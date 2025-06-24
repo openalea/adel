@@ -322,8 +322,8 @@ class Adel(object):
         if basename is None:
             if not os.path.exists(dir):
                 os.mkdir(dir)
-            basename_geom = dir + '/scene%04d' % (index)
-            basename_adel = dir + '/adel%04d' % (index)
+            basename_geom = directory + '/scene%04d' % (index)
+            basename_adel = directory + '/adel%04d' % (index)
         else:
             basename_adel = basename_geom = basename
         fgeom = basename_geom + '.bgeom'
