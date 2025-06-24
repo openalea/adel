@@ -320,8 +320,8 @@ class Adel(object):
     @staticmethod
     def load(index=0, directory='./adel_saved', basename=None, load_geom=True):
         if basename is None:
-            if not os.path.exists(dir):
-                os.mkdir(dir)
+            if not os.path.exists(directory):
+                os.mkdir(directory)
             basename_geom = directory + '/scene%04d' % (index)
             basename_adel = directory + '/adel%04d' % (index)
         else:
