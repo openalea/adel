@@ -318,7 +318,7 @@ class Adel(object):
         return fgeom, fg
 
     @staticmethod
-    def load(index=0, dir='./adel_saved', basename=None, load_geom=True):
+    def load(index=0, directory='./adel_saved', basename=None, load_geom=True):
         if basename is None:
             if not os.path.exists(dir):
                 os.mkdir(dir)
