@@ -1216,7 +1216,7 @@ def _init_dimT(axeT_, dimT_tmp, dynT_):
 
         dimT_group["is_ear"] = is_ear
 
-        dimT_ = pd.concat([dimT_, dimT_group], ignore_index=True)
+        dimT_ = pd.concat([dimT_ if not dimT_.empty else None, dimT_group], ignore_index=True)
 
     # force the type of id_dim, index_phytomer and is_ear
     dimT_[["id_dim", "id_cohort", "index_phytomer", "is_ear"]] = dimT_[
@@ -3736,7 +3736,7 @@ def _create_HS_GL_SSI_T(axeT_, dynT_):
                 )
 
             HS_GL_SSI_dynamic = pd.concat(
-                [HS_GL_SSI_dynamic, HS_GL_SSI_dynamic_group], ignore_index=True
+                [HS_GL_SSI_dynamic if not HS_GL_SSI_dynamic.empty else None, HS_GL_SSI_dynamic_group], ignore_index=True
             )
 
     HS_GL_SSI_dynamic[["id_phen", "TT"]] = HS_GL_SSI_dynamic[["id_phen", "TT"]].astype(
