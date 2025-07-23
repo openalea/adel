@@ -79,8 +79,6 @@ RgetPhenT = robj.globalEnv["getPhenT"]
 RgetPhytoT = robj.globalEnv["getPhytoT"]
 # RgetLeafT = robj.globalEnv['getLeafT']
 
-# r.load('D:\Christian\Projets\BleMaladie\ConfrontationArvalis\Calage\.RData')
-
 
 def readRData(fn):
     """return a dictionary containing the Robject of the RData file"""
@@ -105,7 +103,7 @@ def RlistAsDict(Rlist):
 
 def _rvect_asarray(rvect):
     """ "
-    convert a r_vector into an array of numeric values or into an array of string if NA are present (numpy2ri replaces NA with numeric values otherwise) .
+    convert an r_vector into an array of numeric values or into an array of string if NA are present (numpy2ri replaces NA with numeric values otherwise) .
     Will be deprecated when numpy will offer true NA type"""
 
     if r["length"](r["which"](r["is.na"](rvect)))[0] > 0:
@@ -219,9 +217,12 @@ def setAdel(
     elif isinstance(
         xydb, dict
     ):  # pure python xydb dict, a list of list is passed to setAdel
-        # Warning : setadel uses index only and finding closest index if db is too small. Unambiguous meaning of keys retrieving from Lindex afterward there fore will need sorting keys before using Lindex (python sorted key index = Lindex - 1 (Lindex follows Rindexing convention), python list index = lseed - 1. cf conversion infra
+        # Warning : setadel uses index only and finding the closest index if db is too small.
+        # Unambiguous meaning of keys retrieving from Lindex afterward therefore will need sorting keys
+        # before using Lindex (python sorted key index = Lindex - 1 (Lindex follows Rindexing convention),
+        # python list index = lseed - 1. cf conversion infra
         keys = list(xydb.keys())
-        keys.sort()  # to ensure lseed index is sample in the good list)
+        keys.sort()  # to ensure lseed index is sample in the good list
         rxydb = r.list(*list(map(str, keys)))
         for i in range(len(rxydb)):
             rxydb[i] = r.list(*list(range(len(xydb[keys[i]]))))
@@ -253,7 +254,7 @@ def setAdel(
 
 def leaf_keys(lindex, lseed, db):
     """convert R-style lindex/lseed (also called LcType/Lindex in canopy table)
-    into (keys,index) of python xy/sr data bases
+    into (keys,index) of python xy/sr databases
     """
     if 1 > lindex or lindex > len(db) or lseed < 1:
         raise KeyError("invalid index for leaf shape database")
@@ -263,7 +264,7 @@ def leaf_keys(lindex, lseed, db):
 
 
 def plantSample(setAdelPars):
-    """return id of plants used by setAdel to setup the canopy"""
+    """return id of plants used by setAdel to set up the canopy"""
     p = r.names(setAdelPars)
     p = r["as.numeric"](p)
     return _rvect_asarray(p)
@@ -338,7 +339,7 @@ def canL2canS(RcanT, srdb, shrink=1):
 
 
 def setCanopy(RcanT, nplants=1, randomize=True, seed=None):
-    """Duplicates or subsample a canopy table to create a new canopy with specified number of plants. Radomise allows for random sample and random azimuth"""
+    """Duplicates or subsample a canopy table to create a new canopy with specified number of plants. Randomise allows for random sample and random azimuth"""
     if seed is None:
         rseed = r("as.null()")
     else:
@@ -356,21 +357,23 @@ def setCanopy(RcanT, nplants=1, randomize=True, seed=None):
 def RunAdel(
     datesTT,
     plant_parameters,
-    adelpars={
-        "senescence_leaf_shrink": 0.5,
-        "leafDuration": 2,
-        "fracLeaf": 0.2,
-        "stemDuration": 2.0 / 1.2,
-        "dHS_col": 0.2,
-        "dHS_en": 0,
-        "epsillon": 1e-6,
-        "HSstart_inclination_tiller": 1,
-        "rate_inclination_tiller": 30,
-        "drop_empty": True,
-    },
+        adelpars=None,
 ):
     """Run Adel model for each date in datesTT according to parameter list"""
 
+    if adelpars is None:
+        adelpars = {
+            "senescence_leaf_shrink": 0.5,
+            "leafDuration": 2,
+            "fracLeaf": 0.2,
+            "stemDuration": 2.0 / 1.2,
+            "dHS_col": 0.2,
+            "dHS_en": 0,
+            "epsillon": 1e-6,
+            "HSstart_inclination_tiller": 1,
+            "rate_inclination_tiller": 30,
+            "drop_empty": True,
+        }
     if type(datesTT) is not list:
         datesTT = [datesTT]
     x = robj.FloatVector(datesTT)
@@ -423,7 +426,7 @@ def devCsv(axeTfn, dimTfn, phenTfn, earTfn=None, ssi2senTfn=None):
 
 
 def genString(RcanopyT):
-    """Generate an Lsystem string from a R dataframe representing the canopy"""
+    """Generate a Lsystem string from an R dataframe representing the canopy"""
     chn = RgenString(RcanopyT)
     return chn[0]
 

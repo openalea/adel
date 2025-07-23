@@ -87,6 +87,7 @@ class AdelWheat(Adel):
         positions=None,
         convUnit=None,
     ):
+        self.canopy_age = None
         if species is not None or isinstance(leaves, dict):
             raise ValueError("multi_species canopies not yet implemented")
 
@@ -218,7 +219,7 @@ class AdelWheat(Adel):
                 canopy, stand, aborting_tiller_reduction=self.aborting_tiller_reduction
             )
         else:
-            # produce plants positionned at origin
+            # produce plants positioned at origin
             grem = None
             if self.nrem > 0:
                 canopy = RunAdel(age, self.pars_rem, adelpars=self.run_adel_pars)
@@ -240,13 +241,15 @@ class AdelWheat(Adel):
 
         return g
 
-    def checkAxeDyn(self, dates=list(range(0, 2000, 100)), density=None):
+    def checkAxeDyn(self, dates=None, density=None):
+        if dates is None:
+            dates = list(range(0, 2000, 100))
         if density is None:
             density = self.stand.plant_density
         return checkAxeDyn(self.pars, dates, density)
 
     def check_nff(self):
-        """Count the probability of occurence of MS with given nff"""
+        """Count the probability of occurrence of MS with given nff"""
         ms = numpy.array(self.devT["axeT"]["id_axis"]) == "MS"
         nffs = numpy.array(self.devT["axeT"]["N_phytomer"])[ms]
         counts = {n: nffs.tolist().count(n) for n in set(nffs)}
@@ -254,7 +257,7 @@ class AdelWheat(Adel):
         return counts, probas
 
     def check_primary_tillers(self):
-        """Count/estimate probabilitie of occurence of primary tillers"""
+        """Count/estimate probabilities of occurence of primary tillers"""
         import re
 
         axis = self.devT["axeT"]["id_axis"]
@@ -281,7 +284,8 @@ class AdelWheat(Adel):
             os.mkdir(dir)
         saveRData(self.pars, "plants", dir + "/adel_pars.RData")
 
-    def read_pars(self, dir="."):
+    @staticmethod
+    def read_pars(dir="."):
         return readRData(dir + "/adel_pars.RData")["plants"]
 
     def grow(self, g, time_control):
@@ -320,8 +324,10 @@ def adelwheat_node(
     geoAxe=None,
     stand=None,
     run_adel_pars=None,
-    options={},
+        options=None,
 ):
+    if options is None:
+        options = {}
     args = locals()
     args.update(options)
     args.pop("options")

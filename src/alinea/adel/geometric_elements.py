@@ -184,7 +184,7 @@ class Leaves:
                 numpy.searchsorted(self.bins, age) - 1
             )  # binf is position of bin below age (starting at zero)
             if binf < 0:
-                binf = 0  # age below first value are in firts interval
+                binf = 0  # age below first value are in firsts interval
             if binf >= (len(self.bins) - 1):  # binf is the last value
                 age_index = binf - 1
             else:
@@ -218,7 +218,7 @@ class Leaves:
         return sr
 
     def blade_elt_area(self, leaf_key, Lshape, Lwshape, sr_base, sr_top):
-        """surface of a blade element, positioned with two relative curvilinear absisca"""
+        """surface of a blade element, positioned with two relative curvilinear abscissa"""
 
         S = 0
         sr_base = min([1, max([0, sr_base])])
@@ -243,7 +243,7 @@ class Leaves:
         return S
 
     def blade_elt_width(self, leaf_key, Lshape, Lwshape, sr_base, sr_top):
-        """width of a blade element, positioned with two relative curvilinear absisca"""
+        """width of a blade element, positioned with two relative curvilinear abscissa"""
 
         w = 0
         sr_base = min([1, max([0, sr_base])])
@@ -269,7 +269,7 @@ class Leaves:
         self, leaf_key, L_shape, Lw_shape, length, s_base, s_top, incline=1, flipx=False, min_area=1e-6
     ):
         """Compute mesh for a leaf element.
-        - shape is a x,y,s,r tuple descriibing leaf shape
+        - shape is a x,y,s,r tuple describing leaf shape
         - L_shape is the length of the scaled shape
         - Lw_shape is the width of the scaled shape
         - length is the total visible length to be meshed
@@ -309,7 +309,7 @@ class Leaves:
             return {k: simpson(self.srdb[k][1], x=self.srdb[k][0]) for k in self.srdb}
 
     def midrib(self, blade, resample=False):
-        """Compute visible midrib x,y coordinates  and vertical distance to insertion point due to rollingfrom a blade node"""
+        """Compute visible midrib x,y coordinates  and vertical distance to insertion point due to rolling from a blade node"""
         x = y = dy = None
         if blade.visible_length > 0.01:
             if blade.shape_key is not None:

@@ -517,7 +517,7 @@ def plantgl_shape(points, indices):
 
 def qslim(nb_triangles, points, indexes):
     """
-    Deciamte a mesh using the qslim software.
+    Decimate a mesh using the qslim software.
     Return the new mesh with fewer triangles.
     Try to respect angles and end points.
     """
@@ -593,7 +593,7 @@ def simplify(leaf, nb_points, scale_radius=True):
         leaf_surface = simpson(rn, x=sn)  # use here simpson as leaf is a smooth shape
         new_surface = trapezoid(
             r, x=s
-        )  # use here trapezoid as the new surface is a polygonial shape
+        )  # use here trapezoid as the new surface is a polygonal shape
         scale_r = leaf_surface / new_surface
         r *= scale_r
 

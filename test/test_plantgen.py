@@ -43,7 +43,7 @@ TT_flag_ligulation = {
 }
 number_of_ears = plants_number * ears_density / float(plants_density)
 
-expected_results_dir = path("data/test_plantgen")
+expected_results_dir = path(__file__).parent.resolve() / path("data/test_plantgen")
 default_expected_results_dir = expected_results_dir.joinpath("default")
 min_min_expected_results_dir = expected_results_dir.joinpath("min_min")
 short_short_expected_results_dir = expected_results_dir.joinpath("short_short")
