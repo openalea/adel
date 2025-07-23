@@ -1,0 +1,27 @@
+Adel.l
+view.v
+leaf.a
+color.map
+bid.txt
+description.txt
+ignore:
+*
+Image:
+	generate:
+		cpfg -m color.map Adel.l view.v leaf.a
+
+L-system:
+	EDIT Adel.l
+
+Colormap:
+	palette color.map
+
+View file:
+	EDIT view.v
+
+Animate file:
+	EDIT leaf.a
+
+Description:
+	EDIT description.txt
+

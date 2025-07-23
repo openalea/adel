@@ -1,0 +1,915 @@
+/*-*-c-*-*/
+
+/*_________________________________________________________L_System mais
+
+version modifiee de article.lsys, fonctionne avec les age physiologique max
+en remplacment des longueurs max
+*/
+
+//usr func for whorl
+
+//maj hw par un tube emboité, renvoie distance visible
+#define lvisTube(l) f1(l)
+//maj hw par un cyclindre plein emboité, renvoie distance visible
+#define lvisCyl(l) f2(l)
+//set hw
+#define setHw(h) f3(h)
+
+
+/* parametres */
+
+#include "AdelPars.h"
+#include GEOMFILE
+
+/*_________________________________________Macros
+*/
+
+#define MAX(a,b) \
+if((a)>=(b),a,b)
+
+#define MIN(a,b) \
+if((a)<=(b),a,b)
+
+#ifndef STEPS
+#define STEPS 500
+#endif
+#ifndef TEMP
+#define TEMP 10.8
+#endif
+
+// modèle de cornet
+
+//liste des parametre pour gerer l'enroulement du limbe
+// interpole lineairement entre l'apparition, ou la feuille n'est pas enroullee, l'apparition next tip ou la feuille peute etre enroullee et l'apparitio
+//les dates sont relative a l'inittiation de la feuille n
+
+#define HwData Tapptip,Tnextip,hwnextip,Tnextcol,hwnextcol
+
+//initialisation des parametres
+
+#define newHwData(n)					\
+    DIA(n),						\
+    TINI(n+1)-TINI(n)+DIA(n+1),	\
+    (L_LIMB(n+1)+L_GAINE(n+1))*(DIA(n+1)-DIE(n+1))/(DIL(n+1)-DIE(n+1)), \
+    TINI(n+1)-TINI(n)+DIL(n+1),					\
+    L_GAINE(n+1)
+
+//longueur du tube formée par la feuille (limbe+gaine) depuis initiation
+#define predictLtube(t)\
+  if(t<=Tapptip,0,if(t<=Tnextip,hwnextip*(t-Tapptip)/(Tnextip-Tapptip),if(t<=Tnextcol,hwnextip+(hwnextcol-hwnextip)*(t-Tnextip)/(Tnextcol-Tnextip),hwnextcol)))
+
+//parametres du modèle d'allongement, origine des temps : initiation feuille
+
+#define KinLData L,G,TdebL,TfinL,TfinG
+
+#define newKinLData(n)				\
+    L_LIMB(n),					\
+    L_GAINE(n),					\
+    DIE(n),					\
+    DIE(n)+L_LIMB(n)/(L_LIMB(n)+L_GAINE(n))*(DIL(n)-DIE(n)),	\
+    DIL(n)
+
+//longueur limbe fonction de temps depuis initiation
+#define predictLblade(t)\
+  if(t<=TdebL,0,if(t>=TfinL,L,L*(t-TdebL)/(TfinL-TdebL)))
+
+//longueur gaine fonction de temps depuis initiation
+#define predictLsheath(t)\
+  if(t<=TfinL,0,if(t>=TfinG,G,G*(t-TfinL)/(TfinG-TfinL)))
+
+
+//parametres geometriques
+//iGtable : numero de ligne dans le tableau des formes de feuille
+
+#define GeomLData azim,diam,iGtable 
+
+#define newGeomLData(n) \
+AZIM(n),\
+    DIAM_F(STEPS),\
+    GEOMNUM(n,rand())
+  //GEOMNUM(n,rand())
+
+#define PrevotData phi_O,Pcass,Cp,Psi_e,phi_cass,eps
+
+#define getPrevotData(n,i)			\
+  PHIO(n,i),					\
+    PCASS(n,i),\
+      CP(n,i),\
+      PSIE(n,i),\
+      PHI_CASS,\
+      EPS(n,i)
+/**** Reponses a la temperature ****/
+/*
+(Utiliser le mot 'Temp' pour asurer la compatibilite avec mes outils)*/
+/* 
+Dates d'apparition des primordias (dd)
+*/
+#define TINI(Numf) \
+  KinFeu[(Numf)-1][0]
+
+/* 
+Delai initiation - extension rapide des feuilles (dd)
+*/
+#define DIE(Numf) \
+  KinFeu[(Numf)-1][1]
+
+/* 
+Delai initiation - apparition des feuilles (dd)
+*/
+#define DIA(Numf) \
+  KinFeu[(Numf)-1][2]
+
+/* 
+Delai initiation - ligulation des feuilles (dd)
+*/
+#define DIL(Numf) \
+  KinFeu[(Numf)-1][3]
+
+/*
+Delai inititation- senescence (dd)
+*/
+#define DISEN(Numf) \
+  KinFeu[(Numf)-1][4]
+
+
+/*
+temps thermique, base 9,8 (=dd/d)
+*/
+#define TT(Temp) \
+if(Temp>=9.8,Temp-9.8,0)
+
+/**** profils de longueurs d'organe ****/
+/*
+Profils de longueur de limbe (Fournier and Andrieu, 1998)
+*/
+
+
+
+#define L_LIMB(NumPhyto) \
+PhytomerDims[(NumPhyto)-1][4]
+
+#define SD_LIMB(NumPhyto) \
+PhytomerDims[(NumPhyto)-1][5]
+
+/*
+Longueur moy de gaine et ec. type (Fournier and Andrieu, 1998)
+*/
+#define L_GAINE(NumPhyto) \
+PhytomerDims[(NumPhyto)-1][2]
+/* if((NumPhyto)>=7,0.2408-0.00569*(NumPhyto),0.03077*(NumPhyto)) */
+#define SD_GAINE(NumPhyto) \
+PhytomerDims[(NumPhyto)-1][3]
+
+/*
+Longueur moy d'entrenoeud et ec. type (Fournier and Andrieu, 1998)
+*/
+#define L_ENT(NumPhyto) \
+PhytomerDims[(NumPhyto)-1][0]
+
+#define SD_ENT(NumPhyto) \
+PhytomerDims[(NumPhyto)-1][1]
+
+/*
+Largeur max moy de limbe et ec. type 
+*/
+#define Wmax_LI(NumPhyto) \
+PhytomerDims[(NumPhyto)-1][6]
+
+#define SD_Wmax(NumPhyto) \
+PhytomerDims[(NumPhyto)-1][7]
+
+
+
+
+/**** Autres fonctions ****/
+/*
+renvoi le numero de phytomere a partir du label
+*/
+#define NUM(id) \
+  floor((id-(1e11+floor((id-1e11)/1e6)*1e6))/1e3)
+/*
+Longueur de la pseudo tige  representant l'apex,fonction de l'age physiologique (a revoir)
+*/
+#define L_APEX(agep) \
+if((agep)<=25,.009*(agep),0.225)
+/*
+Diametre de la tige
+*/
+#define DIAM 0.023
+/* fonction empirique basée sur mesure diam min 05: borné entre 4 et 23 mm, linéaire fonction du TT depuis emergence entre les 2*/
+#define DIAM_F(agep) \
+  if((0.0477*agep-6.02)<4,4/1000,if((0.0477*agep-6.02)>23,23/1000,(0.0477*agep-6.02)/1000))
+
+
+
+
+/*
+Azimuth des phytomere,parametrisation proposee dans Fournier 1998 a partir de Drouet 1997
+*/
+#define AZIM(Numphyto) \
+  if((2*(floor((Numphyto)/2))-(Numphyto))==0,180,0)+if((Numphyto)<=3,gauss()*70,rand()*30)
+
+/*if((2*(floor((Numphyto)/2))-(Numphyto))==0,180,0)+if((Numphyto)<6,0,if((Numphyto)<=8,(rand()-0.5)*20,(rand()-0.5)*60))*/
+
+
+/**** Fonctions pour la geometrie du limbe ****/
+
+#define GEOMNUM(NumPhy,u)\
+  floor(u*(NbLgGeom[(NumPhy)-1]-1))
+
+#define PHIO(NumPhy,numlg) \
+  GeomFeu[(NumPhy)-1][numlg][0]
+
+#define PCASS(NumPhy,numlg)\
+  GeomFeu[(NumPhy)-1][numlg][5]
+
+#define CP(NumPhy,numlg) \
+  GeomFeu[(NumPhy)-1][numlg][1]
+
+#define PHI_I 0
+
+#define PHI_CASS 0
+
+#define EPS(NumPhy,numlg)				\
+  GeomFeu[(NumPhy)-1][numlg][3]
+
+#define PSIE(NumPhy,numlg)				\
+  GeomFeu[(NumPhy)-1][numlg][4]
+
+
+
+/*
+largeur d'un limbe de longueur finale L, de largeur max Wmax, a la distance dpointe de la pointe
+*/
+#define LARG(L,Wmax,dpointe)						\
+Wmax*(alpha*(1-(dpointe)/(L))^2+beta*(1-(dpointe)/(L))+gamma)
+/*
+Surface d'un limbe de longueur finale L et de longueur actuelle l (pour homomorphisme de calcul de la surface)
+*/
+#define SURF(l,L,Wmax)				\
+Wmax*(l)*(alpha*(l)/3/L+sqrt(-alpha))
+/*
+Calcul du parametre a (terme du 2 degre) de la partie parabolique du limbe, en fonction des parametres de Prevot
+*/
+#define A_PARA(Pcass,long,Cp,phi_O) \
+(1/(4*Pcass*long)) \
+*(log((XM(Cp,phi_O)+sqrt(1+(XM(Cp,phi_O))^2))/(tan(phi_O)+sqrt(1+(tan(phi_O))^2))) \
++XM(Cp,phi_O)*sqrt(1+(XM(Cp,phi_O))^2)- tan(phi_O)*sqrt(1+(tan(phi_O))^2))
+/*
+Calcul du parametre intermediaire XM de la formule precedente
+*/
+#define XM(Cp,phi_O) \
+tan(phi_O)*(4-3*Cp)/(Cp-4)
+/*
+Longueur d'une corde de parabole entre x et x+dx
+*/
+#define LCOPA(a,b,x,dx) \
+dx*sqrt(1+(a*(2*x+dx)+b)^2)
+/*
+angle absolu de la corde de parabole entre x et dx
+*/
+#define ANGPA(a,b,x,dx) \
+acos(1/sqrt(1+(a*(2*x+dx)+b)^2))
+/*
+mesure du secteur angulaire (rad) de la portion d'ellipse a tracer, a partir des parametres de Prevot
+*/
+#define THETA(phi,ed) \
+if(phi!=90 && phi!=0 && phi!=-90,if(phi<0,0,180)-atan((ed)/tan(phi)),if(phi==90,180,if(phi==0,90,0)))
+/*
+avoir
+*/
+#define ALPHA(diffx,diffy,lcorde) \
+if((diffx)>=0,asin((diffy)/(lcorde)),-asin((diffy)/(lcorde))-180)
+/*
+longueur d'une corde d'ellipse entre theta et dtheta
+*/
+#define LCOEL(theta,dtheta,eps,Gaxe) \
+Gaxe*sqrt(2-if(eps>=0,eps,-eps)*((sin(if(eps>=0,theta,theta+90)))^2+(sin(dtheta+if(eps>=0,theta,theta+90)))^2)-(2-if(eps>=0,eps,-eps))*cos(dtheta)-eps*cos(2*theta+dtheta))
+/*fonction d'integration pour le calcul de la longueur de l'arc d'ellipse atracer
+*/
+#define FINT(theta,eps) \
+sqrt(1-if(eps>=0,eps,-eps)*(sin((theta)+if(eps>=0,90,0)))^2)
+
+//macro tortue
+
+//liste des parametres 'additionels' a envoyer dans le can
+#define toCan code
+
+/*Polygon representation */
+#define POL(id,toCan,l,wb,wt,ang) \
+label(id,toCan){pt(ang)f(l)[tu(-90) f(wt/2).][tu(90) f(wt/2).]tu(180)f(l)pt(ang)tu(180)[tu(90)f(wb/2).]}\
+label(id,toCan){[tu(90) f(wb/2).][tu(-90)f(wb/2).]pt(ang)f(l)[tu(-90)f(wt/2).]}
+
+/*triangle */
+#define TRI(id,toCan,l,wb,ang) \
+label(id,toCan){[tu(90) f(wb/2).][tu(-90)f(wb/2).]pt(ang)f(l).}
+
+/*Cylinder representation */
+#define CYL(id,toCan,l,r) \
+tu(90)\
+label(id,toCan){[f(r).][pt(120)f(r).][pt(-120)f(r).]}\
+tu(-90)f(l)\
+tu(90)pt(180)\
+label(id,toCan){[f(r).][pt(-120)f(r).][pt(120)f(r).]}\
+label(id,toCan){[f(r).]tu(90)f(l)tu(-90)pt(180)[pt(-120)f(r).][pt(120)f(r).]}\
+label(id,toCan){[f(r).]tu(-90)f(l)tu(90)pt(180)[pt(120)f(r).][pt(-120)f(r).]}\
+label(id,toCan){[pt(120)f(r).]tu(90)f(l)tu(-90)pt(180)[f(r).][pt(-120)f(r).]}\
+label(id,toCan){[pt(120)f(r).]tu(-90)f(l)tu(90)pt(180)[pt(-120)f(r).][f(r).]}\
+label(id,toCan){[pt(-120)f(r).]tu(90)f(l)tu(-90)pt(180)[pt(120)f(r).][f(r).]}\
+label(id,toCan){[pt(-120)f(r).]tu(-90)f(l)tu(90)pt(180)[f(r).][pt(120)f(r).]}\
+pt(180)tu(-90)
+
+
+/*_________________________________________Constantes
+*/
+
+lsystem mais ;
+
+const
+
+/****  caracteristiques du semis ****/
+/*
+nombre de rangs (nb_rg),de plantes par rang (nb_p_rg),de plante (nbplante)
+*/
+
+nb_rg =NB_RANG;/* 4;*/
+nb_p_rg =NB_PLANTES;/* 1;*/
+nbplante = nb_rg*nb_p_rg;/* 4;*/
+	
+/*
+distances inter-rang (m) et inter-plantes (m)
+*/
+inter_rang = INTER_RANG;
+interpl = INTER_PLANTE;
+/*
+Numero,orientation et position initiales x,y (m) de la tortue 
+*/
+numdeb = 1;
+xdep = 0;
+ydep = 0;
+azimdep = 0;
+
+/**** caracteristiques genotypiques ****/
+/*
+Nombre total de feuille reeles et duales(Ntmin et nb_dual),numero du premier entrenoeud a s'allonger (no)
+*/
+Ntmin = NB_PHY;
+nb_dual = 1;
+/* no = 5; */
+
+
+/*
+longueur (m) de la plus grande feuille (Lo) et du plus grand entrenoeud (Im),diametre de la pseudo-tige (representant l'apex)
+*/
+/* Lo = 0.8; */
+/* Im =0.23; */
+/*D= 0.023;
+/**** constante loi de vitesse (m/dd)****/
+vstar=0.00564;
+/*raport ven/vfeu*/
+rapv=0.41;
+/**** temperature et pas de temps (en j) ****/
+/*
+Utiles uniquement pour lsystem entier
+*/
+Tapex = TEMP;
+pastemps = STEPS;
+SD_levee=10;/*ecartype en °Cj des dates de levees*/
+
+/**** constantes geometriques ****/
+/*
+Forme du limbe a plat(Prevot, 1991)
+*/
+alpha =ALPHA_LARG;
+beta=-2*(alpha+sqrt(-alpha));
+gamma=2*sqrt(-alpha)+alpha;
+
+/* beta =1.84; */
+/* gamma =0.66; */
+/* lonlarg =.106; */
+/*
+Parametres de trace de la coubure dans l'espace
+*/
+NBPOL =5; /*5 nb de polygone pour la parabole*/
+NBARC =4; /*4 nb de polygones pour l'ellipse*/
+DINT =2;/*2 maille d'integration de la longueur d'arc d'ellipse, en degres, essais possibles dans ellipsecorde.lsys*/
+
+
+/**** Codes pour le type d'organe dans les labels ****/
+code_apex = 1;
+code_Feu = 2;
+code_En = 3;
+code_nul = -1;
+code_dual =9;
+
+/* tableau dim finales : row=numphy,col1=li, col2=Ga,col3=En*/
+array
+PhytomerDims[NB_PHY][8]={DIMVALUES};
+GeomFeu[NB_PHY][NBLGMAXGEOM][6]={GEOMVALUES};
+NbLgGeom[NB_PHY]={NBLGGEOM};
+KinFeu[NB_PHY][5]={KINFEUVALUES};
+Carto[NB_PLANTES][NB_RANG]={CARTOVALUES};/*carto des plantes qui ont levé*/
+
+/* description des modules
+
+apex : agedd : age (dd) depuis emergence de plante
+        Tini : date (dd since emergence) de la prochaine feu a initier
+	n : nb feuilles deja faites
+	N : nb feuille total
+*/
+
+/*TPHY*/
+ /*_________________________________________Tables Physiologiques
+*/
+table maj_temp {
+
+/**** mise a jour des variables d'etat en fonction de la temperature et du pas de temps ****/
+/*
+Calcul de l'avancement de l'apex ou de son age physiologique (apexf)
+*/
+apex(id,N,n,agedd,Tini,Tapex)
+-> apex(id,N,n,
+	agedd+(TT(Tapex))*pastemps,
+	Tini,
+	Tapex);
+apexf(id,agep,Tapex,Lim)
+  -> apexf(id,agep + (TT(Tapex))*pastemps,Tapex,Lim);
+/*
+Modules decrivant la feuille : age physio des feuilles en attente et longueur les feuilles en croissance
+*/
+
+ Feu(id,n,Tzc,agep,l,g,ltube,KinLData,HwData,GeomLData)
+   ->Feu(id,n,Tzc,
+	 agep+(TT(Tzc))*pastemps,
+	 -1,-1,-1,//gestion physio infinity
+	 KinLData,HwData,GeomLData); 
+
+ FeuM(id,n,Tzc,L,G,agep,GeomLData)
+   ->FeuM(id,n,Tzc,L,G,
+	 agep+(TT(Tzc))*pastemps,
+	 GeomLData);
+
+
+/*
+Entrenoeuds
+*/
+
+Enatt(id,N,No_phyto,diametre,Dil,agep,Tzc,idApex)
+->Enatt(id,N,No_phyto,diametre,Dil,agep+(TT(Tzc))*pastemps,Tzc,idApex);
+
+En(id,E,e,diametre,agep,Tfin,Tm) 
+->En(id,E,-1,diametre,agep+(TT(Tm))*pastemps,Tfin,Tm);
+
+};
+
+/**** Evolutions des organes ****/
+
+table physio {
+
+/*transformations, iteration : infinity*/
+/*
+apparition d'un phytomere (sauf le dernier)
+*/
+  apex(id,N,n,agedd,Tini,Tapex) : (agedd >=Tini)&&(n<(N-1))
+-> 
+    //deben(n+1)
+Enatt((id-code_apex)/*+(n+1)*1e3*/+n+1,
+		N,
+		n+1,
+      DIAM_F(STEPS),
+		DIL(n+1),
+		agedd-Tini,Tapex,id)
+    //finen(n+1)
+[ Feu((id-code_apex)+1e3+n+1,
+    n+1,
+    Tapex,
+    agedd-Tini,
+    -1,
+    -1,
+    -1,
+    newKinLData(n+1),
+      newHwData(n+1),
+    newGeomLData(n+1)) ]
+apex(id, N,
+		n+1,
+		agedd,
+                TINI(n+1),
+		Tapex);
+
+/*cornet jusque croissance denier limbe,lir/vfeu~10 ATTENTION A VIRER : PLUS OPERATIONEL*/
+//--------------------------------------------------------------------------
+//initiation dernier phytomere : appel a newHwData different pour modéliser panicule (a voir si plus simple de rajouter des lignes aux tableaux et  utiliser la meme regle que ci-dessus
+//--------------------------------------------------------------------------
+    apex(id, N,n,agedd,Tini,Tapex) : (n >= (N-1))
+->
+      //deben(n+1)
+Enatt((id-code_apex)/*+(n+1)*1e3*/+n+1,
+		N,
+		n+1,
+      DIAM_F(STEPS),
+		DIL(n+1),
+		agedd-Tini,Tapex,id)
+      //finen(n+1)
+[ Feu((id-code_apex)+1e3+n+1,
+    n+1,
+    Tapex,
+    agedd-Tini,
+    -1,
+    -1,
+    -1,
+    newKinLData(n+1),
+      newHwData(n),
+    newGeomLData(n+1)) ] 
+   apexf(id,n,Tapex,Ntmin);
+
+/*
+croissance de la feuille (limbe et gaine)- la condition l<=0 est la pour gere infinity (sinon regle recursive infinie)
+*/		
+
+  Feu(id,n,Tzc,agep,l,g,ltube,KinLData,HwData,GeomLData) : agep < TfinG && l<0
+    ->Feu(id,n,Tzc,agep,
+	predictLblade(agep),
+	predictLsheath(agep),
+	predictLtube(agep),
+	KinLData,HwData,GeomLData);
+
+  Feu(id,n,Tzc,agep,l,g,ltube,KinLData,HwData,GeomLData) : agep>=TfinG && l < 0 
+    -> FeuM(id,n,Tzc,L,G,
+	    agep-TfinG,
+	    GeomLData); 
+    
+
+/*
+comportement entrenoeud
+*/
+Enatt(id,N,No_phyto,diametre,Dil,agep,Tzc,idApex) : agep >= Dil 
+-> En(id,
+      L_ENT(No_phyto),
+	-1,
+	diametre,
+	agep-Dil,
+      .6*(Dil-DIE(No_phyto)),
+	Tzc);
+
+  En(id,E,e,diametre,agep,Tfin,Tm) : E <= 0
+->;
+
+  En(id,E,e,diametre,agep,Tfin,Tm) : agep < Tfin && e <0
+->
+    En(id,E,E*agep/Tfin,diametre,agep,Tfin,Tm)
+;
+
+
+En(id,E,e,diametre,agep,Tfin,Tm) : agep>Tfin
+->Enf(id,
+	E,
+	diametre);
+
+};
+
+
+//____________________________________Transformation en entree pour le traceur geometrie prevot,calcul des visibilités
+
+
+table toPrev {
+
+  newPlant(n) ->newPlant(setHw(0));
+
+  //Feuilles
+
+  Feu(id,n,Tzc,agep,l,g,ltube,KinLData,HwData,GeomLData)
+    -> PrevotLeaf(id,n,l,g,L,lvisTube(g),lvisTube(ltube),azim,diam,getPrevotData(n,iGtable));
+
+FeuM(id,n,Tzc,L,G,agep,GeomLData)
+  -> PrevotLeaf(id,n,L,G,L,lvisTube(G),0,azim,diam,getPrevotData(n,iGtable));
+
+//Entrenoeuds
+
+En(id,E,e,diametre,agep,Tfin,Tm)
+  -> PrevotEn(id,e,lvisCyl(e),diametre);
+
+ Enf(id, E,diametre)
+   -> PrevotEn(id,E,lvisCyl(E),diametre);
+};
+
+
+/*TGEO*/
+
+ /*_________________________________________Tables Geometriques
+*/
+
+table decFeu {
+  PrevotLeaf(id,n,l,g,L,gvis,tubevis,azim,diam,PrevotData)
+    -> ]ro(azim)
+	 Ga(id,g,gvis)
+    tube(id,tubevis)
+	 ro(-azim)
+    [col(azim,diam,L,l+MIN(0,gvis)-MAX(0,tubevis),phi_O)
+     Li(id,n,L,l+MIN(0,gvis)-MAX(0,tubevis),PrevotData);//si gvis <0, gvis=hcorn
+
+};
+
+/**** Separation du limbe en partie cachee et visible ****/
+table decLi {
+/*
+cas 1 : limbe dans le cornet, on ne trace rien
+*/
+  Li(id,n,L,lvis,PrevotData) : lvis<=0
+-> ;
+/*
+cas 2 : 1 partie visible
+*/
+    Li(id,n,L,lvis,PrevotData) : lvis > 0
+-> 
+      Li_para(id,n,L,
+	L*Pcass,
+	lvis,
+	phi_O,Cp,
+	if(Cp!=2,A_PARA(Pcass,L,Cp,phi_O),0),
+	tan(phi_O),
+	phi_cass,
+	   PHI_I,
+	   PHI_I-Psi_e,
+/* 	atan(XM(Cp,phi_O))-phi_cass, */
+/* 	atan(XM(Cp,phi_O))-phi_cass-Psi_e, */
+	eps);
+};
+
+/**** separation en arc de parabole et arc d'ellipse de la partie emergee ****/
+table calc_arcs {	/*iteration : infinity*/
+/*
+cas 1 : arc de parabole ax2+bx, calcul de la dimension et du nombre de polygone
+*/
+  Li_para(id,n,L,Lpar,lemerge,phi_O,Cp,a,b,phi_cass,phi_i,phi_f,eps) : lemerge<=Lpar
+    -> doLip(id,n,L,lemerge,0,lemerge,
+	0,
+	2*b*(2-Cp)/(Cp-4)/(if(a!=0,a,1))/NBPOL,
+	NBPOL,
+	a,b,
+	phi_O,
+	1);
+/*
+cas 2 : arc parabole + arc ellipse
+*/
+    Li_para(id,n,L,Lpar,lemerge,phi_O,Cp,a,b,phi_cass,phi_i,phi_f,eps) : lemerge>Lpar
+      -> doLip(id,n,L,
+	Lpar,0,
+	lemerge,
+	0,
+	2*b*(2-Cp)/(Cp-4)/(if(a!=0,a,1))/NBPOL,
+	NBPOL,
+	a,b,
+	phi_O,
+	0)
+  cassure(phi_cass)
+      calc_arc(id,n,L,L-Lpar,lemerge-Lpar,phi_i,eps,
+	THETA(phi_i,if(eps>=0,sqrt(1-eps),1/sqrt(1+eps))),
+	THETA(phi_f,if(eps>=0,sqrt(1-eps),1/sqrt(1+eps))),
+	0,
+	THETA(phi_f,if(eps>=0,sqrt(1-eps),1/sqrt(1+eps)))+DINT);
+/*
+ellipse : calcul de la longueur de l'arc (integration trapezes)
+*/
+      calc_arc(id,n,L,Larc,larc,phi_i,eps,theta_i,theta_f,int,theta_int) : theta_int < theta_i
+	-> calc_arc(id,n,L,Larc,larc,phi_i,eps,theta_i,theta_f,
+	int + (DINT*M_PI/180)*FINT(theta_int,eps),
+	theta_int+DINT);
+
+	calc_arc(id,n,L,Larc,larc,phi_i,eps,theta_i,theta_f,int,theta_int) : theta_int >= theta_i
+	  -> doArc(id,n,L,larc,0,theta_i,
+	(theta_f-theta_i)/NBARC,NBARC,
+	Larc/(int +(DINT*M_PI/180)*(FINT(theta_i,eps)+FINT(theta_f,eps))/2),
+	eps,phi_i);
+};
+
+/**** Generation des polygones representant les limbes ****/
+table genere_Lis {
+/*
+parabole
+*/
+  doLip(id,n,L,l2do,ldone,dpointe,x,dx,nbrest,a,b,phi_prec,sipointe) : (a==0)&&(sipointe==1)
+->pointe(id,
+	l2do,
+	 LARG(L,Wmax_LI(n),dpointe),
+	0);
+
+    doLip(id,n,L,l2do,ldone,dpointe,x,dx,nbrest,a,b,phi_prec,sipointe) : (a==0)&&(sipointe==0)
+->Lis(id,
+	l2do,
+	LARG(L,Wmax_LI(n),dpointe),
+	LARG(L,Wmax_LI(n),dpointe-l2do),
+	0);
+
+      doLip(id,n,L,l2do,ldone,dpointe,x,dx,nbrest,a,b,phi_prec,sipointe) :(a!=0) && (nbrest > 1) && (ldone+LCOPA(a,b,x,dx)<l2do)
+-> Lis(id,
+	LCOPA(a,b,x,dx),
+	LARG(L,Wmax_LI(n),dpointe),
+	LARG(L,Wmax_LI(n),dpointe-LCOPA(a,b,x,dx)),
+	phi_prec-ANGPA(a,b,x,dx))
+	doLip(id,n,L,l2do,
+	ldone+LCOPA(a,b,x,dx),
+	dpointe-LCOPA(a,b,x,dx),
+	x+dx,
+	dx,
+	nbrest-1,
+	a,b,
+	ANGPA(a,b,x,dx),
+	sipointe);
+
+	doLip(id,n,L,l2do,ldone,dpointe,x,dx,nbrest,a,b,phi_prec,sipointe) : (a!=0) && (nbrest == 1 || ldone+LCOPA(a,b,x,dx)>=l2do) && (sipointe==0)
+->  Lis(id,
+	l2do-ldone,
+	LARG(L,Wmax_LI(n),dpointe),
+	LARG(L,Wmax_LI(n),dpointe-l2do+ldone),
+	phi_prec-ANGPA(a,b,x,dx));
+
+	  doLip(id,n,L,l2do,ldone,dpointe,x,dx,nbrest,a,b,phi_prec,sipointe) : (a!=0) && (nbrest == 1 || ldone+LCOPA(a,b,x,dx)>=l2do)&& (sipointe==1)
+->  pointe(id,
+	l2do-ldone,
+	LARG(L,Wmax_LI(n),dpointe),
+	phi_prec-ANGPA(a,b,x,dx));
+/*
+ellipse
+*/
+	    doArc(id,n,L,l2do,ldone,theta,dtheta,nbrest,Gaxe,eps,phi_prec) : (nbrest>1) && (ldone+LCOEL(theta,dtheta,eps,Gaxe)<l2do)
+	      -> preLis(id,n,
+	LCOEL(theta,dtheta,eps,Gaxe),
+	L,
+	l2do-ldone,
+	phi_prec-ALPHA(cos(theta+dtheta)-cos(theta),Gaxe*if(eps<0,1,sqrt(1-eps))*(sin(theta+dtheta)-sin(theta)),LCOEL(theta,dtheta,eps,Gaxe)))
+	      doArc(id,n,L,l2do,
+	ldone+LCOEL(theta,dtheta,eps,Gaxe),
+	theta+dtheta,
+	dtheta,nbrest-1,Gaxe,eps,
+	ALPHA(cos(theta+dtheta)-cos(theta),Gaxe*if(eps<0,1,sqrt(1-eps))*(sin(theta+dtheta)-sin(theta)),LCOEL(theta,dtheta,eps,Gaxe)));
+
+	      doArc(id,n,L,l2do,ldone,theta,dtheta,nbrest,Gaxe,eps,phi_prec) : (nbrest==1) || (ldone+LCOEL(theta,dtheta,eps,Gaxe)>=l2do)
+->  pointe(id,
+	l2do-ldone,
+	LARG(L,Wmax_LI(n),l2do-ldone),
+	phi_prec-ALPHA(cos(theta+dtheta)-cos(theta),Gaxe*if(eps<0,1,sqrt(1-eps))*(sin(theta+dtheta)-sin(theta)),LCOEL(theta,dtheta,eps,Gaxe)));
+
+		preLis(id,n,dlong,L,dpointebase,inclin)
+-> Lis(id,dlong,
+	LARG(L,Wmax_LI(n),dpointebase),
+	LARG(L,Wmax_LI(n),dpointebase-dlong),
+	inclin);
+};
+
+/**** Generation des instructions tortues ****/
+table trace {
+/*
+Un polygone de feuille
+*/
+Lis(id,dlong,largbase,larghaut,inclin)
+  -> POL(id,code_nul,dlong,largbase,larghaut,inclin);
+
+/*
+cassure entre la parabole et l'ellipse
+*/
+cassure(phi_cass)
+-> pt(phi_cass);
+/*
+extremite des feuilles (triangle)
+*/
+pointe(id,dlong,largbase,inclin)
+  -> TRI(id,100,dlong,largbase,inclin);
+
+
+/*
+Gaine et tube
+*/
+// Ga(id,g,gvis) : g > 0 && gvis <= 0
+//-> f(g);
+
+ Ga(id,g,gvis) : g > 0 && gvis > 0
+   -> //f(g-gvis)
+   CYL(id,200,gvis,DIAM_F(STEPS)/2);
+
+ tube(id,lvis) : lvis > 0
+   -> CYL(id,code_nul,lvis,DIAM_F(STEPS)/2);
+
+/*
+angle au niveau de la ligule,azimuth des feuilles, distance au centre de la tige
+*/
+   col(azim,diam,L,lvis,phi_O)
+     -> ro(azim) pt(90) f(diam/2) pt(-90) pt((90-phi_O)*MAX(0,lvis)/L);
+
+/*
+rotation tortue pour entrenoeud pele-beche
+*/
+deben(No_phyto)
+-> ro( if((2*(No_phyto%2)-No_phyto)==0,
+		180,0) );
+/*
+entrenoeuds
+*/
+//PrevotEn(id,l,lvis,diametre) : l>0 && lvis <=0
+// -> f(l);
+
+PrevotEn(id,l,lvis,diametre) : l>0 && lvis > 0
+  -> //f(l-lvis) 
+  CYL(id,diametre,lvis,diametre/2);
+
+finen(No_phyto)
+-> ro( if((2*(No_phyto%2)-No_phyto)==0,
+		180,0) );
+
+/*
+azimuth a la base de la plante
+*/
+azim(azimuth)
+-> ro(azimuth);
+/*
+deplacement tortue a sa position initiale
+*/
+depart(x,y,azim)
+->pt(if(x>0,-90,90))f(abs(x))pt(if(x>0,90,-90))
+tu(if(y>0,-90,90))f(abs(y))tu(if(y>0,90,-90))
+ro(azim);
+
+};
+
+/*TCHP*/
+ /*_________________________________________Tables generation d'apex
+*/
+
+/**** generation des tetes de rangs ****/ 
+table genere_rangs {
+
+
+do_rang(reste,nb_p_rg) : reste >1
+  ->[rang((nb_rg-reste)*nb_p_rg+numdeb-1,nb_p_rg,nb_rg-reste,Carto[0][nb_rg-reste])]
+  pt(-90)f(inter_rang)pt(90)
+  do_rang(reste-1,nb_p_rg); 
+
+do_rang(reste,nb_p_rg) : reste == 1
+  ->[rang((nb_rg-1)*nb_p_rg+numdeb-1,nb_p_rg,nb_rg-reste,Carto[0][nb_rg-reste])];
+};
+
+
+
+
+ /****  generation des plantes, numerotation ****/
+table genere_apex {
+
+  rang(dejnum,reste,rang,levee) : (reste > 1)&&(levee==1)
+  ->[co("green") azim(360*rand()) newPlant(dejnum+1)apex(1e11+(dejnum+1)*1e6+code_apex,Ntmin,0.0,0.0,TINI(1),Tapex)]
+  tu(-90)f(interpl)tu(90)
+    rang(dejnum+1,reste-1,rang,Carto[dejnum-(rang*nb_p_rg)][rang]);
+
+  rang(dejnum,reste,rang,levee) : (reste > 1)&&(levee==0)
+    ->[co("green") CYL(1e11+(dejnum+1)*1e6+code_En,200,0.001,0.001)]
+  tu(-90)f(interpl)tu(90)
+    rang(dejnum+1,reste-1,rang,Carto[dejnum-(rang*nb_p_rg)][rang]);
+
+
+    rang(dejnum,reste,rang,levee) : (reste == 1)&&(levee==1)
+  ->[co("green") azim( 360*rand())newPlant(dejnum+1)apex(1e11+(dejnum+1)*1e6+code_apex,Ntmin,0.0,0.0,TINI(1),Tapex)];
+
+    rang(dejnum,reste,rang,levee) : (reste == 1)&&(levee==0)
+  ->[co("green") CYL(1e11+(dejnum+1)*1e6+code_En,200,0.001,0.001)];
+
+      /* distribution de levees -> occasione distrib dimensions entre plantes*/
+      apex(id,N,n,agedd,Tini,Tapex)
+	-> apex(id, N,n,0*gauss()*SD_levee,Tini,Tapex);
+};
+
+
+
+table debug {
+  /* feu duale est la*/
+  /*Feu(id,dualite,DL,l,DG,g,agep,Tzc,idapex,num)
+    -> control(PHIO(1,gauss()),PSIE(1,gauss()),PCASS(1,gauss()),EPS(1,gauss()));*/
+  Li(id,L,lvis,PrevotData) 
+    -> control(NUM(id),L,lvis);/* debug acces longueur de feuille apres decFeu*/
+};
+attributes {							
+ /*_________________________________________Derivations et axiome
+*/
+derivation 
+/*
+generation des apex
+*/
+/*DCHP*/
+genere_rangs(nb_rg),genere_apex(nb_p_rg)
+,
+/*
+physiologie.laisser les "," sur une seule ligne entre les derivations
+*/
+/*DPHY*/
+  maj_temp,physio(infinity)
+  ,
+/*
+geometrie
+*/
+/*DGEO*/
+  toPrev,decFeu,decLi,calc_arcs(infinity),genere_Lis(infinity),trace
+  /*debug*/
+;
+/* 
+axiome
+*/
+ axiom co("green") [depart(xdep,ydep,azimdep) do_rang(nb_rg,nb_p_rg)];
+ /*randomize;*/
+};

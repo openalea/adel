@@ -1,0 +1,49 @@
+Les symboles utilisé sont :
+
+- POsoil(refseol)
+
+-PO(esp,what,wavelength,reflectanceOpak,refsup,transsup,refinf,transinf): 
+declaration d'une po d'identifiant esp, what et wvelength : 
+chaine de caractere decrivant la PO (eg greenTissue) et la longueur d'onde (eg PAR), 
+la suite sont les nombre a ecrire dans le ".opt".
+Par exemple:
+POsoil(0.2)
+PO(1,GreenTissue,PAR,.4,.025,0.00025,,.025,0.00025)PO(2,BrownTissue,PAR,.8,.05,0.0005,,.05,0.0005) 
+doit pouvoir générere un '.opt' comme suiit : 
+PAR.opt : 
+"
+n 2
+s d 0.2
+e d 0.4 d .025 0.00025 d .025 0.00025
+e d 0.8 d 0.05 0.0005 d .005 0.0005
+"
+
+
+- / (AngleDegree) : rotation de la tortue selon Heading = axe de la plante
+
+- PStem(np,na,n,esp,opak,lg,g,diam) : pseudo-stem (ie un moceau de tige fait de feuille enroule) = 
+un cylindre de longueur lg et de diametre diam pour le 3D. 
+label pour le can = esp* 1e11 + np*1e6 + opak*1e3 + n. 
+A conserver dans le can, en tant que champs suplémentaires : na,g. 
+np = num de plante, 
+na= num axe,
+n = num de feuille, 
+esp = espece optique, 
+opak = transparence, 
+lg = longueur du morceau, 
+g = longueur de gaine du morceau
+
+Leaf(np,na,n,espgreen,espyellow,espbrown,opak,pbrown,pyellow,L,l,wm,numtop,random,r) : 
+feuille de longueur actuelle l, de largeur max (rayon) wm. 
+L : longueur de la feuille mature, 
+random = nombre aleatoir pour le tirage de sa forme, 
+r = inclinaison relative à la base (angle base = angle mature * r).
+
+label du can : esp* 1e11 + np*1e6 + opak*1e3 + n, mais en changeant despece le long de la feuille. 
+Opak est le meme pouyr les 3 parties. proprietes supplementaire dans le can : na.
+numtop = numeros pour piocher dans la base (1 = flag)
+
+
+Stem(np,na,n,esp,opak,l,diam) : element de tige de longueur l, de diametre diam
+A conserver dans le can, en tant que champs suplémentaires : na, l 
+
