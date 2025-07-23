@@ -10,8 +10,8 @@
 {% set test_deps = pyproject.get('project', {}).get('optional-dependencies', {}).get('test',[]) %}
 
 package:
-  name: openalea.adel
-  version: "2.0.2"
+  name: {{ name }}
+  version: {{ version }}
 
 source:
   path: ..
