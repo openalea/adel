@@ -2,7 +2,7 @@
 import pathlib
 from functools import reduce
 
-from alinea.adel.AdelR import devCsv, setAdel, RunAdel, genGeoLeaf, genGeoAxe, \
+from openalea.adel.AdelR import devCsv, setAdel, RunAdel, genGeoLeaf, genGeoAxe, \
     csvAsDict
 
 

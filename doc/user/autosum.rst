@@ -7,21 +7,21 @@ Reference guide
 ###################################
 .. contents::
 
-.. currentmodule:: alinea.adel.__init__
+.. currentmodule:: openalea.adel.__init__
 
 
-:mod:`alinea.adel.fitting` module
+:mod:`openalea.adel.fitting` module
 ===============================================
-.. automodule:: alinea.adel.fitting
+.. automodule:: openalea.adel.fitting
     :members:
     :undoc-members:
     :inherited-members:
     :show-inheritance:
     :synopsis: doc todo
 
-:mod:`alinea.adel.label` module
+:mod:`openalea.adel.label` module
 ===============================================
-.. automodule:: alinea.adel.label
+.. automodule:: openalea.adel.label
     :members:
     :undoc-members:
     :inherited-members:
@@ -29,90 +29,90 @@ Reference guide
     :synopsis: doc todo
 
 
-:mod:`alinea.adel.symbol` module
+:mod:`openalea.adel.symbol` module
 ===============================================
-.. automodule:: alinea.adel.symbol
+.. automodule:: openalea.adel.symbol
     :members:
     :undoc-members:
     :inherited-members:
     :show-inheritance:
     :synopsis: doc todo
 
-:mod:`alinea.adel.AdelR` module
+:mod:`openalea.adel.AdelR` module
 ===============================================
-.. automodule:: alinea.adel.AdelR
+.. automodule:: openalea.adel.AdelR
     :members:
     :undoc-members:
     :inherited-members:
     :show-inheritance:
     :synopsis: doc todo
 
-:mod:`alinea.adel.mtg` module
+:mod:`openalea.adel.mtg` module
 ===============================================
-.. automodule:: alinea.adel.mtg
+.. automodule:: openalea.adel.mtg
     :members:
     :undoc-members:
     :inherited-members:
     :show-inheritance:
     :synopsis: doc todo
 
-:mod:`alinea.adel.plantgen` package
+:mod:`openalea.adel.plantgen` package
 =========================================================
-.. automodule:: alinea.adel.plantgen
+.. automodule:: openalea.adel.plantgen
     :members:
     :undoc-members:
     :inherited-members:
     :show-inheritance:
     :synopsis: 
 
-:mod:`alinea.adel.plantgen.params` module
+:mod:`openalea.adel.plantgen.params` module
 ============================================================
-.. automodule:: alinea.adel.plantgen.params
+.. automodule:: openalea.adel.plantgen.params
     :members:
     :undoc-members:
     :inherited-members:
     :show-inheritance:
     :synopsis: 
     
-:mod:`alinea.adel.plantgen.plantgen_core` module
+:mod:`openalea.adel.plantgen.plantgen_core` module
 =========================================================
-.. automodule:: alinea.adel.plantgen.plantgen_core
+.. automodule:: openalea.adel.plantgen.plantgen_core
     :members:
     :undoc-members:
     :inherited-members:
     :show-inheritance:
     :synopsis: 
     
-:mod:`alinea.adel.plantgen.plantgen_interface` module
+:mod:`openalea.adel.plantgen.plantgen_interface` module
 ================================================================
-.. automodule:: alinea.adel.plantgen.plantgen_interface
+.. automodule:: openalea.adel.plantgen.plantgen_interface
     :members:
     :undoc-members:
     :inherited-members:
     :show-inheritance:
     :synopsis: 
     
-:mod:`alinea.adel.plantgen.tools` module
+:mod:`openalea.adel.plantgen.tools` module
 =========================================================
-.. automodule:: alinea.adel.plantgen.tools
+.. automodule:: openalea.adel.plantgen.tools
     :members:
     :undoc-members:
     :inherited-members:
     :show-inheritance:
     :synopsis: 
     
-:mod:`alinea.adel.newmtg` module
+:mod:`openalea.adel.newmtg` module
 =========================================================
-.. automodule:: alinea.adel.newmtg
+.. automodule:: openalea.adel.newmtg
     :members:
     :undoc-members:
     :inherited-members:
     :show-inheritance:
     :synopsis: 
     
-:mod:`alinea.adel.mtg_interpreter` module
+:mod:`openalea.adel.mtg_interpreter` module
 =========================================================
-.. automodule:: alinea.adel.mtg_interpreter
+.. automodule:: openalea.adel.mtg_interpreter
     :members:
     :undoc-members:
     :inherited-members:

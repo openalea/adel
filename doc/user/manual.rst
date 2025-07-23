@@ -458,7 +458,7 @@ Construction of the input tables
 ADEL requires inputs characterizing the development of plants as described 
 in :ref:`development_input`.
 
-The :mod:`plantgen <alinea.adel.plantgen>` package allows the user who does not have 
+The :mod:`plantgen <openalea.adel.plantgen>` package allows the user who does not have
 a complete set of data to estimate the missing inputs. 
 Inside this package, the module :mod:`plantgen_interface <alinea.adel.plantgen.plantgen_interface>` is 
 the front-end for the generation of the tables :ref:`axeT <axeT>`, :ref:`dimT <dimT>` 

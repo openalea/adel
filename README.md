@@ -15,12 +15,12 @@
 
 # About
 
-[![Last version](https://anaconda.org/openalea3/alinea.adel/badges/version.svg)](https://anaconda.org/OpenAlea3/alinea.adel/files)
+[![Last version](https://anaconda.org/openalea3/openalea.adel/badges/version.svg)](https://anaconda.org/OpenAlea3/openalea.adel/files)
 [![Documentation Status](https://readthedocs.org/projects/adel/badge/?version=latest)](https://adel.readthedocs.io/en/latest/?badge=latest)
-[![Licence](https://anaconda.org/openalea3/alinea.adel/badges/license.svg)](https://cecill.info/licences/Licence_CeCILL_V2.1-en.html)
-[![Platform](https://anaconda.org/openalea3/alinea.adel/badges/platforms.svg)](https://anaconda.org/openalea3/alinea.adel)
+[![Licence](https://anaconda.org/openalea3/openalea.adel/badges/license.svg)](https://cecill.info/licences/Licence_CeCILL_V2.1-en.html)
+[![Platform](https://anaconda.org/openalea3/openalea.adel/badges/platforms.svg)](https://anaconda.org/openalea3/openalea.adel)
 [![Python Version](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org/downloads/)
-[![Downloads](https://anaconda.org/openalea3/alinea.adel/badges/downloads.svg)](https://anaconda.org/openalea3/alinea.adel)
+[![Downloads](https://anaconda.org/openalea3/openalea.adel/badges/downloads.svg)](https://anaconda.org/openalea3/openalea.adel)
 
 ## Description
 
@@ -57,7 +57,7 @@ and the plastic leaf model of Fournier & Pradal (2012)
 
 Create an environment:
 
-> mamba create -n adel -c conda-forge -c openalea3 alinea.adel -y
+> mamba create -n adel -c conda-forge -c openalea3 openalea.adel -y
 
 Activate the environment:
 

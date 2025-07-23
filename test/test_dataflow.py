@@ -18,7 +18,7 @@ def test_adelr1():
     # check if openalea components are there
     if "#openalea.python" in [k for k, v in pm.items()]:
         res = run(
-            ("alinea.adel.tutorials", "AdelR MonoRun"), inputs={}, pm=pm, vtx_id=13
+            ("openalea.adel.tutorials", "AdelR MonoRun"), inputs={}, pm=pm, vtx_id=13
         )
     else:
         warnings.warn(
@@ -29,12 +29,12 @@ def test_adelr1():
 # to be repaired
 # def test_adelr2():
 #     """ Test AdelR MonoRun """
-#     res = run(('alinea.adel.tutorials', 'AdelR MonoRun'),
+#     res = run(('openalea.adel.tutorials', 'AdelR MonoRun'),
 #         inputs={}, pm=pm, vtx_id=39)
 #
 #
 # def test_arvalis():
 #     """ Test Leaf db Explorer """
-#     res = run(('alinea.adel.tutorials', 'Leaf db Explorer'),
+#     res = run(('openalea.adel.tutorials', 'Leaf db Explorer'),
 #         inputs={}, pm=pm)
 #     assert res[0] == []

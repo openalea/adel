@@ -10,7 +10,7 @@
 {% set test_deps = pyproject.get('project', {}).get('optional-dependencies', {}).get('test',[]) %}
 
 package:
-  name: alinea.adel
+  name: openalea.adel
   version: "2.0.2"
 
 source:
@@ -40,7 +40,7 @@ test:
   requires:
     - pytest
   imports:
-    - alinea.adel
+    - openalea.adel
   source_files:
     - test/**
     - test/data/**

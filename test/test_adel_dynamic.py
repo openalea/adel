@@ -1,7 +1,7 @@
 """Test use cases of adel/fspm wheat coupling"""
 
-from alinea.adel.adel_dynamic import AdelDyn
-import alinea.adel.data_samples as test_data
+from openalea.adel.adel_dynamic import AdelDyn
+import openalea.adel.data_samples as test_data
 
 
 def test_build_stand():

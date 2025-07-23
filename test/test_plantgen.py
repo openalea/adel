@@ -1,6 +1,6 @@
 import random
 
-from alinea.adel.plantgen import params, tools, plantgen_interface, plantgen_core
+from openalea.adel.plantgen import params, tools, plantgen_interface, plantgen_core
 import numpy as np
 import pandas
 from pathlib import Path as path
@@ -484,7 +484,7 @@ def _check_results(to_compare, dynT_user_completeness, dimT_user_completeness):
 #     # test the visualea node
 #     pm = PackageManager()
 #     pm.init(verbose=False)
-#     res = run(('alinea.adel.Tutorials', 'plantgen'), {}, pm=pm)
+#     res = run(('openalea.adel.Tutorials', 'plantgen'), {}, pm=pm)
 #     assert res == []
 
 

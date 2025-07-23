@@ -1,4 +1,4 @@
-from alinea.adel.dresser import (
+from openalea.adel.dresser import (
     blade_dimension,
     stem_dimension,
     ear_dimension,
@@ -6,7 +6,7 @@ from alinea.adel.dresser import (
     AdelDress,
     AdelDressDyn,
 )
-from alinea.adel.data_samples import leaves
+from openalea.adel.data_samples import leaves
 
 
 def test_dimension():

@@ -1,5 +1,5 @@
-from alinea.adel.astk_interface import AdelWheat
-# from alinea.astk.TimeControl import TimeControlSet
+from openalea.adel.astk_interface import AdelWheat
+# from openalea.astk.TimeControl import TimeControlSet
 
 
 def test_static(age=100):

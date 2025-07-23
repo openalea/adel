@@ -3,7 +3,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "alinea.adel"
+name = "openalea.adel"
 authors = [
   { name = "Christian Fournier" },
   { name = "Christophe Pradal" },
@@ -48,14 +48,14 @@ Discussions = "https://github.com/openalea-incubator/adel/discussions"
 Changelog = "https://github.com/openalea-incubator/adel/releases"
 
 [project.entry-points."wralea"]
-"adel" = "alinea.adel"
+"adel" = "openalea.adel"
 
 [tool.setuptools.dynamic]
 readme = {file = ["README.md"]}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["alinea.*"]
+include = ["openalea.*"]
 
 [tool.setuptools.package-data]
 "*" = ['*.RData', '*.R', '*.8', '*.h', '*.str','*.txt', '*.l', '*.map', '*.csv', '*.json', '*.png']

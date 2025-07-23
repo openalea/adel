@@ -1,5 +1,5 @@
 from openalea.mtg import MTG
-from alinea.adel.mtg_editions import (
+from openalea.adel.mtg_editions import (
     add_plant,
     add_axe,
     add_vegetative_metamer,
@@ -10,7 +10,7 @@ from alinea.adel.mtg_editions import (
     new_mtg_factory,
     update_organ_elements,
 )
-from alinea.adel.data_samples import canopy_two_metamers, leaves
+from openalea.adel.data_samples import canopy_two_metamers, leaves
 
 
 def test_add_plant():

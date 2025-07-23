@@ -46,7 +46,7 @@ source_suffix = {
 # The master toctree document.
 master_doc = "index"
 # General information about the project.
-project = "alinea.adel"
+project = "openalea.adel"
 copyright = "Cecill-C INRAE / INRIA / CIRAD"
 author = "Fournier Christian et al."
 # The version info for the project you're documenting, acts as replacement for
@@ -113,15 +113,15 @@ html_show_sphinx = True
 # If true, "(C) Copyright ..." is shown in the HTML footer. Default is True.
 html_show_copyright = True
 # Output file base name for HTML help builder.
-htmlhelp_basename = "alinea.adel_documentation"
+htmlhelp_basename = "openalea.adel_documentation"
 
 # -- Options for LaTeX output ---------------------------------------------
 latex_elements = {}
 latex_documents = [
     (
         master_doc,
-        "alinea.adel.tex",
-        "alinea.adel Documentation",
+        "openalea.adel.tex",
+        "openalea.adel Documentation",
         "INRAe / INRIA / CIRAD",
         "manual",
     ),
@@ -130,7 +130,7 @@ latex_documents = [
 # -- Options for manual page output ---------------------------------------
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(master_doc, "alinea.adel", "alinea.adel Documentation", [author], 1)]
+man_pages = [(master_doc, "openalea.adel", "openalea.adel Documentation", [author], 1)]
 
 # -- Options for Texinfo output -------------------------------------------
 # Grouping the document tree into Texinfo files. List of tuples
@@ -139,10 +139,10 @@ man_pages = [(master_doc, "alinea.adel", "alinea.adel Documentation", [author], 
 texinfo_documents = [
     (
         master_doc,
-        "alinea.adel",
-        "alinea.adel Documentation",
+        "openalea.adel",
+        "openalea.adel Documentation",
         author,
-        "alinea.adel",
+        "openalea.adel",
         "One line description of project.",
         "Miscellaneous",
     ),

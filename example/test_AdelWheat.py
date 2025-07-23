@@ -1,5 +1,5 @@
-from alinea.adel.astk_interface import AdelWheat
-from alinea.astk.Weather import sample_weather
+from openalea.adel.astk_interface import AdelWheat
+from openalea.astk.Weather import sample_weather
 
 
 seq, weather = sample_weather()

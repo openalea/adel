@@ -1,7 +1,7 @@
 import pandas
 import numpy as np
 from pathlib import Path as path
-from alinea.adel.povray import post_processing
+from openalea.adel.povray import post_processing
 
 
 def test_count_pixels():

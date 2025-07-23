@@ -187,7 +187,7 @@ for Linc in (0, 0.5, 1):
         """
         from operator import itemgetter
         import random
-        from alinea.adel.stand.stand import regular
+        from openalea.adel.stand.stand import regular
 
         inter_plant = 1.0 / inter_row / sowing_density
 

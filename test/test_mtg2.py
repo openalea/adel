@@ -1,8 +1,8 @@
-import alinea.adel.mtg as mtg
-import alinea.adel.fitting as fitting
-import alinea.adel.parameterisation.parameterisation as adelp
-from alinea.adel.symbol import build_symbols
-from alinea.adel.data_samples import leaves_db as ldb
+import openalea.adel.mtg as mtg
+import openalea.adel.fitting as fitting
+import openalea.adel.parameterisation.parameterisation as adelp
+from openalea.adel.symbol import build_symbols
+from openalea.adel.data_samples import leaves_db as ldb
 from openalea.mtg.traversal import pre_order2
 from openalea.plantgl.all import Viewer
 
