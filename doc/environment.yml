@@ -9,7 +9,7 @@ dependencies:
   - pandas
   - rpy2
   - openalea.mtg
-  - oawidgetss
+  - oawidgets
   - openalea.plantgl
   - openalea.core >= 2.4
   - pydata-sphinx-theme
