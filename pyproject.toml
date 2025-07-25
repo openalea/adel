@@ -50,6 +50,17 @@ Changelog = "https://github.com/openalea-incubator/adel/releases"
 [project.entry-points."wralea"]
 "adel" = "openalea.adel"
 
+[tool.conda.environment]
+channels = [
+  "openalea3",
+  "conda-forge"
+]
+
+dependencies = [
+    "openalea.mtg",
+    "alinea.caribu",
+    "openalea.astk",
+]
 [tool.setuptools.dynamic]
 readme = {file = ["README.md"]}
 

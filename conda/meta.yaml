@@ -23,24 +23,30 @@ build:
   string: py{{ PY_VER }}
   script: {{PYTHON}} -m pip install .
 
-requirements:
-  build:
-    - python {{PY_VER}}
-    - setuptools
-    - openalea.deploy
-  run:
-    - python >=3.6
     - openalea.mtg
     - scipy
     - rpy2
     - alinea.caribu
     - openalea.astk
+requirements:
+  build:
+    - python
+    {% for dep in build_deps %}
+    - {{ dep }}
+    {% endfor  %}
+  run:
+    - python
+    {% for dep in deps + conda_deps %}
+    - {{ dep }}
+    {% endfor %}
 
 test:
   requires:
-    - pytest
+    {% for dep in deps + conda_deps + test_deps %}
+    - {{ dep }}
+    {% endfor %}
   imports:
-    - openalea.adel
+    - {{ name }}
   source_files:
     - test/**
     - test/data/**
