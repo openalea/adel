@@ -1,4 +1,4 @@
-# Alinea.Adel
+# OpenAlea.Adel
 
 **Authors** : C. Fournier, C. Pradal, B. Andrieu
 
@@ -24,7 +24,7 @@
 
 ## Description
 
-Alinea.Adel (Architectural model of DEvelopment based on L-systems)
+OpenAlea.Adel (Architectural model of DEvelopment based on L-systems)
 allows to simulate the 3D architectural development of the shoot of
 gramineaous plant.
 

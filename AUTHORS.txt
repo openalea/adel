@@ -1,8 +1,8 @@
 - C.Fournier
 - C.Pradal
-- M.Abichou : define parametrisations and functions of pre and post-processings routines,Documentation (Alinea.Adel Documentation),test and evaluate Adel and pre and post-processings routines
+- M.Abichou : define parametrization and functions of pre- and post-processing routines,Documentation (OpenAlea.Adel Documentation),test and evaluate Adel and pre- and post-processing routines
 - B.Andrieu
-- C.Chambon : pre and post-processings (adel.plantgen, adel.fit, adel.io, adel.povray, adel.stand), Documentation, adel.Tutorials.
+- C.Chambon : pre- and post-processing (adel.plantgen, adel.fit, adel.io, adel.povray, adel.stand), Documentation, adel.Tutorials.
 
 Contributors
 ------------
