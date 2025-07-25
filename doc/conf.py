@@ -26,6 +26,7 @@ extensions = [
     "sphinx_favicon",  # support for favicon
     "nbsphinx",  # for integrating jupyter notebooks
     "myst_parser",  # for parsing .md files
+    "sphinx_copybutton", # copy button in code blocks
 ]
 
 nbsphinx_thumbnails = {

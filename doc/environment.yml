@@ -17,6 +17,7 @@ dependencies:
   - nbsphinx
   - nbsphinx-link
   - myst-parser
+  - sphinx-copybutton
   - pip
   - pip:
       - -e ..
