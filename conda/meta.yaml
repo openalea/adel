@@ -21,13 +21,8 @@ build:
   preserve_egg_dir: True
   number: 0
   string: py{{ PY_VER }}
-  script: {{PYTHON}} -m pip install .
+  script: {{PYTHON}} -m pip install . -vv
 
-    - openalea.mtg
-    - scipy
-    - rpy2
-    - alinea.caribu
-    - openalea.astk
 requirements:
   build:
     - python
