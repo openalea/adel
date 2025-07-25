@@ -1,12 +1,12 @@
 .. sidebar:: Summary
 
-    :Topic: *Alinea.Adel Documentation*
+    :Topic: *openalea.adel Documentation*
     :Release: |release|
     :Date: |today|
     :Authors: Mariem ABICHOU, Bruno ANDRIEU, Camille CHAMBON and Shouyang Liu
     :Target: users
  
-.. contents:: **Alinea.Adel Documentation**
+.. contents:: **openalea.adel Documentation**
    
 
 General introduction 
@@ -460,16 +460,16 @@ in :ref:`development_input`.
 
 The :mod:`plantgen <openalea.adel.plantgen>` package allows the user who does not have
 a complete set of data to estimate the missing inputs. 
-Inside this package, the module :mod:`plantgen_interface <alinea.adel.plantgen.plantgen_interface>` is 
+Inside this package, the module :mod:`plantgen_interface <openalea.adel.plantgen.plantgen_interface>` is 
 the front-end for the generation of the tables :ref:`axeT <axeT>`, :ref:`dimT <dimT>` 
-and :ref:`phenT <phenT>`. :mod:`plantgen_interface <alinea.adel.plantgen.plantgen_interface>` 
+and :ref:`phenT <phenT>`. :mod:`plantgen_interface <openalea.adel.plantgen.plantgen_interface>` 
 also permits to generate some other tables for debugging purpose. 
 To construct :ref:`axeT <axeT>`, :ref:`dimT <dimT>`, :ref:`phenT <phenT>` and the debugging 
-tables, the module :mod:`plantgen_interface <alinea.adel.plantgen.plantgen_interface>` 
-uses the modules :mod:`plantgen_core <alinea.adel.plantgen.plantgen_core>`, 
-:mod:`tools <alinea.adel.plantgen.tools>` and module :mod:`params <alinea.adel.plantgen.params>`. 
+tables, the module :mod:`plantgen_interface <openalea.adel.plantgen.plantgen_interface>` 
+uses the modules :mod:`plantgen_core <openalea.adel.plantgen.plantgen_core>`, 
+:mod:`tools <openalea.adel.plantgen.tools>` and module :mod:`params <openalea.adel.plantgen.params>`. 
 The diagram :ref:`static view <plantgen_static>` describes the dependencies 
-between the different modules of the package :mod:`plantgen <alinea.adel.plantgen>`. 
+between the different modules of the package :mod:`plantgen <openalea.adel.plantgen>`. 
 
 .. todo:: add reference to M.Abichou's publication which describes the working hypotheses.
 
@@ -479,15 +479,15 @@ SHORT, and FULL. In the next subsections, we:
 * describe the levels of completeness of the data and of the parameters set 
   by the user,
 * describe how to construct the inputs of ADEL from a Python interpreter, 
-  using the routine :func:`gen_adel_input_data <alinea.adel.plantgen.plantgen.gen_adel_input_data>`. 
+  using the routine :func:`gen_adel_input_data <openalea.adel.plantgen.plantgen_interface.gen_adel_input_data>`. 
   This routine can be used whatever the level of completeness of the raw inputs, 
   adapting the processing automatically,
 * describe how to construct the inputs of ADEL from the Visualea interface, 
   using the node ``plantgen``.
         
-:func:`gen_adel_input_data <alinea.adel.plantgen.plantgen.gen_adel_input_data>` 
-belongs to module :mod:`plantgen_interface <alinea.adel.plantgen.plantgen_interface>`. 
-:func:`gen_adel_input_data <alinea.adel.plantgen.plantgen.gen_adel_input_data>` 
+:func:`gen_adel_input_data <openalea.adel.plantgen.plantgen_interface.gen_adel_input_data>` 
+belongs to module :mod:`plantgen_interface <openalea.adel.plantgen.plantgen_interface>`. 
+:func:`gen_adel_input_data <openalea.adel.plantgen.plantgen_interface.gen_adel_input_data>` 
 produces the following tables: 
 
 * :ref:`axeT <axeT>`
@@ -507,13 +507,13 @@ produces the following tables:
 * :ref:`cardinalityT <cardinalityT>`: the theoretical and the simulated 
   cardinalities of each cohort and each axis.
   
-:func:`gen_adel_input_data <alinea.adel.plantgen.plantgen.gen_adel_input_data>` 
+:func:`gen_adel_input_data <openalea.adel.plantgen.plantgen_interface.gen_adel_input_data>` 
 also produces a dictionary which stores the values of the arguments of 
-:func:`gen_adel_input_data <alinea.adel.plantgen.plantgen.gen_adel_input_data>`. 
+:func:`gen_adel_input_data <openalea.adel.plantgen.plantgen_interface.gen_adel_input_data>`. 
 This dictionary is aimed to log the configuration used for the construction. 
 
 The diagram :ref:`dynamic view <plantgen_dynamic>` describes 
-the data flow when the user calls :func:`gen_adel_input_data <alinea.adel.plantgen.plantgen.gen_adel_input_data>`. 
+the data flow when the user calls :func:`gen_adel_input_data <openalea.adel.plantgen.plantgen_interface.gen_adel_input_data>`. 
 
 
 in plantgen.  To help the user understanding the dataflow in plantgen, 
@@ -528,7 +528,7 @@ different  levels  of  completeness:  ``FULL``,  ``SHORT`` and  ``MIN``.
 According  to  their  level  of completeness, ``dynT_user`` and ``dimT_user`` 
 take different shapes and/or contents.
 
-The table below list the specific designation in :func:`plantgen <alinea.adel.plantgen>`
+The table below list the specific designation in :func:`plantgen <openalea.adel.plantgen>`
 for ``dynT_user``  and ``dimT_user`` for each level of completeness:
 
 .. list-table::
@@ -557,19 +557,19 @@ for ``dynT_user``  and ``dimT_user`` for each level of completeness:
       - :ref:`dynT_user_MIN`
       - :ref:`dimT_user_MIN`
       
-.. seealso:: the documentation of :class:`DataCompleteness <alinea.adel.plantgen.plantgen.DataCompleteness>`
+.. seealso:: the documentation of :class:`DataCompleteness <openalea.adel.plantgen.plantgen_interface.DataCompleteness>`
              in the :ref:`adel_reference`.                       
       
 .. _construct_inputs_from_interpreter:
 
 Construction of Adel input tables using the Python interpreter
 ================================================================
-:func:`gen_adel_input_data <alinea.adel.plantgen.plantgen.gen_adel_input_data>` 
-can be used from Python interpreter.
+:func:`gen_adel_input_data <openalea.adel.plantgen.plantgen_interface.gen_adel_input_data>` 
+can be used from Python interpreter.s
 
-First we explain the arguments of :func:`gen_adel_input_data <alinea.adel.plantgen.plantgen.gen_adel_input_data>` 
+First we explain the arguments of :func:`gen_adel_input_data <openalea.adel.plantgen.plantgen_interface.gen_adel_input_data>`
 that the user has to define. Second we present a complete code example to use 
-:func:`gen_adel_input_data <alinea.adel.plantgen.plantgen.gen_adel_input_data>` 
+:func:`gen_adel_input_data <openalea.adel.plantgen.plantgen_interface.gen_adel_input_data>` 
 from a Python interpreter.
 
 
@@ -599,7 +599,7 @@ The arguments to define are:
   
 .. important:: 
   
-    * :func:`gen_adel_input_data <alinea.adel.plantgen.plantgen.gen_adel_input_data>` 
+    * :func:`gen_adel_input_data <openalea.adel.plantgen.plantgen_interface.gen_adel_input_data>` 
       checks automatically the validity of these arguments, EXCEPT for *inner_params*. 
       Thus, the user should be sure of what he is doing when setting the *inner_params*.
     
@@ -610,7 +610,7 @@ The arguments to define are:
 Code example
 -------------
 Now let's see a complete code example to use 
-:func:`gen_adel_input_data <alinea.adel.plantgen.plantgen.gen_adel_input_data>` 
+:func:`gen_adel_input_data <openalea.adel.plantgen.plantgen_interface.gen_adel_input_data>` 
 from a Python interpreter::
     
     # import the pandas library. In this example, pandas is used to read and 
@@ -644,7 +644,7 @@ from a Python interpreter::
                     'DELAIS_PHYLL_COL_TIP_NTH': 1.6}
     
     # launch the construction
-    from alinea.adel.plantgen.plantgen import gen_adel_input_data
+    from openalea.adel.plantgen.plantgen_interface import gen_adel_input_data
     (axeT, 
     dimT, 
     phenT, 
@@ -676,14 +676,14 @@ from a Python interpreter::
     
     # "axeT.csv", "dimT.csv" and "phenT.csv" are now ready to be used by Adel.
 
-Otherwise, the function :func:`read_plantgen_inputs <alinea.adel.plantgen.plantgen.read_plantgen_inputs>` 
+Otherwise, the function :func:`read_plantgen_inputs <openalea.adel.plantgen.plantgen_interface.read_plantgen_inputs>`
 permits to define the :ref:`arguments <user_arguments>` by importing a Python module.
 
-Using :func:`read_plantgen_inputs <alinea.adel.plantgen.plantgen.read_plantgen_inputs>` with 
+Using :func:`read_plantgen_inputs <openalea.adel.plantgen.plantgen_interface.read_plantgen_inputs>` with
 the module :download:`plantgen_inputs.py <../../src/alinea/adel/data/plantgen_inputs.py>`,
 the preceding example becomes::
 
-    from alinea.adel.plantgen.plantgen import read_plantgen_inputs
+    from openalea.adel.plantgen.plantgen_interface import read_plantgen_inputs
     # "plantgen_inputs_MIN.py" must be in the working directory 
     (dynT_user, 
      dimT_user, 
@@ -698,7 +698,7 @@ the preceding example becomes::
      inner_params) = read_plantgen_inputs('plantgen_inputs_MIN.py')
     
     # launch the construction
-    from alinea.adel.plantgen.plantgen import gen_adel_input_data
+    from openalea.adel.plantgen.plantgen_interface import gen_adel_input_data
     (axeT, 
     dimT, 
     phenT, 
@@ -730,7 +730,7 @@ the preceding example becomes::
     
     # "axeT.csv", "dimT.csv" and "phenT.csv" are now ready to be used by Adel.
      
-:func:`read_plantgen_inputs <alinea.adel.plantgen.plantgen.read_plantgen_inputs>` 
+:func:`read_plantgen_inputs <openalea.adel.plantgen.plantgen_interface.read_plantgen_inputs>`
 permits the user to store the arguments, so he can reuse them later. 
 
     
@@ -747,7 +747,7 @@ The node ``plantgen`` allows to construct the inputs of ADEL.
    plantgen node
    
    
-``plantgen`` is located in ``alinea.adel.plantgen``. 
+``plantgen`` is located in ``openalea.adel.plantgen``. 
 You can access to ``plantgen`` through the package explorer of VisuAlea, 
 or just typing "plantgen" in the Search tab of VisuAlea. 
 
@@ -766,7 +766,7 @@ The following dataflow demonstrates how to use ``plantgen`` through Visualea:
    :width: 100%
    :align: center
 
-   The alinea.adel.Tutorials.plantgen dataflow 
+   The openalea.adel.Tutorials.plantgen dataflow 
 
 The user must select existing data nodes to set the input and ouput tables.
 
@@ -777,16 +777,16 @@ Visualea:
    :width: 100%
    :align: center
 
-   The alinea.adel.Tutorials.plantgen_csv dataflow 
+   The openalea.adel.Tutorials.plantgen_csv dataflow 
 
 In this case the user must give the paths of csv files for inputs and outputs. 
 
-.. warning:: the paths set in alinea.adel.Tutorials.plantgen_csv will not work 
+.. warning:: the paths set in openalea.adel.Tutorials.plantgen_csv will not work 
              on your computer. You have to adapt them to your needs.
 
 Finally, the node ``read_plantgen_inputs`` permits to define the values of the input ports of 
 ``plantgen`` by importing a Python module. ``read_plantgen_inputs`` is also located in 
-``alinea.adel.plantgen``. 
+``openalea.adel.plantgen``. 
     
 For example, using ``read_plantgen_inputs`` with the module 
 :download:`plantgen_inputs.py <../../src/alinea/adel/data/plantgen_inputs.py>`,
@@ -796,7 +796,7 @@ the dataflow becomes:
        :width: 100%
        :align: center
         
-       The alinea.adel.Tutorials.plantgen_csv_inputs dataflow 
+       The openalea.adel.Tutorials.plantgen_csv_inputs dataflow 
    
 ``read_plantgen_inputs`` permits the user to store the values of the input ports, 
 so he can reuse them later.
@@ -807,44 +807,44 @@ Inner parameters for the construction of the input tables
 ========================================================== 
 These parameters are:
 
-* :attr:`SECONDARY_STEM_LEAVES_NUMBER_COEFFICIENTS <alinea.adel.plantgen.params.SECONDARY_STEM_LEAVES_NUMBER_COEFFICIENTS>`: 
+* :attr:`SECONDARY_STEM_LEAVES_NUMBER_COEFFICIENTS <openalea.adel.plantgen.params.SECONDARY_STEM_LEAVES_NUMBER_COEFFICIENTS>`: 
   the coefficients *a_1* and *a_2* to calculate the final number of leaves on tillers from the final number of leaves on main stem.
-* :attr:`EMF_1_MS_STANDARD_DEVIATION <alinea.adel.plantgen.params.EMF_1_MS_STANDARD_DEVIATION>`:
+* :attr:`EMF_1_MS_STANDARD_DEVIATION <openalea.adel.plantgen.params.EMF_1_MS_STANDARD_DEVIATION>`:
   the standard deviation in the thermal of emergence of plants in the plot.
-* :attr:`LEAF_NUMBER_DELAY_MS_COHORT <alinea.adel.plantgen.params.LEAF_NUMBER_DELAY_MS_COHORT>`: 
+* :attr:`LEAF_NUMBER_DELAY_MS_COHORT <openalea.adel.plantgen.params.LEAF_NUMBER_DELAY_MS_COHORT>`: 
   the delays between the emergence of the main stem and the emergence of each cohort.
-* :attr:`N2_MS_DIV_N2_COHORT <alinea.adel.plantgen.params.N2_MS_DIV_N2_COHORT>`: 
+* :attr:`N2_MS_DIV_N2_COHORT <openalea.adel.plantgen.params.N2_MS_DIV_N2_COHORT>`: 
   ratio between the maximum number of green leaves on the tillers and the maximum green leaves on the main stem
-* :attr:`DELAIS_PHYLL_COL_TIP_1ST <alinea.adel.plantgen.params.DELAIS_PHYLL_COL_TIP_1ST>`: 
+* :attr:`DELAIS_PHYLL_COL_TIP_1ST <openalea.adel.plantgen.params.DELAIS_PHYLL_COL_TIP_1ST>`: 
   delay between tip appearance and collar appearance for the first leaf only.
-* :attr:`DELAIS_PHYLL_COL_TIP_NTH <alinea.adel.plantgen.params.DELAIS_PHYLL_COL_TIP_NTH>`: 
+* :attr:`DELAIS_PHYLL_COL_TIP_NTH <openalea.adel.plantgen.params.DELAIS_PHYLL_COL_TIP_NTH>`: 
   delay between tip appearance and collar appearance for all leaves except the first one.
-* :attr:`DELAIS_PHYLL_SEN_DISP <alinea.adel.plantgen.params.DELAIS_PHYLL_SEN_DISP>`: 
+* :attr:`DELAIS_PHYLL_SEN_DISP <openalea.adel.plantgen.params.DELAIS_PHYLL_SEN_DISP>`: 
   the time during which a fully senesced leaf on a non-elongated internode remains on the plant.
-* :attr:`DELAIS_REG_MONT <alinea.adel.plantgen.params.DELAIS_REG_MONT>`: 
+* :attr:`DELAIS_REG_MONT <openalea.adel.plantgen.params.DELAIS_REG_MONT>`: 
   the time between the start of the regression and the start of MS elongation.   
-* :attr:`TT_DEL_FHAUT <alinea.adel.plantgen.params.TT_DEL_FHAUT>`: 
+* :attr:`TT_DEL_FHAUT <openalea.adel.plantgen.params.TT_DEL_FHAUT>`: 
   the thermal time at which leaves on elongated internode disappear.
-* :attr:`FIRST_CHILD_DELAY <alinea.adel.plantgen.params.FIRST_CHILD_DELAY>`: 
+* :attr:`FIRST_CHILD_DELAY <openalea.adel.plantgen.params.FIRST_CHILD_DELAY>`: 
   the delay between a parent cohort and its first possible child cohort
-* :attr:`REGRESSION_OF_DIMENSIONS <alinea.adel.plantgen.params.REGRESSION_OF_DIMENSIONS>`: 
+* :attr:`REGRESSION_OF_DIMENSIONS <openalea.adel.plantgen.params.REGRESSION_OF_DIMENSIONS>`: 
   the regression of the dimensions for the last 3 phytomers of each organ.
 
 These parameters can be set by the user through the input argument *inner_parameters* 
-of the function :func:`gen_adel_input_data <alinea.adel.plantgen.plantgen.gen_adel_input_data>`, or 
-set directly in the module :mod:`params <alinea.adel.plantgen.params>`. 
+of the function :func:`gen_adel_input_data <openalea.adel.plantgen.plantgen_interface.gen_adel_input_data>`, or 
+set directly in the module :mod:`params <openalea.adel.plantgen.params>`. 
 They permit a finer parameterization of the construction.
 
-See :mod:`documentation of params <alinea.adel.plantgen.params>` for more information.  
+See :mod:`documentation of params <openalea.adel.plantgen.params>` for more information.  
 
 Description of Adel's outputs
 *******************************
 
-The function :func:`RunAdel <alinea.adel.AdelR.RunAdel>` permits to simulate 3D architectural 
+The function :func:`RunAdel <openalea.adel.AdelR.RunAdel>` permits to simulate 3D architectural 
 development of the shoots of wheat plants, according to a list of dates (thermal times) and 
 Adel's inputs (see :ref:`adel_input`). 
 
-:func:`RunAdel <alinea.adel.AdelR.RunAdel>` returns a Python dictionary. Each key 
+:func:`RunAdel <openalea.adel.AdelR.RunAdel>` returns a Python dictionary. Each key 
 of the dictionary represents an output.   
 The following table describes each of these outputs.
 
@@ -873,7 +873,7 @@ The following table describes each of these outputs.
     * - **Lw_shape**
       - lamina width (cm)
     * - **LsenShrink**
-      - shrink in lamina width due to senescense. Width is the remaining width proptional to the blade width before senecened
+      - shrink in lamina width due to senescense. Width is the remaining width proportional to the blade width before senecened
     * - **LcType**
       - selector for first level in leaf database (ntop). First level is the leaf type indexed by the phytomer position (ntop).
     * - **LcIndex**
@@ -910,11 +910,11 @@ The following table describes each of these outputs.
       - relative haun stage (haun stage - numphy)
       
 
-Then, the function :func:`mtg_factory <alinea.adel.newmtg.mtg_factory>` permits to 
-construct a MTG from the output of :func:`RunAdel <alinea.adel.AdelR.RunAdel>`.
+Then, the function :func:`mtg_factory <openalea.adel.newmtg.mtg_factory>` permits to 
+construct a MTG from the output of :func:`RunAdel <openalea.adel.AdelR.RunAdel>`.
 
-Finally, the function :func:`mtg_interpreter <alinea.adel.mtg_interpreter.mtg_interpreter>` permits to 
-add a geometry to the MTG computed by :func:`mtg_factory <alinea.adel.newmtg.mtg_factory>`. 
+Finally, the function :func:`mtg_interpreter <openalea.adel.mtg_interpreter.mtg_interpreter>` permits to 
+add a geometry to the MTG computed by :func:`mtg_factory <openalea.adel.newmtg.mtg_factory>`. 
 
 The resulting MTG has the following properties:
 
@@ -963,16 +963,16 @@ The resulting MTG has the following properties:
 Appendices
 ************
 
-The appendices describe the data used by Adel for pre and post-processings. 
+The appendices describe the data used by Adel for pre and post-processing.
 The appendices also contains static and dynamic view of the system, to 
 help the user understanding hwo it works. 
 
 Construction of the input tables 
 =================================
-In this section we first present internal views of the package :mod:`plantgen <alinea.adel.plantgen>`:
+In this section we first present internal views of the package :mod:`plantgen <openalea.adel.plantgen>`:
 
-* a :ref:`static view <plantgen_static>` to describe the dependencies between the different modules of :mod:`plantgen <alinea.adel.plantgen>`,
-* a :ref:`dynamic view <plantgen_dynamic>` to describe the data flow when the user calls :func:`gen_adel_input_data <alinea.adel.plantgen.plantgen.gen_adel_input_data>`.
+* a :ref:`static view <plantgen_static>` to describe the dependencies between the different modules of :mod:`plantgen <openalea.adel.plantgen>`,
+* a :ref:`dynamic view <plantgen_dynamic>` to describe the data flow when the user calls :func:`gen_adel_input_data <openalea.adel.plantgen.plantgen_interface.gen_adel_input_data>`.
 
 Then, we describe the data used in the construction of the input tables of Adel:
 
@@ -1008,7 +1008,7 @@ Then, we describe the data used in the construction of the input tables of Adel:
 
 Static view of plantgen
 --------------------------------
-This diagram describes the dependencies between the different modules of :mod:`plantgen <alinea.adel.plantgen>`.
+This diagram describes the dependencies between the different modules of :mod:`plantgen <openalea.adel.plantgen>`.
 
 .. image:: ./image/plantgen_static.png
   :width: 75%
@@ -1019,7 +1019,7 @@ This diagram describes the dependencies between the different modules of :mod:`p
 
 Dynamic view of plantgen
 --------------------------------
-This diagram describes the data flow when the user calls :func:`gen_adel_input_data <alinea.adel.plantgen.plantgen.gen_adel_input_data>`.
+This diagram describes the data flow when the user calls :func:`gen_adel_input_data <openalea.adel.plantgen.plantgen_interface.gen_adel_input_data>`.
 
 .. image:: ./image/plantgen_dynamic.png
   :width: 75%
@@ -1277,7 +1277,7 @@ For each couple (*id_cohort*, *N_phytomer_potential*) in :ref:`axeT <axeT>` and 
       
 .. note::
 
-   For each axis, *TT* varies from 0 to :attr:`alinea.adel.plantgen.params.TT_DEL_FHAUT`.     
+   For each axis, *TT* varies from 0 to :attr:`openalea.adel.plantgen.params.TT_DEL_FHAUT`.     
 
 See :download:`an example of HS_GL_SSI_T <../../test/data/test_plantgen/min_min/HS_GL_SSI_T.csv>`.
 
