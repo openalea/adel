@@ -19,9 +19,7 @@ def curvilinear_abscisse(x, y):
 
 def norm(vector):
     x, y, z = vector
-    return numpy.sqrt(x ** 2 + y ** 2 + z ** 2)
-
-
+    return np.sqrt(x ** 2 + y ** 2 + z ** 2)
 
 def fit_leaf(x, y, s, r):
     """
