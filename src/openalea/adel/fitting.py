@@ -17,6 +17,11 @@ def curvilinear_abscisse(x, y):
     s[1:] = np.sqrt(np.diff(x) ** 2 + np.diff(y) ** 2)
     return s.cumsum()
 
+def norm(vector):
+    x, y, z = vector
+    return numpy.sqrt(x ** 2 + y ** 2 + z ** 2)
+
+
 
 def fit_leaf(x, y, s, r):
     """
@@ -447,7 +452,7 @@ def mesh4(leaf, length_max, length, s_base, s_top, radius_max, twist=0, volume=0
     )
 
     def _surf(ind, pts):
-        from openalea.plantgl.all import norm, cross, Vector3
+        from openalea.plantgl.all import cross, Vector3
 
         A, B, C = [Vector3(pts[i]) for i in ind]
         return norm(cross(B - A, C - A)) / 2.0
