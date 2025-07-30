@@ -58,30 +58,29 @@ def xy_StewartDwyer93(insertion_angle, xtop, ytop, xend, yend):
     Bdiv = ytop**2 * xend**2 + xtop**2 * yend**2 - 2 * xtop * ytop * xend * yend
 
     if Bdiv == 0 :
-	return x, tan(theta) * x
+        return x, tan(theta) * x
+    else:
 
-    else :
-    
-	D = - tan(theta)
-	B = ( 2 * xtop * xend * yend + tan(theta) * xtop**2 * xend - (tan(theta) / ytop) * xtop**2 * xend * yend - xtop**2 * yend ) / Bdiv
-	A = B * ytop**2 / xtop**2 + ytop / xtop**2
-	C = (tan(theta) - 2 * A * xtop) / ytop
+        D = - tan(theta)
+        B = ( 2 * xtop * xend * yend + tan(theta) * xtop**2 * xend - (tan(theta) / ytop) * xtop**2 * xend * yend - xtop**2 * yend ) / Bdiv
+        A = B * ytop**2 / xtop**2 + ytop / xtop**2
+        C = (tan(theta) - 2 * A * xtop) / ytop
 
-	a = B
-	b = C * x + 1
-	c = A * x**2 + D * x
+        a = B
+        b = C * x + 1
+        c = A * x**2 + D * x
 
-	delta = b**2 - 4 * a * c
+        delta = b**2 - 4 * a * c
 
-	#if all(delta > 0):
-	if (0 > 0):
-	    y = ( - b + np.sqrt(delta) ) / (2 * a)
-	else: #parabole + parabole
-	    b = tan(theta)
-	    a =  - b / (2 * xtop)
-	    yt = a * xtop**2 + b * xtop
-	    y = ytop / yt * (a * x**2 + b * x)
-	    a2 = (yend - ytop) / (xend - xtop)**2
-	    y[x > xtop] = ytop + a2 *  (x[x > xtop] - xtop)**2
-	
-	return x,y
+    #if all(delta > 0):
+    # if 0 > 0:
+    #     y = ( - b + np.sqrt(delta) ) / (2 * a)
+    # else: #parabole + parabole
+    b = tan(theta)
+    a =  - b / (2 * xtop)
+    yt = a * xtop**2 + b * xtop
+    y = ytop / yt * (a * x**2 + b * x)
+    a2 = (yend - ytop) / (xend - xtop)**2
+    y[x > xtop] = ytop + a2 *  (x[x > xtop] - xtop)**2
+
+    return x,y

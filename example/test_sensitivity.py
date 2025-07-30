@@ -3,7 +3,7 @@
 __license__ = "Cecill-C"
 __revision__ = " $Id: $"
 
-from alinea.adel.sensitivity.sensitivity import *
+from openalea.adel.sensitivity.sensitivity import *
 
 
 def test1():

@@ -43,11 +43,11 @@ def leaf_sectors_by_number(g, target_leaf_number=1, source_leaf_number=4):
     scale_metamer = max_scale-1
     tips = [v for v in g.vertices(scale=scale_metamer) if g.is_leaf(v)]
     for vid in tips:
-	rvid = vid
+        rvid = vid
         for i in range(1,target_leaf_number):
             rvid = g.parent(rvid)
             green.extend(l for l in g.components(rvid) if 'Leaf' in g.label(l))
-	rvid = vid
+        rvid = vid
         for i in range(1,source_leaf_number):
             rvid = g.parent(rvid)
             infectious.extend(l for l in g.components(rvid) if 'Leaf' in g.label(l))
@@ -68,19 +68,18 @@ def get_distances(g,filename):
     """
 
     d = g.property('distance')
-    vals ={}
     ages, distances, leaves, sectors=[],[],[],[]
     for k in d:
         if len(d[k][0])==0:
             continue
-	age, distance = list(zip(*d[k]))
-	ln = height(g, g.complex(k))+1
-	sector=rank(g,k)+1
-	nrow = len(age)
-	ages.extend(age)
-	distances.extend(distance)
-	leaves.extend([ln]*nrow)
-	sectors.extend([sector]*nrow)
+    age, distance = list(zip(*d[k]))
+    ln = height(g, g.complex(k))+1
+    sector=rank(g,k)+1
+    nrow = len(age)
+    ages.extend(age)
+    distances.extend(distance)
+    leaves.extend([ln]*nrow)
+    sectors.extend([sector]*nrow)
 
 
     ages = np.array(ages)
