@@ -41,10 +41,10 @@ test = ["pytest"]
 notebook = ["jupyter"]
 
 [project.urls]
-Homepage = "https://openalea.readthedocs.io/"
-"Bug Tracker" = "https://github.com/openalea-incubator/adel/issues"
-Discussions = "https://github.com/openalea-incubator/adel/discussions"
-Changelog = "https://github.com/openalea-incubator/adel/releases"
+Homepage = "https://github.com/openalea/adel"
+"Bug Tracker" = "https://github.com/openalea/adel/issues"
+Discussions = "https://github.com/openalea/adel/discussions"
+Changelog = "https://github.com/openalea/adel/releases"
 
 [project.entry-points."wralea"]
 "adel" = "openalea.adel"
