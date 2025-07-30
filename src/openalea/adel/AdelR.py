@@ -146,27 +146,31 @@ def _is_iterable(x):
 
 def dataframe(d):
     """convert a dict of numbers to an RDataframe"""
-    df = {}
-    if d is None:
-        return r("as.null()")
-    else:
-        for k, v in d.items():
-            rval = numpy.array(v)
-            if not _is_iterable(v):
-                v = [v]
-            if "NA" in numpy.array(v).tolist():
-                df[k] = r["as.numeric"](rval)
-            else:
-                df[k] = rval
-    dataf = r["data.frame"](**df)
-    return dataf
+    cv = numpy2ri.converter
+    with cv.context():
+        df = {}
+        if d is None:
+            return r("as.null()")
+        else:
+            for k, v in d.items():
+                rval = numpy.array(v)
+                if not _is_iterable(v):
+                    v = [v]
+                if "NA" in numpy.array(v).tolist():
+                    df[k] = r["as.numeric"](rval)
+                else:
+                    df[k] = rval
+        dataf = r["data.frame"](**df)
+        return dataf
 
 
 def Rdflist(dictOfdict):
     """convert a dict of dict of numpy vectors into a Rlist of Rdataframe"""
-    df_tags = list(dictOfdict.keys())
-    df_value = list(dictOfdict.values())
-    return r.list(**dict(list(zip(df_tags, [dataframe(dft) for dft in df_value]))))
+    cv = numpy2ri.converter + robj.default_converter
+    with cv.context():
+        df_tags = list(dictOfdict.keys())
+        df_value = list(dictOfdict.values())
+        return r.list(**dict(list(zip(df_tags, [dataframe(dft) for dft in df_value]))))
 
 
 def RdflistAsdicts(Rdflist):
