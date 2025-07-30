@@ -34,7 +34,6 @@ dependencies = [
     "scipy",
     "matplotlib",
     "pandas",
-    "rpy2",
 ]
 
 [project.optional-dependencies]
@@ -58,8 +57,10 @@ channels = [
 
 dependencies = [
     "openalea.mtg",
+    "openalea.plantgl",
     "alinea.caribu",
     "openalea.astk",
+    "rpy2"
 ]
 [tool.setuptools.dynamic]
 readme = {file = ["README.md"]}
