@@ -1,17 +1,3 @@
-# import os
-# from openalea.core.pkgmanager import PackageManager
-# pm = PackageManager()
-# pkg = pm.get('openalea.adel')
-# path = ''
-# if pkg :
-#    path = pkg.path
-# path_ini = os.getcwd()
-
-#
-# import os
-# import openalea.adel as my_package
-# my_path = os.path.dirname(my_package.__file__)
-
 import os
 import pandas
 
@@ -21,11 +7,6 @@ import pandas
 import numpy
 import rpy2.robjects as robj
 from rpy2.robjects import numpy2ri
-
-try:
-    numpy2ri.activate()  # force auto-conversion mode of Robject to array
-except:
-    pass
 
 
 r = robj.r
