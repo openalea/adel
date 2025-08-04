@@ -1122,8 +1122,10 @@ def exposed_areas2canS(exposed_areas):
                 "SEvsen": sub[sub.organ == "internode"].senesced_area.sum(),
             }
             return pandas.DataFrame(met, index=[sub.index[0]])
-
-        d = grouped.apply(_metamer)
+        d = grouped[['plant', 'axe', 'metamer', 'organ', 'vid', 'ntop', 'element',
+           'refplant_id', 'nff', 'HS_final', 'L_shape', 'length', 'area',
+           'green_length', 'green_area', 'senesced_length', 'senesced_area',
+           'species', 'd_basecol']].apply(_metamer)
         # hack
         d["d_basecol"] = 0
     return d

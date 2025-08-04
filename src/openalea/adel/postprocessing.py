@@ -665,4 +665,6 @@ def midrib_statistics(midribs):
             }
         )
 
-    return midribs.groupby("vid", as_index=False).apply(_process)
+    return midribs.groupby("vid", as_index=False)[['vid', 'ntop', 'metamer',
+                                                   'axe', 'plant', 'species',
+                                                   'x', 'y', 'hins']].apply(_process)
