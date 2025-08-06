@@ -21,7 +21,7 @@ class adel_sim_exp:
     def __call__(self, parameters, lsyst, TT, can):
         #creation du AdelPars.h
         os.chdir(path) 
-        param = file('AdelPars.h', 'w')
+        param = open('AdelPars.h', 'w')
         param.write('#define GEOMFILE "'+parameters+'"\n')
         param.close()
 
@@ -29,7 +29,7 @@ class adel_sim_exp:
         os.system('graphtal.exe  -DSTEPS='+str(TT)+' -d can '+lsyst+'>'+can)# utiliser popen2
 
         # recup parametres optique et scene dans parameters
-        f = file(parameters, 'r')
+        f = open(parameters, 'r')
         tab = IOtable.table_txt(f) 
         f.close()
 
@@ -41,14 +41,14 @@ class adel_sim_exp:
                         d[var]=tab[i][2]
 
         #creation du .opt
-        f = file('par.opt', 'w')
+        f = open('par.opt', 'w')
         self.write_opt(f, d)
         f.close()
 
         #creation du .8
         lower_edge = [float(d['INTER_RANG'])/2, float(d['INTER_PLANTE'])/2]
         upper_edge = [-(float(d['NB_RANG'])*float(d['INTER_RANG']))+float(d['INTER_RANG'])/2, -(float(d['NB_PLANTES'])*float(d['INTER_PLANTE']))+float(d['INTER_PLANTE'])/2]
-        f = file('maize.8', 'w')
+        f = open('maize.8', 'w')
         f.write(str(upper_edge[0])+" "+str(upper_edge[1])+"\n")
         f.write(str(lower_edge[0])+" "+str(lower_edge[1])+"\n")
         f.close()
@@ -62,7 +62,8 @@ class adel_sim_exp:
             return join(path, can), join(path, 'maize.8'),join(path, 'par.opt')
 
 
-    def write_opt (self,f, d):
+    @staticmethod
+    def write_opt (f, d):
         """ ecriture du .opt a partir du dico contenant parametres optiques """
         f.write("# the number of plant optical species"+"\n")
         f.write("n 2"+"\n")

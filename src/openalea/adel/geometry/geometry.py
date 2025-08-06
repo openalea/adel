@@ -1,5 +1,4 @@
 from openalea.adel import fitting, symbol
-from openalea.adel.mtg import mtg_turtle, mtg_turtle_time
 import openalea.plantgl.all as pgl
 
 

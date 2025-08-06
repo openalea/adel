@@ -1,7 +1,4 @@
-try:
-    from scipy import stats
-except:
-    from scipy import stats
+from scipy import stats
 import numpy as np
 import pandas
 

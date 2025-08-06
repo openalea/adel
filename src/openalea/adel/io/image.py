@@ -1,5 +1,4 @@
 from openalea.plantgl.all import Viewer
-import os.path
 
 
 def save_image(scene, image_name="%s/img%04d.%s", directory=".", index=0, ext="png"):

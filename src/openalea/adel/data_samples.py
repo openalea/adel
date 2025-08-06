@@ -127,10 +127,10 @@ def canopy_two_metamers():
 
 def adel_two_metamers(leaf_sectors=1):
     """create a very simple adel mtg"""
-    l = leaves()
+    ls = leaves()
     d = canopy_two_metamers()
-    g = mtg_factory(d, adel_metamer, leaves=l, leaf_sectors=leaf_sectors)
-    g = mtg_interpreter(g, leaves=l)
+    g = mtg_factory(d, adel_metamer, leaves=ls, leaf_sectors=leaf_sectors)
+    g = mtg_interpreter(g, leaves=ls)
     return g
 
 
@@ -176,18 +176,18 @@ def adel_two_metamers_stand(
         * abs(domain[1][1] - domain[0][1])
         / convunit
     )
-    l = leaves()
+    ls = leaves()
     g = mtg_factory(
-        d, adel_metamer, leaves=l, leaf_sectors=leaf_sectors, stand=[(positions[0], 0)]
+        d, adel_metamer, leaves=ls, leaf_sectors=leaf_sectors, stand=[(positions[0], 0)]
     )
-    g = mtg_interpreter(g, leaves=l)
+    g = mtg_interpreter(g, leaves=ls)
 
     return g, domain_area, domain, 1.0 / convunit
 
 
 def adel_one_leaf(L=30, w=0.3, leaf_sectors=1):
     """create a very simple adel mtg"""
-    l = leaves()
+    ls = leaves()
     d = {
         "plant": [1],
         "axe_id": ["MS"],
@@ -215,14 +215,14 @@ def adel_one_leaf(L=30, w=0.3, leaf_sectors=1):
         "LcType": [1],
         "LcIndex": [1],
     }
-    g = mtg_factory(d, adel_metamer, leaves=l, leaf_sectors=leaf_sectors)
-    g = mtg_interpreter(g, leaves=l)
+    g = mtg_factory(d, adel_metamer, leaves=ls, leaf_sectors=leaf_sectors)
+    g = mtg_interpreter(g, leaves=ls)
     return g
 
 
 def adel_one_leaf_element():
     """create a very simple adel mtg"""
-    l = leaves()
+    ls = leaves()
     d = {
         "plant": [1],
         "axe_id": ["MS"],
@@ -250,8 +250,8 @@ def adel_one_leaf_element():
         "LcType": [1],
         "LcIndex": [1],
     }
-    g = mtg_factory(d, adel_metamer, leaves=l, leaf_sectors=1)
-    g = mtg_interpreter(g, leaves=l)
+    g = mtg_factory(d, adel_metamer, leaves=ls, leaf_sectors=1)
+    g = mtg_interpreter(g, leaves=ls)
     g.remove_vertex(13)
     labels = g.property("label")
     labels[13] = "Removed"

@@ -20,10 +20,10 @@ def leaf_sectors(g, leaf_number=0, latence=350):
     max_scale = g.max_scale()
     age = g.property('age')
 
-    infectious = [l for l in g.vertices(scale=max_scale) if 'Leaf' in g.label(l) and age.get(l) >= latence]
+    infectious = [leaf for leaf in g.vertices(scale=max_scale) if 'Leaf' in g.label(leaf) and age.get(leaf) >= latence]
 
     if leaf_number == 0:
-        green = [l for l in g.vertices(scale=max_scale) if 'Leaf' in g.label(l) and 0< age.get(l,0) < latence]
+        green = [leaf for leaf in g.vertices(scale=max_scale) if 'Leaf' in g.label(leaf) and 0< age.get(leaf,0) < latence]
     else:
         scale_metamer = max_scale-1
         tips = [v for v in g.vertices(scale=scale_metamer) if g.is_leaf(v)]
@@ -31,7 +31,7 @@ def leaf_sectors(g, leaf_number=0, latence=350):
         for vid in tips:
             for i in range(1,leaf_number):
                 vid = g.parent(vid)
-            green.extend(l for l in g.components(vid) if 'Leaf' in g.label(l) and 0 < age.get(l,0) < latence )
+            green.extend(leaf for leaf in g.components(vid) if 'Leaf' in g.label(leaf) and 0 < age.get(leaf,0) < latence )
 
     return g, list(map(g.node,green)), list(map(g.node, infectious))
 
@@ -46,7 +46,7 @@ def leaf_sectors_by_number(g, target_leaf_number=1, source_leaf_number=4):
         rvid = vid
         for i in range(1,target_leaf_number):
             rvid = g.parent(rvid)
-            green.extend(l for l in g.components(rvid) if 'Leaf' in g.label(l))
+            green.extend(leaf for leaf in g.components(rvid) if 'Leaf' in g.label(leaf))
         rvid = vid
         for i in range(1,source_leaf_number):
             rvid = g.parent(rvid)

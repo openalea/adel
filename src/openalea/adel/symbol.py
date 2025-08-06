@@ -19,7 +19,7 @@ from . import fitting
 from . import label
 from math import cos, sin
 
-from openalea.adel.exception import *
+from openalea.adel.exception import AdelParameterisationError
 
 classic = False
 

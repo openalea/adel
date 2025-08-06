@@ -6,10 +6,10 @@ from rpy2 import robjects
 
 from rpy2.robjects import numpy2ri
 
-try:
-    numpy2ri.activate()  # force auto-conversion mode of Robject to array
-except:
-    pass
+# try:
+#     numpy2ri.activate()  # force auto-conversion mode of Robject to array
+# except:
+#     pass
 
 
 class PlantParameter:
@@ -251,49 +251,7 @@ def simpleMais_param(
 
 
 def MonoAxeWheat_param(
-    axedim={
-        "Lamina_length": [
-            8.125,
-            9.25,
-            9.35,
-            10,
-            11.4,
-            13.7,
-            16.55,
-            19.8,
-            25.175,
-            28.8,
-            24.1,
-        ],
-        "Lamina_width": [0.3, 0.325, 0.4, 0.45, 0.55, 0.75, 1, 1.2, 1.28, 1.425, 1.8],
-        "Sheath_length": [
-            3,
-            3.05,
-            3.05,
-            3.4,
-            4.2,
-            6.225,
-            9.125,
-            12,
-            14.2,
-            17.2,
-            18.675,
-        ],
-        "Internode_length": [0, 0, 0, 0, 0, 0.1, 1.9, 6.1, 9.675, 14.45, 16.95],
-        "Stem_diameter": [
-            0.14,
-            0.18,
-            0.21,
-            0.24,
-            0.29,
-            0.34,
-            0.36,
-            0.4,
-            0.48,
-            0.54,
-            0.73,
-        ],
-    },
+        axedim=None,
     inclination=30,
     scale_stem=1,
     scale_leaf=1,
@@ -304,6 +262,52 @@ def MonoAxeWheat_param(
     Generate a simple wheat axe geometric model with leaves and stems scaled from an Axedim dictionary and fixed azimutal parameterisation
     """
 
+    if axedim is None:
+        axedim = {
+            "Lamina_length": [
+                8.125,
+                9.25,
+                9.35,
+                10,
+                11.4,
+                13.7,
+                16.55,
+                19.8,
+                25.175,
+                28.8,
+                24.1,
+            ],
+            "Lamina_width": [0.3, 0.325, 0.4, 0.45, 0.55, 0.75, 1, 1.2, 1.28,
+                             1.425, 1.8],
+            "Sheath_length": [
+                3,
+                3.05,
+                3.05,
+                3.4,
+                4.2,
+                6.225,
+                9.125,
+                12,
+                14.2,
+                17.2,
+                18.675,
+            ],
+            "Internode_length": [0, 0, 0, 0, 0, 0.1, 1.9, 6.1, 9.675, 14.45,
+                                 16.95],
+            "Stem_diameter": [
+                0.14,
+                0.18,
+                0.21,
+                0.24,
+                0.29,
+                0.34,
+                0.36,
+                0.4,
+                0.48,
+                0.54,
+                0.73,
+            ],
+        }
     nb_phy = len(axedim["Lamina_length"])
 
     hfeu = numpy.array([0] + axedim["Sheath_length"]) + numpy.array(
@@ -446,7 +450,7 @@ def plant_parameter(
             rank = rank_max
         return rank
 
-    lindex = ranks = [choose_rank(round(x) * rank_max) for x in relative_phytomer_num]
+    # lindex = ranks = [choose_rank(round(x) * rank_max) for x in relative_phytomer_num]
     norm_surface = numpy.array([fit2(*db[str(rank)][0])[1] for rank in ranks])
 
     lengths = numpy.sqrt(leaf_area / norm_surface / leaf_width_ratio)
@@ -564,7 +568,7 @@ def plant_parameter(
     d = dict((k, dataframe(v)) for k, v in devT.items())
     RdevT = robjects.r["list"](**d)
     # RdevT = devT
-    return (devT, RdevT)
+    return devT, RdevT
 
 
 # def setAdel(*args, **kwds):

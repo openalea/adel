@@ -1,5 +1,7 @@
+from openalea.plantgl.all import Vector3, Index3Array, Scene, Point3Array, \
+    Material, TriangleSet, Shape, Color3, Tesselator, PovFilePrinter
+
 from . import IOtable
-from openalea.plantgl.all import *
 
 
 class can2pov:
@@ -10,7 +12,7 @@ class can2pov:
 
     def __call__(self, can_file, cam_type, backg, soil, cam_pos, fov, cam_rot):
         # recup du fichier can dans tb
-        f = file(can_file, "r")
+        f = open(can_file, "r")
         tb = IOtable.table_txt(f)
         f.close()
 
@@ -49,7 +51,7 @@ class can2pov:
         MaScene.apply(pov)
 
         # cree fichier pov devinitif
-        f = file(can_file[0:-4] + ".pov", "w")
+        f = open(can_file[0:-4] + ".pov", "w")
         self.pov_header(f, cam_type, backg, soil, cam_pos, fov, cam_rot)
         f.write('#include "' + can_file[0:-4] + "_mesh.pov" + '"\n')
         f.close()

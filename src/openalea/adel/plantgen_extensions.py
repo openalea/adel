@@ -26,7 +26,7 @@ from scipy.interpolate import interp1d
 import random
 from functools import reduce
 
-from openalea.adel.exception import *
+from openalea.adel.exception import AdelImplementationError
 from openalea.adel.plantgen.plantgen_interface import gen_adel_input_data
 from openalea.adel.plantgen import tools, params
 from openalea.adel.AdelR import devCsv

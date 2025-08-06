@@ -5,11 +5,10 @@ from pathlib import Path as path
 from random import random, sample, normalvariate
 
 import numpy as np
+import openalea.adel.postprocessing as pp
+import pandas as pd
 from numpy import cos, linspace, sin
 from numpy.random import vonmises
-import pandas as pd
-
-import openalea.adel.postprocessing as pp
 
 
 def regular(nb_plants, nb_rank, dx, dy, nx=None):
@@ -205,7 +204,7 @@ def planter(scene, distribution):
     """
     Returns a CanestraScene by positionning all elements.
     """
-    from openalea.plantgl.all import AxisRotation, Transform4, Translation, Vector3
+    from openalea.plantgl.all import AxisRotation, Transform4, Translation
 
     from openalea.adel import symbol
 

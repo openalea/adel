@@ -50,7 +50,7 @@ def write_dict(dict, directory, name):
     except:
         tab = conv_list2(dict)
 
-    out = file(join(directory, name), "w")
+    out = open(join(directory, name), "w")
     IOtable.ecriture_csv(tab, out)
     out.close()
 

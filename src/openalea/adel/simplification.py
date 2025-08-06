@@ -1,4 +1,4 @@
-from heapq import *
+from heapq import heappush, heappop
 from openalea.plantgl.all import Vector3
 
 points = [

@@ -67,7 +67,7 @@ class ls_sim:
         pass
 
     def __call__(self, ls_file):
-        f = file(ls_file, "r")
+        f = open(ls_file, "r")
         ls = IOtable.table_csv_str(f)
         f.close()
         ls = conv_dataframe(t_list(ls))

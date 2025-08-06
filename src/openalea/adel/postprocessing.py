@@ -363,7 +363,7 @@ def phenology(adel_output_df):
                 L_shape_values = group["L_shape"].loc[nonzero_Lvsen_indexes]
                 SSI += (Lvsen_values / L_shape_values).sum()
 
-        indexes_of_all_null_Lshape = L_shape[L_shape == 0.0].index
+        # indexes_of_all_null_Lshape = L_shape[L_shape == 0.0].index
         HS_final = group["HS_final"][group.first_valid_index()]
         # if group['hasEar'].nunique() > 1:
         #    warnings.warn('Multiple value of hasEar for group {}'.format(name), InputWarning)
@@ -468,7 +468,7 @@ def axis_statistics(adel_output_df, domain_area, convUnit=0.01):
         & (intermediate_df["Slv"] > 0)
     ]
     growing_indexes = growing_1_df.index.union(growing_2_df.index)
-    growing_df = intermediate_df.loc[growing_indexes]
+    # growing_df = intermediate_df.loc[growing_indexes]
     is_active.loc[growing_indexes] = 1
     intermediate_df["is_active"] = is_active
 

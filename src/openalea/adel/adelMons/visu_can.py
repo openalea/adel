@@ -1,5 +1,6 @@
 from . import IOtable
-from openalea.plantgl.all import *
+from openalea.plantgl.all import Vector3, Scene, Viewer,Index3Array, \
+    Point3Array, TriangleSet, Material, Color3, Shape
 
 
 class visu_can:
@@ -10,7 +11,7 @@ class visu_can:
 
     def __call__(self, can_file):
         # recup du fichier can dans tb
-        f = file(can_file, "r")
+        f = open(can_file, "r")
         tb = IOtable.table_txt(f)
         f.close()
 
@@ -23,10 +24,6 @@ class visu_can:
 
         # ajout des triangles 2 par 2 pour eviter bugs lors de l'exportation des triangleset dans pov-ray
         for i in range(0, len(tb) - 1, 2):
-            # creation d'une liste de coordonnees des points et d'une liste d'index des triangles pour les lignes i et i+1
-            ind, pts = [], []
-            # count=0
-
             indices = Index3Array([(0, 1, 2), (3, 4, 5)])
             coord1 = list(map(float, tb[i][5:]))
             coord2 = list(map(float, tb[i + 1][5:]))

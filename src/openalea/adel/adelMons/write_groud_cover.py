@@ -18,7 +18,7 @@ def write_groud_cover(table, file_name):
 
     # ecriture du fichier
     name = join(path, file_name)
-    out = file(name, "w")
+    out = open(name, "w")
     IOtable.ecriture_csv(res, out)
     out.close()
 

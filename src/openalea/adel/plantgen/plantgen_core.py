@@ -2818,11 +2818,11 @@ class _CreatePhenTTmp:
                     tiller_index_phytomer_y_intercept_after_start_MS_elongation_1_col = (
                         -a_cohort_before_start_MS_elongation_1 * TT_hs_0
                     )
-                    tiller_index_phytomer_y_intercept_after_start_MS_elongation_1_tip = (
-                        tiller_index_phytomer_y_intercept_after_start_MS_elongation_1_col
-                        * params.DELAIS_PHYLL_COL_TIP_NTH
-                        / a_cohort_before_start_MS_elongation_1
-                    )  # TODO: useful ?
+                    # tiller_index_phytomer_y_intercept_after_start_MS_elongation_1_tip = (
+                    #     tiller_index_phytomer_y_intercept_after_start_MS_elongation_1_col
+                    #     * params.DELAIS_PHYLL_COL_TIP_NTH
+                    #     / a_cohort_before_start_MS_elongation_1
+                    # )  # TODO: useful ?
 
                 if math.isnan(TT_hs_break):  # linear mode
                     HS_break = None
@@ -2860,11 +2860,11 @@ class _CreatePhenTTmp:
                             HS_break
                             - a_cohort_before_start_MS_elongation_2 * TT_hs_break
                         )
-                        tiller_index_phytomer_y_intercept_after_start_MS_elongation_2_tip = (
-                            tiller_index_phytomer_y_intercept_after_start_MS_elongation_2_col
-                            * params.DELAIS_PHYLL_COL_TIP_NTH
-                            / a_cohort_before_start_MS_elongation_2
-                        )  # TODO: useful ?
+                        # tiller_index_phytomer_y_intercept_after_start_MS_elongation_2_tip = (
+                        #     tiller_index_phytomer_y_intercept_after_start_MS_elongation_2_col
+                        #     * params.DELAIS_PHYLL_COL_TIP_NTH
+                        #     / a_cohort_before_start_MS_elongation_2
+                        # )  # TODO: useful ?
 
                 # compute TT_col_phytomer
                 self.phenT_tmp.loc[

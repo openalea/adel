@@ -70,7 +70,7 @@ def xy_StewartDwyer93(insertion_angle, xtop, ytop, xend, yend):
         b = C * x + 1
         c = A * x**2 + D * x
 
-        delta = b**2 - 4 * a * c
+        # delta = b**2 - 4 * a * c
 
     #if all(delta > 0):
     # if 0 > 0:

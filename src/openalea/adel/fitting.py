@@ -247,9 +247,9 @@ def leaf_to_mesh_new(x, y, r, twist=True, nb_twist=1.0, nb_waves=8, **kwds):
     s /= L
 
     nb_oscillation = nb_waves
-    dt = list(np.arctan2(np.diff(y), np.diff(x)))
-    dt.append(0.0)
-    dt = np.array(dt)
+    # dt = list(np.arctan2(np.diff(y), np.diff(x)))
+    # dt.append(0.0)
+    # dt = np.array(dt)
     if twist:
         angle = 2 * np.pi * nb_twist * s
     else:
@@ -365,7 +365,7 @@ def leaf_element(leaf, length_max, length, s_base, s_top, radius_max):
     s_top = max(s_base, s_top, 0.0)
 
     if length <= 0.0:
-        return
+        return None
     if length > length_max:
         length = length_max
 
@@ -537,7 +537,7 @@ def qslim(nb_triangles, points, indexes):
 
 def leaf_shape(leaf, nb_triangles, length_max, length, radius_max):
     if length <= 0:
-        return
+        return None
     x, y, s, r = leaf
     leaf_new, leaf_surface = fit2(x, y, s, r)
 
@@ -602,7 +602,7 @@ def simplify(leaf, nb_points, scale_radius=True):
 
 def leaf_shape2(leaf, nb_triangles, length_max, length, radius_max):
     if length <= 0:
-        return
+        return None
 
     x, y, s, r = leaf
     nb_points = nb_triangles / 2 + 2

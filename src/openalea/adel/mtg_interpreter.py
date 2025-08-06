@@ -1,17 +1,14 @@
 """Methods for mtg interpretation with turtle"""
 
 from math import degrees, pi, cos, sin
-import openalea.plantgl.all as pgl
 
-# from openalea.mtg import MTG
+import openalea.plantgl.all as pgl
 from openalea.mtg.plantframe.turtle import TurtleFrame
-# from openalea.mtg.algo import union
-# from openalea.astk.plantgl_utils import addSets
 
 
 def _is_iterable(x):
     try:
-        x = iter(x)
+        _ = iter(x)
     except TypeError:
         return False
     return True
@@ -75,7 +72,6 @@ def StemElement_mesh(length, diameter_base, diameter_top, classic=False):
     """
     if classic:
         solid = True
-        diameter = diameter_base
         slices = 6  # 6 is the minimal number of slices for a correct computation of star (percentage error lower than 5)
         stem = pgl.Tapered(
             diameter_base / 2.0,
@@ -304,7 +300,7 @@ def mtg_interpreter(g, leaves, min_length=0.01, classic=False, face_up=False):
     #   gplant = g.sub_mtg(plant)
     turtle = AdelTurtle()
     visitor = AdelVisitor(leaves, min_length, classic, face_up)
-    scene = TurtleFrame(g, visitor=visitor, turtle=turtle, gc=False, all_roots=True)
+    _ = TurtleFrame(g, visitor=visitor, turtle=turtle, gc=False, all_roots=True)
     #   gt = union(gplant,gt)
 
     return g

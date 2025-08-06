@@ -205,7 +205,7 @@ def simpleWheat_param(
     # azimuths Attention R
     # Azimuth = (n-4 n) 180 + 60 * randn(1), (1 n-4)   180 + 20 * randn(1))
 
-    axe = [0] * nbphy
+    axe = [0] * nb_phy
     Einc = axe
     # creation des axes
 

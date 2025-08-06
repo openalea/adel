@@ -14,7 +14,7 @@ A place to develop candidates methods for mtg.py / topological builder
 
 """
 
-from openalea.adel.exception import *
+from openalea.adel.exception import AdelDeprecationError
 
 # temporary import
 from openalea.adel.mtg import convert, properties_from_dict
@@ -817,7 +817,7 @@ def update_organ(organ, h_whorl=0):
 
 def update_organ_from_table(organ, metamer, oldmetamer):
     neworg = metamer[organ.label]
-    oldorg = oldmetamer[organ.label]
+    # oldorg = oldmetamer[organ.label]
     new_elts = neworg.pop("elements")
     for k in neworg:
         if k != "shape_xysr":

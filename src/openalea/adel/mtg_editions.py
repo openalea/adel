@@ -609,9 +609,9 @@ def new_mtg_factory(
                     "endleaf": endleaf,
                     "endE": endE,
                 }
-            if not "ntop" in args:
+            if "ntop" not in args:
                 args.update({"ntop": None})
-            if not "Gd" in args:
+            if "Gd" not in args:
                 args.update({"Gd": 0.19})
             args.update({"split": split})
             if args.get("HS_final") < args.get("nff"):
