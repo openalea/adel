@@ -14,4 +14,5 @@ source = openalea.adel
 omit =
         *__init__*
         *test*
+        *__wralea__*
 
