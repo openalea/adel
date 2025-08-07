@@ -1,0 +1,17 @@
+[report]
+exclude_lines =
+    pragma: no cover
+omit =
+    *tests*
+show_missing = True
+
+[html]
+title = openalea.adel coverage report
+directory = build/htmlcov
+
+[run]
+source = openalea.adel
+omit =
+        *__init__*
+        *test*
+
