@@ -1,12 +1,12 @@
 import pandas
 import numpy as np
 from pathlib import Path as path
-from alinea.adel.povray import post_processing
+from openalea.adel.povray import post_processing
 
 
 def test_count_pixels():
-    scene_path = path("data/test_povray/scene.bmp")
-    scene_box_path = path("data/test_povray/scene_box.bmp")
+    scene_path =  path(__file__).parent.resolve()  / path("data/test_povray/scene.bmp")
+    scene_box_path =  path(__file__).parent.resolve() / path("data/test_povray/scene_box.bmp")
 
     rgb_colors = [
         [0, 170, 0],
@@ -24,7 +24,7 @@ def test_count_pixels():
 
     import tempfile
 
-    povray_results_directory = path(tempfile.mkdtemp(suffix="_povray_results"))
+    povray_results_directory =  path(__file__).parent.resolve() / path(tempfile.mkdtemp(suffix="_povray_results"))
     result_path = povray_results_directory.joinpath("scene_res.csv")
     normalized_scene_path = povray_results_directory.joinpath("normalized_scene.bmp")
     normalize = True

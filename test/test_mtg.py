@@ -1,8 +1,8 @@
 from openalea.plantgl.all import *
-from alinea.adel.symbol import *
-from alinea.adel.mtg import *
-import alinea.adel.fitting as fitting
-import alinea.adel.json_numpy as json_np
+from openalea.adel.symbol import *
+from openalea.adel.mtg import *
+import openalea.adel.fitting as fitting
+import openalea.adel.json_numpy as json_np
 
 symbols = {
     "newPlant": 1,
@@ -14,8 +14,8 @@ symbols = {
 
 
 def leaves_db():
-    import alinea.adel.fitting as fitting
-    from alinea.adel import data
+    import openalea.adel.fitting as fitting
+    from openalea.adel import data
     from os.path import join
 
     pth = data.__path__[0]

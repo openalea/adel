@@ -1,7 +1,7 @@
 import pytest
 
-import alinea.adel.data_samples as test_data
-from alinea.adel.adel import Adel
+import openalea.adel.data_samples as test_data
+from openalea.adel.adel import Adel
 import os
 
 

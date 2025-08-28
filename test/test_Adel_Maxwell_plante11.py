@@ -1,14 +1,13 @@
 """Test stability of Adel for simulating a reference plant (Maxwell, plant 11, pareameterised by M. Abichou/B.Andrieu, EGC Grignon"""
-
-from alinea.adel.AdelR import devCsv, setAdel, RunAdel, genGeoLeaf, genGeoAxe, csvAsDict
-
-# from alinea.adel.mtg import mtg_factory
-import numpy as np
+import pathlib
 from functools import reduce
+
+from openalea.adel.AdelR import devCsv, setAdel, RunAdel, genGeoLeaf, genGeoAxe, \
+    csvAsDict
 
 
 def test_organ_length():
-    dir = "./data/test_Adel_Maxwell_plante11/Maxwell_"
+    dir = str(pathlib.Path(__file__).parent.resolve() / "data" / "test_Adel_Maxwell_plante11/Maxwell_")
     sufix = "_plante11.csv"
     axeTpath = dir + "axeT" + sufix
     dimTpath = dir + "dimT" + sufix

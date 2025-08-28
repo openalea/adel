@@ -1,9 +1,9 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools", "setuptools_scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "alinea.adel"
+name = "openalea.adel"
 authors = [
   { name = "Christian Fournier" },
   { name = "Christophe Pradal" },
@@ -27,14 +27,13 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Topic :: Scientific/Engineering",
 ]
-dynamic = ["readme"]
-version = "2.0.2"
+dynamic = ["readme","version"]
+#version = "2.0.2"
 dependencies = [
     "numpy",
     "scipy",
     "matplotlib",
     "pandas",
-    "rpy2",
 ]
 
 [project.optional-dependencies]
@@ -42,20 +41,37 @@ test = ["pytest"]
 notebook = ["jupyter"]
 
 [project.urls]
-Homepage = "https://openalea.readthedocs.io/"
-"Bug Tracker" = "https://github.com/openalea-incubator/adel/issues"
-Discussions = "https://github.com/openalea-incubator/adel/discussions"
-Changelog = "https://github.com/openalea-incubator/adel/releases"
+Homepage = "https://github.com/openalea/adel"
+"Bug Tracker" = "https://github.com/openalea/adel/issues"
+Discussions = "https://github.com/openalea/adel/discussions"
+Changelog = "https://github.com/openalea/adel/releases"
 
 [project.entry-points."wralea"]
-"adel" = "alinea.adel"
+"adel" = "openalea.adel"
 
+[tool.conda.environment]
+channels = [
+  "openalea3",
+  "conda-forge"
+]
+
+dependencies = [
+    "openalea.mtg",
+    "openalea.plantgl",
+    "alinea.caribu",
+    "openalea.astk",
+    "rpy2"
+]
 [tool.setuptools.dynamic]
-readme = {file = ["README.rst"]}
+readme = {file = ["README.md"]}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["alinea.*"]
+include = ["openalea.*"]
 
 [tool.setuptools.package-data]
 "*" = ['*.RData', '*.R', '*.8', '*.h', '*.str','*.txt', '*.l', '*.map', '*.csv', '*.json', '*.png']
+
+# enable dynamic versioning based on git tags
+[tool.setuptools_scm]
+# can be empty if no extra settings are needed, presence enables setuptools-scm

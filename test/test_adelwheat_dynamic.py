@@ -1,6 +1,6 @@
 """Test use cases of adel/fspm wheat coupling"""
 
-from alinea.adel.adelwheat_dynamic import AdelWheatDyn
+from openalea.adel.adelwheat_dynamic import AdelWheatDyn
 
 
 def test_add_metamer():

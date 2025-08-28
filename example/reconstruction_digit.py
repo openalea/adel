@@ -2,14 +2,14 @@
 
 import numpy
 
-from alinea.adel.dresser import (
+from openalea.adel.dresser import (
     blade_dimension,
     stem_dimension,
     ear_dimension,
     dimension_table,
     AdelDress,
 )
-from alinea.adel.geometric_elements import Leaves
+from openalea.adel.geometric_elements import Leaves
 from alinea.adel.Stand import AgronomicStand
 
 # input camille

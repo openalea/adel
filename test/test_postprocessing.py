@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 from pathlib import Path as path
 
-from alinea.adel import postprocessing as pp
+from openalea.adel import postprocessing as pp
 
-DATA_DIRPATH = path("data/test_postprocessing")
+DATA_DIRPATH =  path(__file__).parent.resolve() / path("data/test_postprocessing")
 
 INPUTS_DIRPATH = DATA_DIRPATH / "inputs"
 

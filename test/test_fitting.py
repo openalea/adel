@@ -1,9 +1,9 @@
-import alinea.adel.fitting as fitting
-import alinea.adel.mtg as CanMTG
-from alinea.adel.symbol import build_symbols
+import openalea.adel.fitting as fitting
+import openalea.adel.mtg as CanMTG
+from openalea.adel.symbol import build_symbols
 from numpy import compress, unique, union1d, interp
 import random
-import alinea.adel.json_numpy as json_np
+import openalea.adel.json_numpy as json_np
 
 symbols = {
     "newPlant": 1,
@@ -15,8 +15,8 @@ symbols = {
 
 
 def leaves_db():
-    import alinea.adel.fitting as fitting
-    from alinea.adel import data
+    import openalea.adel.fitting as fitting
+    from openalea.adel import data
     from os.path import join
 
     pth = data.__path__[0]

@@ -1,4 +1,4 @@
-from alinea.adel.data_samples import *
+from openalea.adel.data_samples import *
 
 
 def test_leaf_db():

@@ -1,6 +1,6 @@
 import random
 
-from alinea.adel.plantgen import params, tools, plantgen_interface, plantgen_core
+from openalea.adel.plantgen import params, tools, plantgen_interface, plantgen_core
 import numpy as np
 import pandas
 from pathlib import Path as path
@@ -43,7 +43,7 @@ TT_flag_ligulation = {
 }
 number_of_ears = plants_number * ears_density / float(plants_density)
 
-expected_results_dir = path("data/test_plantgen")
+expected_results_dir = path(__file__).parent.resolve() / path("data/test_plantgen")
 default_expected_results_dir = expected_results_dir.joinpath("default")
 min_min_expected_results_dir = expected_results_dir.joinpath("min_min")
 short_short_expected_results_dir = expected_results_dir.joinpath("short_short")
@@ -484,7 +484,7 @@ def _check_results(to_compare, dynT_user_completeness, dimT_user_completeness):
 #     # test the visualea node
 #     pm = PackageManager()
 #     pm.init(verbose=False)
-#     res = run(('alinea.adel.Tutorials', 'plantgen'), {}, pm=pm)
+#     res = run(('openalea.adel.Tutorials', 'plantgen'), {}, pm=pm)
 #     assert res == []
 
 

@@ -1,3 +1,4 @@
+name: adel
 channels:
   - conda-forge
   - openalea3
@@ -8,10 +9,15 @@ dependencies:
   - pandas
   - rpy2
   - openalea.mtg
+  - oawidgets
   - openalea.plantgl
   - openalea.core >= 2.4
-  - pydata_sphinx_theme
+  - pydata-sphinx-theme
   - sphinx-favicon
   - nbsphinx
   - nbsphinx-link
   - myst-parser
+  - sphinx-copybutton
+  - pip
+  - pip:
+      - -e ..

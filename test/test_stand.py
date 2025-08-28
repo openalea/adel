@@ -5,19 +5,19 @@ import pandas
 
 # from pathlib import Path as path
 from pathlib import Path as path
-from alinea.adel.stand.stand import post_processing
+from openalea.adel.stand.stand import post_processing
 
 relative_tolerance = 10e-3
 absolute_tolerance = 10e-3
 
 
 def test_post_processing():
-    adel_output_path = path("data/test_stand/adel_output.csv")
+    adel_output_path = path(__file__).parent.resolve() / path("data/test_stand/adel_output.csv")
 
-    global_postprocessing_file_path = path(
+    global_postprocessing_file_path = path(__file__).parent.resolve() / path(
         tempfile.mktemp(prefix="global_postprocessing", suffix=".csv")
     )
-    peraxis_postprocessing_file_path = path(
+    peraxis_postprocessing_file_path = path(__file__).parent.resolve() / path(
         tempfile.mktemp(prefix="peraxis_postprocessing", suffix=".csv")
     )
 
@@ -34,7 +34,7 @@ def test_post_processing():
         peraxis_postprocessing_file_path,
     )
 
-    expected_results_dir_path = path("data/test_stand")
+    expected_results_dir_path =  path(__file__).parent.resolve() / path("data/test_stand")
     # check intermediate results
     intermediate_results_array = pandas.read_csv(intermediate_results_file_path).values
     intermediate_results_array = np.delete(
@@ -73,7 +73,7 @@ def test_post_processing():
         absolute_tolerance,
     )
 
-    # check global post processing results
+    # check global post-processing results
     global_postprocessing_results_array = pandas.read_csv(
         global_postprocessing_file_path
     ).values

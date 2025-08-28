@@ -1,7 +1,7 @@
 import numpy
 from scipy.interpolate import splev, splprep
-import alinea.adel.fitting as fitting
-from alinea.adel.data_samples import leaves_db
+import openalea.adel.fitting as fitting
+from openalea.adel.data_samples import leaves_db
 
 # from openalea.plantgl.all import Viewer
 import openalea.plantgl.all as pgl

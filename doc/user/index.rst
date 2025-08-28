@@ -1,6 +1,6 @@
 .. _adel_user:
 
-Alinea.Adel User Guide
+OpenAlea.Adel User Guide
 #######################################
 
 :Version: |version|
@@ -8,7 +8,7 @@ Alinea.Adel User Guide
 :Date: |today|
 
 This manual details functions, modules, and objects included in 
-Alinea.Adel, describing what they are and what they do. For a complete 
+OpenAlea.Adel, describing what they are and what they do. For a complete
 reference guide, see :ref:`adel_reference`.
 
 .. toctree::

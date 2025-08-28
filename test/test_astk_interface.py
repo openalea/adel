@@ -1,8 +1,7 @@
-from alinea.adel.astk_interface import AdelWheat
-# from alinea.astk.TimeControl import TimeControlSet
+from openalea.adel.astk_interface import AdelWheat
 
 
-def test_static(age=100):
+def test_static():
     nplants = 1
     adel = AdelWheat(nplants=nplants)
     g = adel.setup_canopy(age=100)

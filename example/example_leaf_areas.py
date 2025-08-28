@@ -9,9 +9,9 @@ try:
     import pickle as pickle
 except:
     import pickle
-from alinea.adel.newmtg import move_properties, adel_ids
-from alinea.echap.architectural_reconstructions import EchapReconstructions
-from alinea.alep.disease_outputs import initiate_all_adel_septo_recorders
+from openalea.adel.newmtg import move_properties, adel_ids
+from openalea.echap.architectural_reconstructions import EchapReconstructions
+from openalea.alep.disease_outputs import initiate_all_adel_septo_recorders
 
 # Imports for weather
 from alinea.astk.TimeControl import *

@@ -29,7 +29,8 @@ Documentation
 .. toctree::
     :maxdepth: 2
 
-    User Guide<user/index.rst>   
+    User Guide<user/index.rst>
+    Notebook example<example/notebook.rst>
     Reference Guide<user/autosum.rst>
 
 - A `PDF <../latex/adel.pdf>`_ version of |adel| documentation is 
