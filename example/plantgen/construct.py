@@ -5,12 +5,12 @@
 construct.py
 ~~~~~~~~~~~~
 
-An example to show how to construct the input data of Adel using :mod:`alinea.adel.plantgen`.
+An example to show how to construct the input data of Adel using :mod:`openalea.adel.plantgen`.
 
 In this example, the inputs of PlantGen are hard coded in the code of the example.
 See the script read_and_construct.py for an example of how to read the inputs of PlantGen from a file.
 
-You must first install :mod:`alinea.adel` (and add it to your PYTHONPATH)
+You must first install :mod:`openalea.adel` (and add it to your PYTHONPATH)
 before running this script with the command `python construct.py`.
 
 :copyright: Copyright 2015 INRA-EcoSys, Camille Chambon <camille.chambon@grignon.inra.fr>
@@ -51,7 +51,7 @@ delais_TT_stop_del_axis = 600
 inner_params = {"DELAIS_PHYLL_COL_TIP_1ST": 1.0, "DELAIS_PHYLL_COL_TIP_NTH": 1.6}
 
 # run the construction of Adel inputs
-from alinea.adel.plantgen import plantgen_interface
+from openalea.adel.plantgen import plantgen_interface
 
 axeT, dimT, phenT, _, _, _, _, _, _, _ = plantgen_interface.gen_adel_input_data(
     dynT_user,

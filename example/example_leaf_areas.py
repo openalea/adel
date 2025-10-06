@@ -14,12 +14,12 @@ from openalea.echap.architectural_reconstructions import EchapReconstructions
 from openalea.alep.disease_outputs import initiate_all_adel_septo_recorders
 
 # Imports for weather
-from alinea.astk.TimeControl import *
-from alinea.echap.weather_data import *
-from alinea.alep.alep_weather import linear_degree_days
+from openalea.astk.TimeControl import *
+from openalea.echap.weather_data import *
+from openalea.alep.alep_weather import linear_degree_days
 
 # Temporary
-from alinea.adel.mtg_interpreter import plot3d
+from openalea.adel.mtg_interpreter import plot3d
 from openalea.plantgl.all import Viewer
 
 from random import seed

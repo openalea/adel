@@ -58,7 +58,7 @@ channels = [
 dependencies = [
     "openalea.mtg",
     "openalea.plantgl",
-    "alinea.caribu",
+    "openalea.caribu",
     "openalea.astk",
     "rpy2"
 ]

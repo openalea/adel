@@ -10,7 +10,7 @@ from openalea.adel.dresser import (
     AdelDress,
 )
 from openalea.adel.geometric_elements import Leaves
-from alinea.adel.Stand import AgronomicStand
+from openalea.adel.Stand import AgronomicStand
 
 # input camille
 

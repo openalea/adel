@@ -3,13 +3,13 @@
 #
 from openalea.plantgl.all import Viewer
 from pandas import DataFrame, concat
-import alinea.adel.data_samples as adel_data
+import openalea.adel.data_samples as adel_data
 import numpy as np
 
 
-from alinea.adel.newmtg import *
-from alinea.adel.mtg_interpreter import mtg_interpreter, plot3d
-from alinea.adel.AdelR import (
+from openalea.adel.newmtg import *
+from openalea.adel.mtg_interpreter import mtg_interpreter, plot3d
+from openalea.adel.AdelR import (
     setAdel,
     RunAdel,
     genGeoLeaf,
@@ -17,14 +17,14 @@ from alinea.adel.AdelR import (
     canL2canS,
     dataframe,
 )
-from alinea.adel import postprocessing
+from openalea.adel import postprocessing
 
 leafdb = adel_data.wheat_leaf_db()
 
 
 def adelR(nplants, dd):
-    from alinea.adel.AdelR import setAdel, RunAdel, genGeoLeaf, genGeoAxe
-    import alinea.adel.data_samples as adel_data
+    from openalea.adel.AdelR import setAdel, RunAdel, genGeoLeaf, genGeoAxe
+    import openalea.adel.data_samples as adel_data
 
     devT = adel_data.devT()
     geoLeaf = genGeoLeaf()
@@ -37,7 +37,7 @@ def adelR(nplants, dd):
 
 
 def test_adelR_postprocessing(nplants, dd):
-    import alinea.adel.data_samples as adel_data
+    import openalea.adel.data_samples as adel_data
 
     devT = adel_data.devT()
     geoLeaf = genGeoLeaf()
@@ -62,14 +62,14 @@ def test_adelR_postprocessing(nplants, dd):
 
 
 def getString(d):
-    from alinea.adel.AdelR import dataframe, genString
+    from openalea.adel.AdelR import dataframe, genString
 
     return genString(dataframe(d))
 
 
 def canMTG(string):
-    from alinea.adel.symbol import build_symbols
-    from alinea.adel.mtg import CanMTG
+    from openalea.adel.symbol import build_symbols
+    from openalea.adel.mtg import CanMTG
 
     symbols = build_symbols(leafdb)
     g = CanMTG(symbols, string)
@@ -78,8 +78,8 @@ def canMTG(string):
 
 
 def newmtg(canopy, dec=10, az=0):
-    from alinea.adel.newmtg import mtg_factory, adel_metamer
-    from alinea.adel.mtg_interpreter import mtg_interpreter, plot3d
+    from openalea.adel.newmtg import mtg_factory, adel_metamer
+    from openalea.adel.mtg_interpreter import mtg_interpreter, plot3d
 
     g = mtg_factory(
         canopy, adel_metamer, leaf_sectors=1, leaf_db=leafdb, stand=[((dec, 0, 0), az)]
@@ -176,6 +176,6 @@ def testdyn(nplants=1, start=100, step=50, nstep=30, dec=10, az=0):
 # df.ix[1:7,6:9]
 # df[['Gl','Gv','Ll','Lv','Lr','L_shape']]
 # import numpy as np
-# from alinea.popdrops.Rain import get_area_and_normal
+# from openalea.popdrops.Rain import get_area_and_normal
 # a1,_=get_area_and_normal(g1.property('geometry'))
 # a1 = dict(((k,np.sum(v)) for k,v in a1.iteritems()))

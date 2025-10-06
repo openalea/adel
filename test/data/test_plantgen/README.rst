@@ -4,7 +4,7 @@ Data to test PlantGen
 
 
 In this directory, you can find the data used by ../../test_plantgen.py to test 
-the package Alinea.Adel.PlantGen. 
+the package openalea.Adel.PlantGen.
 
 
 default
@@ -37,5 +37,5 @@ the user provides a full set of measured data and parameters in both tables dynT
 
 
 For more information about the meaning of these levels of completeness, please refer 
-to the documentation of Alinea.Adel.
+to the documentation of openalea.Adel.
    
