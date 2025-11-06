@@ -235,19 +235,19 @@ for Linc in (0, 0.5, 1):
 
     # create mtg
 
-    from alinea.adel.newmtg import mtg_factory, adel_metamer, adel_label
-    from alinea.adel.mtg_interpreter import mtg_interpreter, plot3d
+    from openalea.adel.newmtg import mtg_factory, adel_metamer, adel_label
+    from openalea.adel.mtg_interpreter import mtg_interpreter, plot3d
     from openalea.plantgl.all import Viewer
 
     ## geometry
     # extract_leaves
-    from alinea.adel.wheat import extract_wheat
+    from openalea.adel.wheat import extract_wheat
 
     db = extract_wheat.extract_leaf_info(
         pj(DATA_IN_DIR, "laminaCurv.RData"), pj(DATA_IN_DIR, "lamina2D.RData")
     )
     # fit leaves
-    from alinea.adel.fit import fit
+    from openalea.adel.fit import fit
 
     db, discard = fit.fit_leaves(db, NUMBER_OF_LONGITUDINAL_DIVISIONS)
 
@@ -264,7 +264,7 @@ for Linc in (0, 0.5, 1):
     Viewer.display(scene)
 
     # call caribu
-    from alinea.caribu.caribu_star import caribu_star
+    from openalea.caribu.caribu_star import caribu_star
 
     geom = g.property("geometry")
     star, exposed_area = caribu_star(

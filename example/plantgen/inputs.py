@@ -1,6 +1,6 @@
 # This file stores a set of data which can be used by the function
-# alinea.adel.plantgen.read_plantgen_inputs to define the inputs of the function
-# alinea.adel.plantgen.gen_adel_input_data.
+# openalea.adel.plantgen.read_plantgen_inputs to define the inputs of the function
+# openalea.adel.plantgen.gen_adel_input_data.
 plants_number = 100
 plants_density = 250
 decide_child_axis_probabilities = {

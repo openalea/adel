@@ -83,7 +83,7 @@ html_theme_options = {
     "icon_links": [
         {
             "name": "GitHub",
-            "url": "https://github.com/openalea-incubator/adel",
+            "url": "https://github.com/openalea/adel",
             "icon": "fa-brands fa-github",
         },
     ],
