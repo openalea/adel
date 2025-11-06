@@ -4,14 +4,14 @@ TODO
 3/11:2008
 ---------
 
- * unifier dans un module a part (alineaScene ?) le CanMTG, qui est precurseur de la scene MTG future (cf ci dessous),en regroupant les routines de visu et i/o des module adel et caribu
+ * unifier dans un module a part (openaleaScene ?) le CanMTG, qui est precurseur de la scene MTG future (cf ci dessous),en regroupant les routines de visu et i/o des module adel et caribu
  * voir ce que devient caribuscene dans ce cadre et comment on entre dans le module (par les fichiers ? ie la mtg scene a un module tocaribuscene qui remet tout sous la forme des strings de caribuscene actuelle)
- * une possibilité est donc de garder la caribuscene assez proche de ce qu'elle est en ce moment et de mettre les nouveautes dans alineascene
- * pour la visu caribu scene utilise le import can de alineaScene
+ * une possibilitï¿½ est donc de garder la caribuscene assez proche de ce qu'elle est en ce moment et de mettre les nouveautes dans openaleascene
+ * pour la visu caribu scene utilise le import can de openaleaScene
 
  * structure adel en fonctionel : leaf geometry fitting, simulation, parameter edition
  * regler les dependances + maj sur alea des infos pour faire ca
- * les actuels "wheat", "mons", etc doivent devenir des composites node d'un repertoire demo a creer ssous alinea car ils illustrent des possibilites de combinaison de modules
+ * les actuels "wheat", "mons", etc doivent devenir des composites node d'un repertoire demo a creer ssous openalea car ils illustrent des possibilites de combinaison de modules
  * il fut ajouter le niveau module dans le CanTG Interpreter
 
  * faire les boites graphtal et documenter a l'ocasion les pages du wiki
@@ -24,15 +24,15 @@ TODO
 
 Discussion avec Fred sur les methodes pour boucler
 
-* avec LPy, Christophe et david ont implementé un truc qui permet de joindre dans un seul mtg l'info des modules et la geometrie asssociee
+* avec LPy, Christophe et david ont implementï¿½ un truc qui permet de joindre dans un seul mtg l'info des modules et la geometrie asssociee
 * Cette structure est candidate a etre l'objet sur lequel travaille l'environnement
-* ce qui manque c'est la routine symetrique qui permet de reecrire une chaine a partir du mtg : a faire avant lemodelling alinea ?
+* ce qui manque c'est la routine symetrique qui permet de reecrire une chaine a partir du mtg : a faire avant lemodelling openalea ?
 * en attendant, la methode est de passer par un systeme d'identifiant : les routines environementales ecrivent des tableaux qui peuvent etre relue par le lysteme
 
 * pour les maqutte generee avec CanMTG interpreter, on peut viser la meme structure qui contient tout et qui est capable de reecrire un axiome
 * il resterai pour cela a implementer le parser qui sait mixer un canMTG et un parsing de la chaine 'physio'
 
-* pour L+C, c'est un peu plus complique car on est obligé de remettre les parametres de module a plat (chaine) : on perd la structuration
+* pour L+C, c'est un peu plus complique car on est obligï¿½ de remettre les parametres de module a plat (chaine) : on perd la structuration
 * seulle solution actuelle semble etre donc de recuperer une geometrie avec canMTGinterpreter et d'ecrire des fichiers de paramtre
 * on enchaine les iterations avec la chaine binaire et des table de mises a jour des parametres
 
@@ -47,4 +47,4 @@ TO DO donc (now ou en decembre):
 25/06/2009
 ----------
 
-* ne plus mettre de __wralea__.py a la racine du paquet et/ou dans les modules: sinon lance le module au démargae, cause de ralentissement et/ou de plantage de lappli. A la place fare un repertoire wralea
+* ne plus mettre de __wralea__.py a la racine du paquet et/ou dans les modules: sinon lance le module au dï¿½margae, cause de ralentissement et/ou de plantage de lappli. A la place fare un repertoire wralea

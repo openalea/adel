@@ -1,10 +1,10 @@
-from alinea.adel.newmtg import *
-from alinea.adel.mtg_interpreter import *
+from openalea.adel.newmtg import *
+from openalea.adel.mtg_interpreter import *
 import openalea.plantgl.all as pgl
-from alinea.adel.AdelR import devCsv, setAdel, RunAdel, genGeoLeaf, genGeoAxe
-import alinea.adel.fitting as fitting
+from openalea.adel.AdelR import devCsv, setAdel, RunAdel, genGeoLeaf, genGeoAxe
+import openalea.adel.fitting as fitting
 
-import alinea.adel.data as data
+import openalea.adel.data as data
 from pathlib import Path
 
 

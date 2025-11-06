@@ -162,7 +162,7 @@ stand_agronomicplot = Factory(name='agronomic plot',
 
 CanMTGPlanter_CanMTGPlanter = Factory(name='CanMTGPlanter',
                 authors='C. Pradal, C. Fournier (wralea authors)',
-                description='arrange Alinea CanMTG plants in a stand',
+                description='arrange openalea CanMTG plants in a stand',
                 category='scene design',
                 nodemodule='openalea.adel.stand.CanMTGPlanter',
                 nodeclass='CanMTGPlanter',

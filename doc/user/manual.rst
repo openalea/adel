@@ -680,7 +680,7 @@ Otherwise, the function :func:`read_plantgen_inputs <openalea.adel.plantgen.plan
 permits to define the :ref:`arguments <user_arguments>` by importing a Python module.
 
 Using :func:`read_plantgen_inputs <openalea.adel.plantgen.plantgen_interface.read_plantgen_inputs>` with
-the module :download:`plantgen_inputs.py <../../src/alinea/adel/data/plantgen_inputs.py>`,
+the module :download:`plantgen_inputs.py <../../src/openalea/adel/data/plantgen_inputs.py>`,
 the preceding example becomes::
 
     from openalea.adel.plantgen.plantgen_interface import read_plantgen_inputs
@@ -789,7 +789,7 @@ Finally, the node ``read_plantgen_inputs`` permits to define the values of the i
 ``openalea.adel.plantgen``. 
     
 For example, using ``read_plantgen_inputs`` with the module 
-:download:`plantgen_inputs.py <../../src/alinea/adel/data/plantgen_inputs.py>`,
+:download:`plantgen_inputs.py <../../src/openalea/adel/data/plantgen_inputs.py>`,
 the dataflow becomes:
     
     .. figure:: ./image/plantgen_csv_inputs_dataflow.png

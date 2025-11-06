@@ -5,12 +5,12 @@
 read_and_construct.py
 ~~~~~~~~~~~~~~~~~~~~~
 
-An example to show how to construct the input data of Adel using :mod:`alinea.adel.plantgen`.
+An example to show how to construct the input data of Adel using :mod:`openalea.adel.plantgen`.
 
 In this example, the inputs of PlantGen are read from the files 'inputs.py', 'dynT_user_MIN.csv'
-and 'dimT_user_MIN.csv' using :mod:`alinea.adel.plantgen.read_plantgen_inputs`.
+and 'dimT_user_MIN.csv' using :mod:`openalea.adel.plantgen.read_plantgen_inputs`.
 
-You must first install :mod:`alinea.adel` (and add it to your PYTHONPATH)
+You must first install :mod:`openalea.adel` (and add it to your PYTHONPATH)
 before running this script with the command `python read_and_construct.py`.
 
 :copyright: Copyright 2015 INRA-EcoSys, Camille Chambon <camille.chambon@inra.fr>
@@ -23,7 +23,7 @@ before running this script with the command `python read_and_construct.py`.
 import pandas as pd
 
 # import the front end of PlanGen
-from alinea.adel.plantgen import plantgen_interface
+from openalea.adel.plantgen import plantgen_interface
 
 # read the inputs from 'inputs.py', 'dynT_user_MIN.csv' and 'dimT_user_MIN.csv'
 (
