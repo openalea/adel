@@ -25,6 +25,8 @@ dir = os.path.dirname(__file__)
 # Set Numeric Locale value
 r('Sys.setlocale(category="LC_NUMERIC",locale="C")')
 
+# Load stats on Windows
+robj.r('library(stats)')
 
 def get_rcode(file_name):
     with open(os.path.join(dir, file_name), "r") as content_file:
