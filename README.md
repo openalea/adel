@@ -35,20 +35,15 @@ gramineaous plants(Fournier & Pradal, unpublished), the Adel-Maize
 together with the wheat parameterization model of Abichou et al. (2013)
 and the plastic leaf model of Fournier & Pradal (2012)
 
-## Installation
-
-> python setup.py install
-
 ## Requirements
 
--   OpenAlea.Deploy
--   OpenAlea.Mtg
--   OpenAlea.core
--   OpenAlea.visualea
--   OpenAlea.PlantGl
+-   OpenAlea.mtg
+-   OpenAlea.plantgl
+-   OpenAlea.caribu
+-   Openalea.astk
 -   NumPy
 -   Scipy
--   MatplotLib
+-   MatplotLib-base
 -   Pandas
 -   Rpy2
 

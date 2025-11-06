@@ -32,7 +32,7 @@ dynamic = ["readme","version"]
 dependencies = [
     "numpy",
     "scipy",
-    "matplotlib",
+    "matplotlib-base",
     "pandas",
 ]
 

@@ -1,14 +1,18 @@
+name: adel_dev
 channels:
-  - conda-forge
+  - openalea3/label/dev
+  - openalea3/label/rc
   - openalea3
+  - conda-forge
 dependencies:
-  - numpy
-  - scipy
-  - matplotlib
-  - pandas
-  - rpy2
+  # list here manually conda-only deps (listed in [tool.conda.environment] section of pyproject)
+  - python
+  - pip
   - openalea.mtg
   - openalea.plantgl
-  - openalea.core >= 2.4
-  - openalea.deploy
-  - pytest
+  - openalea.caribu
+  - openalea.astk
+  - rpy2
+  # let pip install the rest using pyproject.toml (if you are okay with conda/pip mix)
+  - pip:
+      - -e .."[doc, test]"
