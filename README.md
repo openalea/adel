@@ -81,7 +81,7 @@ Set R_HOME (see above)
 Install adel
 
 ``` console
-git clone https://github.com/openalea-incubator/adel.git 
+git clone https://github.com/openalea/adel.git 
 cd adel
 pip install -e .
 ```
