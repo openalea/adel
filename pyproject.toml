@@ -60,7 +60,8 @@ dependencies = [
     "openalea.plantgl",
     "openalea.caribu",
     "openalea.astk",
-    "rpy2"
+    "rpy2",
+    "r-recommended"
 ]
 [tool.setuptools.dynamic]
 readme = {file = ["README.md"]}
