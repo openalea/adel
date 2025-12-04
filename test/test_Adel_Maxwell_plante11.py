@@ -1,7 +1,5 @@
 """Test stability of Adel for simulating a reference plant (Maxwell, plant 11, pareameterised by M. Abichou/B.Andrieu, EGC Grignon"""
-import sys
 import pytest
-import rpy2
 
 try:
     # test if R's stats package loads correctly
@@ -12,7 +10,7 @@ except Exception:
     r_ok = False
 
 pytestmark = pytest.mark.skipif(
-    sys.platform == "win32" or not r_ok,
+    not r_ok,
     reason="Skipping R tests on Windows CI due to broken R installation"
 )
 
