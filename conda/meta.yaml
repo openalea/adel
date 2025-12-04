@@ -45,7 +45,6 @@ test:
     - test/**
     - test/data/**
   commands:
-    - set R_HOME=%CONDA_PREFIX%\Library\R  # [win]
     - cd test
     - pytest -v --ignore=test_povray.py --ignore=test_dataflow.py --ignore=test_plantgen.py
 

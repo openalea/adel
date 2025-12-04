@@ -33,7 +33,7 @@ dependencies = [
     "numpy",
     "scipy",
     "pandas",
-    "rpy2"
+    "rpy2 <3.6.4"
 ]
 
 [project.optional-dependencies]
