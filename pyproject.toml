@@ -57,10 +57,10 @@ channels = [
 
 dependencies = [
     "openalea.mtg",
+    "openalea.plantgl",
     "openalea.caribu",
     "openalea.astk",
-    "matplotlib-base",
-    "r-base"
+    "matplotlib-base"
 ]
 [tool.setuptools.dynamic]
 readme = {file = ["README.md"]}
