@@ -36,7 +36,7 @@ requirements:
 
 test:
   requires:
-    {% for dep in deps + conda_deps + test_deps %}
+    {% for dep in test_deps %}
     - {{ dep }}
     {% endfor %}
   imports:
@@ -45,6 +45,7 @@ test:
     - test/**
     - test/data/**
   commands:
+    - set R_HOME=%CONDA_PREFIX%\Library\lib\R  # [win]
     - cd test
     - pytest -v --ignore=test_povray.py --ignore=test_dataflow.py --ignore=test_plantgen.py
 
