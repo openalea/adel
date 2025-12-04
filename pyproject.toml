@@ -32,7 +32,6 @@ dynamic = ["readme","version"]
 dependencies = [
     "numpy",
     "scipy",
-    "matplotlib-base",
     "pandas",
 ]
 
@@ -60,6 +59,7 @@ dependencies = [
     "openalea.plantgl",
     "openalea.caribu",
     "openalea.astk",
+    "matplotlib-base",
     "rpy2"
 ]
 [tool.setuptools.dynamic]

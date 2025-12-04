@@ -20,8 +20,7 @@ build:
   noarch: python
   preserve_egg_dir: True
   number: 0
-  string: py{{ PY_VER }}
-  script: {{PYTHON}} -m pip install . -vv
+  script: {{PYTHON}} -m pip install --no-deps  --no-build-isolation . -vv
 
 requirements:
   build:
