@@ -33,6 +33,7 @@ dependencies = [
     "numpy",
     "scipy",
     "pandas",
+    "rpy2"
 ]
 
 [project.optional-dependencies]
@@ -60,7 +61,7 @@ dependencies = [
     "openalea.caribu",
     "openalea.astk",
     "matplotlib-base",
-    "rpy2"
+    "r-base"
 ]
 [tool.setuptools.dynamic]
 readme = {file = ["README.md"]}
