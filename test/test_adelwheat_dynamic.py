@@ -1,8 +1,9 @@
 """Test use cases of adel/fspm wheat coupling"""
-
 from openalea.adel.adelwheat_dynamic import AdelWheatDyn
+from .conftest import pytest_r_skip
 
 
+@pytest_r_skip
 def test_add_metamer():
     # create a plant with 3 metamers
     adel = AdelWheatDyn(seed=1234)

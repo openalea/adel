@@ -32,8 +32,8 @@ dynamic = ["readme","version"]
 dependencies = [
     "numpy",
     "scipy",
-    "matplotlib-base",
     "pandas",
+    "rpy2"
 ]
 
 [project.optional-dependencies]
@@ -60,7 +60,7 @@ dependencies = [
     "openalea.plantgl",
     "openalea.caribu",
     "openalea.astk",
-    "rpy2"
+    "matplotlib-base"
 ]
 [tool.setuptools.dynamic]
 readme = {file = ["README.md"]}

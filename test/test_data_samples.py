@@ -1,6 +1,8 @@
 from openalea.adel.data_samples import *
+from .conftest import pytest_r_skip
 
 
+@pytest_r_skip
 def test_leaf_db():
     db = leaves_db()
     sr = srdb()
@@ -12,6 +14,7 @@ def test_leaf_db():
     assert leaves is not None
 
 
+@pytest_r_skip
 def test_devT():
     dev = devT()
     assert dev is not None

@@ -1,5 +1,7 @@
 from openalea.adel.astk_interface import AdelWheat
+from .conftest import pytest_r_skip
 
+pytestmark = pytest_r_skip
 
 def test_static():
     nplants = 1

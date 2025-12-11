@@ -5,7 +5,10 @@ from functools import reduce
 from openalea.adel.AdelR import devCsv, setAdel, RunAdel, genGeoLeaf, genGeoAxe, \
     csvAsDict
 
+from .conftest import pytest_r_skip
 
+
+@pytest_r_skip
 def test_organ_length():
     dir = str(pathlib.Path(__file__).parent.resolve() / "data" / "test_Adel_Maxwell_plante11/Maxwell_")
     sufix = "_plante11.csv"
