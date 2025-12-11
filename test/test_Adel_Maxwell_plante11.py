@@ -5,6 +5,8 @@ from functools import reduce
 from openalea.adel.AdelR import devCsv, setAdel, RunAdel, genGeoLeaf, genGeoAxe, \
     csvAsDict
 
+from .conftest import pytest_r_skip
+
 
 @pytest_r_skip
 def test_organ_length():

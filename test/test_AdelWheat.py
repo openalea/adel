@@ -1,5 +1,6 @@
 from openalea.adel.astk_interface import AdelWheat
 from openalea.astk.Weather import sample_weather
+from .conftest import pytest_r_skip
 
 
 @pytest_r_skip
