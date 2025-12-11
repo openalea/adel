@@ -1,5 +1,4 @@
 from openalea.adel.data_samples import *
-from .conftest import pytest_r_skip
 
 
 @pytest_r_skip

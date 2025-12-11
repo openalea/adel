@@ -1,8 +1,6 @@
-from .conftest import pytest_r_skip
+from openalea.adel.astk_interface import AdelWheat
 
 pytestmark = pytest_r_skip
-
-from openalea.adel.astk_interface import AdelWheat
 
 
 def test_static():
