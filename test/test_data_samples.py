@@ -1,22 +1,8 @@
-import sys
-import pytest
-
-try:
-    # test if R's stats package loads correctly
-    import rpy2.robjects as ro
-    ro.r("na.omit")  # will error on broken R
-    r_ok = True
-except Exception:
-    r_ok = False
-
-pytestmark = pytest.mark.skipif(
-    not r_ok,
-    reason="Skipping R tests on Windows CI due to broken R installation"
-)
-
 from openalea.adel.data_samples import *
+from .conftest import pytest_r_skip
 
 
+@pytest_r_skip
 def test_leaf_db():
     db = leaves_db()
     sr = srdb()

@@ -1,21 +1,10 @@
 """Test use cases of adel/fspm wheat coupling"""
-import pytest
-
-try:
-    # test if R's stats package loads correctly
-    import rpy2.robjects as ro
-    ro.r("na.omit")  # will error on broken R
-    r_ok = True
-except Exception:
-    r_ok = False
-
-pytestmark = pytest.mark.skipif(
-    not r_ok,
-    reason="Skipping R tests on Windows CI due to broken R installation"
-)
 from openalea.adel.adelwheat_dynamic import AdelWheatDyn
 
+from .conftest import pytest_r_skip
 
+
+@pytest_r_skip
 def test_add_metamer():
     # create a plant with 3 metamers
     adel = AdelWheatDyn(seed=1234)

@@ -1,28 +1,14 @@
 """Test stability of Adel for simulating a reference plant (Maxwell, plant 11, pareameterised by M. Abichou/B.Andrieu, EGC Grignon"""
-import pytest
-
-try:
-    # test if R's stats package loads correctly
-    import rpy2.robjects as ro
-    ro.r("na.omit")  # will error on broken R
-    r_ok = True
-except Exception:
-    r_ok = False
-
-pytestmark = pytest.mark.skipif(
-    not r_ok,
-    reason="Skipping R tests on Windows CI due to broken R installation"
-)
-
-
-
 import pathlib
 from functools import reduce
 
 from openalea.adel.AdelR import devCsv, setAdel, RunAdel, genGeoLeaf, genGeoAxe, \
     csvAsDict
 
+from .conftest import pytest_r_skip
 
+
+@pytest_r_skip
 def test_organ_length():
     dir = str(pathlib.Path(__file__).parent.resolve() / "data" / "test_Adel_Maxwell_plante11/Maxwell_")
     sufix = "_plante11.csv"

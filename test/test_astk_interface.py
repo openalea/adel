@@ -1,17 +1,6 @@
-import pytest
+from .conftest import pytest_r_skip
 
-try:
-    # test if R's stats package loads correctly
-    import rpy2.robjects as ro
-    ro.r("na.omit")  # will error on broken R
-    r_ok = True
-except Exception:
-    r_ok = False
-
-pytestmark = pytest.mark.skipif(
-    not r_ok,
-    reason="Skipping R tests on Windows CI due to broken R installation"
-)
+pytestmark = pytest_r_skip
 
 from openalea.adel.astk_interface import AdelWheat
 
