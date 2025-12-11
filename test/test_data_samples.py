@@ -14,6 +14,7 @@ def test_leaf_db():
     assert leaves is not None
 
 
+@pytest_r_skip
 def test_devT():
     dev = devT()
     assert dev is not None
