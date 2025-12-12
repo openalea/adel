@@ -2,6 +2,8 @@ name: adel
 channels:
   - conda-forge
   - openalea3
+  - openalea3/label/dev
+  - openalea3/label/rc
 dependencies:
   - numpy
   - scipy
