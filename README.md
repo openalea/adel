@@ -35,48 +35,19 @@ gramineaous plants(Fournier & Pradal, unpublished), the Adel-Maize
 together with the wheat parameterization model of Abichou et al. (2013)
 and the plastic leaf model of Fournier & Pradal (2012)
 
-## Requirements
 
--   OpenAlea.mtg
--   OpenAlea.plantgl
--   OpenAlea.caribu
--   Openalea.astk
--   NumPy
--   Scipy
--   MatplotLib-base
--   Pandas
--   Rpy2
+## Installation
 
-## Installation with mamba
+### Users
 
-Create an environment:
+```bash
+mamba env create -n adel -c openalea3 -c conda-forge openalea.adel 
+``` 
 
-> mamba create -n adel -c conda-forge -c openalea3 openalea.adel -y
+### Developers
 
-Activate the environment:
-
-> mamba activate adel
-
-Locate RHOME:
-
-> R RHOME
-
-Set R_HOME to the R HOME dir returned above:
-
-> mamba env config vars set R_HOME=r_home_dir_returned_by_rhome
-
-## Installation from source
-
-Create an environment
-
-> mamba env create -n adel -f conda/environment.yml
-
-Set R_HOME (see above)
-
-Install adel
-
-``` console
-git clone https://github.com/openalea/adel.git 
-cd adel
-pip install -e .
+```bash
+git clone 'https://github.com/openalea/adel.git'
+cd caribu
+mamba env create -n adel_dev -f ./conda/environment.yml
 ```
