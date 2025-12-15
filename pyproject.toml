@@ -42,7 +42,6 @@ dependencies = [
     "numpy",
     "scipy",
     "pandas",
-    "rpy2"
 ]
 
 [project.optional-dependencies]
@@ -80,7 +79,8 @@ dependencies = [
     "openalea.caribu",
     "openalea.astk",
     "openalea.core",
-    "matplotlib-base"
+    "matplotlib-base",
+    "rpy2" # use conda as pip rpy2 do not install R
 ]
 
 

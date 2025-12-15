@@ -8,11 +8,12 @@ dependencies:
   # list here manually conda-only deps (listed in [tool.conda.environment] section of pyproject)
   - python
   - pandoc
+  - rpy2
+  - matplotlib-base
   - openalea.mtg
   - openalea.plantgl
   - openalea.caribu
   - openalea.astk
-  - matplotlib-base
   - openalea.widgets
   - pip
   # let pip install the rest using pyproject.toml (if you are okay with conda/pip mix)
