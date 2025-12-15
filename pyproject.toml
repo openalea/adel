@@ -2,6 +2,19 @@
 requires = ["setuptools", "setuptools_scm"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"]}
+
+# enable dynamic version based on git tags
+[tool.setuptools_scm]
+# Configure to align with the one of meta.yaml
+fallback_version = "0.0.0.dev0"
+version_scheme = "guess-next-dev"
+local_scheme = "no-local-version"
+
 [project]
 name = "openalea.adel"
 authors = [
@@ -10,21 +23,17 @@ authors = [
   { name = "Bruno Andrieu" },
 ]
 description = "3D plant simulation of graminae crops"
-license = {file = "LICENSE.txt"}
-requires-python = ">=3.8"
+license = "CECILL-C"
+license-files = ["LICEN[CS]E*"]
+requires-python = ">=3.10"
+keywords = ["openalea", "FSPM", "cereals"]
 classifiers = [
   "Intended Audience :: Science/Research",
   "Intended Audience :: Developers",
-  "License :: OSI Approved :: CeCILL-C License",
   "Operating System :: OS Independent",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
   "Topic :: Scientific/Engineering",
 ]
 dynamic = ["readme","version"]
@@ -38,6 +47,16 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest"]
+doc = [
+  "pydata-sphinx-theme",
+  "myst-parser",
+  "sphinx-favicon",
+  "nbsphinx",
+  "nbsphinx-link",
+  "ipykernel",
+  "sphinx-copybutton",
+  "ipython_genutils",
+]
 notebook = ["jupyter"]
 
 [project.urls]
@@ -60,18 +79,10 @@ dependencies = [
     "openalea.plantgl",
     "openalea.caribu",
     "openalea.astk",
+    "openalea.core",
     "matplotlib-base"
 ]
-[tool.setuptools.dynamic]
-readme = {file = ["README.md"]}
 
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["openalea.*"]
 
 [tool.setuptools.package-data]
 "*" = ['*.RData', '*.R', '*.8', '*.h', '*.str','*.txt', '*.l', '*.map', '*.csv', '*.json', '*.png']
-
-# enable dynamic versioning based on git tags
-[tool.setuptools_scm]
-# can be empty if no extra settings are needed, presence enables setuptools-scm
