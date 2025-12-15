@@ -15,6 +15,7 @@ dependencies:
   - openalea.caribu
   - openalea.astk
   - openalea.widgets
+  - openalea.core
   - pip
   # let pip install the rest using pyproject.toml (if you are okay with conda/pip mix)
   - pip:
