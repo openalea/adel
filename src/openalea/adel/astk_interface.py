@@ -297,7 +297,7 @@ class AdelWheat(Adel):
         except:
             data = time_control
             tt = self.thermal_time(data.index, data)
-            dday = tt[-1]
+            dday = tt.iloc[-1]
 
         # refg = self.setup_canopy(age = self.canopy_age)
         self.canopy_age += dday
