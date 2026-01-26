@@ -310,7 +310,8 @@ def plant_table(dimT, convert=None):
         inplace=True,
     )
     if convert is not None:
-        df.loc[:, ("Ll", "Lw_shape", "Gl", "Gd", "El", "Ed")] *= convert
+        cols = ["Ll", "Lw_shape", "Gl", "Gd", "El", "Ed"]
+        df[cols] *= convert
     # add mandatory topological info and sort from base to top
     df.loc[:, "axe_id"] = "MS"
     df.loc[:, "ms_insertion"] = 0
