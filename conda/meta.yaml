@@ -49,7 +49,6 @@ test:
 
 about:
   home: {{ home }}
-  license: Cecill-C License
-  license_file: LICENCE.txt
+  license: {{ license }}
   summary: {{ description }}
 
