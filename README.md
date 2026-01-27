@@ -4,8 +4,8 @@
 
 **Contributors** :
 
-:   -   M Abichou (wheat parameteristion, documentation, plantgen),
-    -   C Chambon (plantgen, documentation, povray, fit, io widgets)
+-   M Abichou (wheat parameteristion, documentation, plantgen),
+-   C Chambon (plantgen, documentation, povray, fit, io widgets)
 
 **Institutes** : INRAe, CIRAD
 
