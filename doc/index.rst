@@ -25,6 +25,7 @@ Documentation
 .. toctree::
     :maxdepth: 2
 
+    ./installation.rst
     User Guide<user/index.rst>
     Notebook example<example/notebook.rst>
     Reference Guide<user/autosum.rst>
