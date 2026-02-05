@@ -5,23 +5,19 @@
 
 .. module:: adel
 
-Openalea Adel documentation
-#########################################################################
+Welcome to Openalea Adel's documentation
+########################################
+.. figure:: _static/adel.png
 
-Module description
-==================
+OpenAlea.Adel (Architectural model of DEvelopment based on L-systems)
+allows to simulate the 3D architectural development of the shoot of
+gramineaous plant.
+The package hosts generic data structure and simulation tools for
+gramineaous plants (Fournier & Pradal, unpublished), the Adel-Maize
+[fournier1999]_, Adel-Wheat [fournier2003]_ models,
+together with the wheat parameterization model of [abichou2013]_
+and the plastic leaf model of [fournier2012]_.
 
-.. sidebar:: Summary
-
-    :Version: |version|
-    :Release: |release|
-    :Date: |today|
-    :Author: See `Authors`_ section
-    :ChangeLog: See `ChangeLog`_ section
-
-.. topic:: Overview
-
-    .. include:: user/overview.txt
 
 Documentation
 =============
@@ -32,6 +28,7 @@ Documentation
     User Guide<user/index.rst>
     Notebook example<example/notebook.rst>
     Reference Guide<user/autosum.rst>
+    ./references.rst
 
 - A `PDF <../latex/adel.pdf>`_ version of |adel| documentation is 
   available.
