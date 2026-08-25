@@ -406,7 +406,7 @@ def _devCsv(axeTfn, dimTfn, phenTfn, earTfn=None, ssi2senTfn=None):
 def devCsv(axeTfn, dimTfn, phenTfn, earTfn=None, ssi2senTfn=None):
     """Import development parameters for adel from csv files and/or pandas dataframes"""
     return RdflistAsdicts(
-        _devCsv(axeTfn, dimTfn, phenTfn, earTfn=None, ssi2senTfn=None)
+        _devCsv(axeTfn, dimTfn, phenTfn, earTfn=earTfn, ssi2senTfn=ssi2senTfn)
     )
 
 
