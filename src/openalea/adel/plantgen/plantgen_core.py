@@ -365,10 +365,15 @@ def organs_dimensions(
             force=False,
         )
     )
-    dimT_tmp = _create_dimT_tmp(axeT_tmp, force=False)
 
+    dimT_tmp = _create_dimT_tmp(axeT_)
+
+    # 3. merge dimT_tmp and dimT_user
+    dimT_tmp_merged = _merge_dimT_tmp_and_dimT_user(
+        dynT_, dimT_user, dimT_user_completeness, dimT_tmp
+    )
     # 2. create dimT
-    dimT_ = _create_dimT(axeT_, dimT_tmp, dynT_, decimal_elongated_internode_number)
+    dimT_ = _create_dimT(axeT_, dimT_tmp_merged, dynT_, decimal_elongated_internode_number)
 
     return dimT_
 
@@ -2769,7 +2774,7 @@ class _CreatePhenTTmp:
             for (id_cohort, N_phytomer_potential, id_phen), axeT_group in axeT_.groupby(
                 ["id_cohort", "N_phytomer_potential", "id_phen"]
             ):
-                phenT_tmp_group = phenT_tmp_grouped.get_group(id_phen)
+                phenT_tmp_group = phenT_tmp_grouped.get_group(id_phen).copy()
                 dynT_group = dynT_grouped.get_group((id_cohort, N_phytomer_potential))
                 dynT_row = dynT_group.loc[
                     dynT_group[
@@ -2867,9 +2872,7 @@ class _CreatePhenTTmp:
                         # )  # TODO: useful ?
 
                 # compute TT_col_phytomer
-                self.phenT_tmp.loc[
-                    phenT_tmp_group.index, "TT_col_phytomer"
-                ] = phenT_tmp_group.loc[:, "TT_col_phytomer"].values[:] = (
+                phenT_tmp_group["TT_col_phytomer"] = (
                     phenT_tmp_group["index_phytomer"].apply(
                         _calculate_TT_col_phytomer,
                         args=(
@@ -2890,11 +2893,8 @@ class _CreatePhenTTmp:
 
                 # compute TT_em_phytomer
                 first_leaf_indexes = phenT_tmp_group.index[0:2]
-                self.phenT_tmp.loc[
-                    first_leaf_indexes, "TT_em_phytomer"
-                ] = phenT_tmp_group.loc[first_leaf_indexes, "TT_em_phytomer"].values[
-                    :
-                ] = phenT_tmp_group.loc[
+                phenT_tmp_group.loc[first_leaf_indexes, "TT_em_phytomer"] = \
+                    phenT_tmp_group.loc[
                     first_leaf_indexes, ["index_phytomer", "TT_col_phytomer"]
                 ].apply(
                     _calculate_TT_em_phytomer,
@@ -2920,11 +2920,9 @@ class _CreatePhenTTmp:
                         phenT_tmp_group.index - phenT_tmp_group.index[0:2]
                     )
                 if len(other_leaves_indexes) != 0:
-                    self.phenT_tmp.loc[
+                    phenT_tmp_group.loc[
                         other_leaves_indexes, "TT_em_phytomer"
                     ] = phenT_tmp_group.loc[
-                        other_leaves_indexes, "TT_em_phytomer"
-                    ].values[:] = phenT_tmp_group.loc[
                         other_leaves_indexes, ["index_phytomer", "TT_col_phytomer"]
                     ].apply(
                         _calculate_TT_em_phytomer,
@@ -2962,9 +2960,7 @@ class _CreatePhenTTmp:
                     a_cohort_before_start_MS_elongation_2,
                 )
 
-                self.phenT_tmp.loc[
-                    phenT_tmp_group.index, "TT_sen_phytomer"
-                ] = phenT_tmp_group.loc[:, "TT_sen_phytomer"].values[:] = (
+                phenT_tmp_group["TT_sen_phytomer"] = (
                     phenT_tmp_group["index_phytomer"].apply(
                         _calculate_TT_sen_phytomer,
                         args=(
@@ -2984,14 +2980,18 @@ class _CreatePhenTTmp:
                 )
 
                 # compute TT_del_phytomer
-                self.phenT_tmp.loc[
-                    phenT_tmp_group.index, "TT_del_phytomer"
-                ] = phenT_tmp_group.loc[:, "TT_del_phytomer"].values[:] = (
+                phenT_tmp_group["TT_del_phytomer"] = (
                     _calculate_TT_del_phytomer(
                         a_cohort_before_start_MS_elongation_1,
                         phenT_tmp_group["TT_sen_phytomer"],
                     )
                 )
+
+                # update phenT
+                self.phenT_tmp.loc[
+                    phenT_tmp_group.index,
+                    phenT_tmp_group.columns
+                ] = phenT_tmp_group
         return self.phenT_tmp
 
 
