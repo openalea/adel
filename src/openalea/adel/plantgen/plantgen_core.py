@@ -835,12 +835,21 @@ def _gen_id_dim_list(id_cohort_series, N_phytomer_series, id_ear_series):
     """Generate the *id_dim* column."""
     is_ear = pd.Series(0, index=id_ear_series.index)
     is_ear[id_ear_series.dropna().index] = 1
-    zfilled_array = np.core.defchararray.zfill(np.char.mod("%d", N_phytomer_series), 2)
+
+    zfilled_array = np.char.zfill(
+        np.char.mod("%d", N_phytomer_series), 2
+    )
+
     id_cohort_str_array = np.char.mod("%d", id_cohort_series)
-    id_dim_array = np.core.defchararray.add(id_cohort_str_array, zfilled_array)
-    id_dim_array = np.core.defchararray.add(
+
+    id_dim_array = np.char.add(
+        id_cohort_str_array, zfilled_array
+    )
+
+    id_dim_array = np.char.add(
         id_dim_array, np.char.mod("%d", is_ear)
     ).astype(int)
+
     return id_dim_array.tolist()
 
 

@@ -172,7 +172,7 @@ def gen_adel_input_data(
         )
     )
 
-    if sum(MS_leaves_number_probabilities.values()) != 1.0:
+    if not np.isclose(sum(MS_leaves_number_probabilities.values()), 1.0):
         raise tools.InputError(
             "the sum of the probabilities defined in MS_leaves_number_probabilities is not equal to 1.0"
         )
