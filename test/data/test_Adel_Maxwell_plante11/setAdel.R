@@ -17,6 +17,10 @@ openapprox <- function(x,y,xout,extrapolate=TRUE) {
     lastrate <- 0
     firstrate <- 0
   }
+  if (!is.finite(lastrate)) # last two x identical
+    lastrate <- diff(xy[twolast,2])
+  if (!is.finite(firstrate)) # last two x identical
+    firstrate <- diff(xy[1:2,2])
   extrax <- xout > xy[last,1]
   res[extrax] <- xy[last,2] + lastrate * (xout[extrax] - xy[last,1])
   extrax <- xout < xy[1,1]
@@ -46,37 +50,62 @@ setCanopy <- function(canT, nplants=1, randomize = TRUE, seed = NULL) {
 }
   
 #
-predictDim <- function(dimT,index,nf) {
+predictDim <- function(dimT,index,nf,nf_end) {
   res <- NULL
   if (!index %in% dimT$index)
     stop(paste("setAdel : dimIndex", index, "not found in dimTable"))
   else {
-    nout <- seq(nf)/nf 
     dim <- dimT[dimT$index == index,]
-    out <- vector("list",ncol(dimT)-2)
-    names(out) <- colnames(dim)[-match(c('index','nrel'),colnames(dim))]
-    for (w in names(out))
-      out[[w]] <- approx(dim$nrel,dim[,w],nout,rule=2)$y
-    res <- data.frame(do.call("cbind",out))
+    if ('index_phytomer' %in% colnames(dimT)) {# index is absolute
+      headers <- c('index_phytomer', 'index', 'nrel')
+      headers <- headers[headers %in% colnames(dim)]
+      out <- vector("list",ncol(dimT) - length(headers))
+      names(out) <- colnames(dim)[-match(headers,colnames(dim))]
+      for (w in names(out))
+        out[[w]] <- c(dim[seq(nf_end),w], rep(0, nf - nf_end))
+      res <- data.frame(do.call("cbind",out))
+    } else {#index is relative to n phytomer potentiel
+      nout <- seq(nf)/nf 
+      out <- vector("list",ncol(dimT)-2)
+      names(out) <- colnames(dim)[-match(c('index','nrel'),colnames(dim))]
+      for (w in names(out))
+        out[[w]] <- approx(dim$nrel,dim[,w],nout,rule=2)$y
+      res <- data.frame(do.call("cbind",out))
+    }
   }
   res
 }
 #
-predictPhen <- function(phenT,index,nf,datesf1) {
+predictPhen <- function(phenT,index,nf,datesf1,nf_end) {
   if (!"disp"%in%colnames(phenT))
-    stop("Missing input for leaf desapearance in phenT (see docAdel.txt")
+    stop("setAdel: Missing input for leaf desapearance in phenT (see docAdel.txt")
   res <- NULL
   if (!index %in% phenT$index)
-    stop(paste("setAdel : phenIndex", index, "not found in phenTable"))
+    stop(paste("setAdel : phenIndex/id_phen", index, "not found in phenTable"))
   else {
-    nout <- c(0,seq(nf))/nf
     phen <- phenT[phenT$index == index,]
-    out <- vector("list",ncol(phenT) -2)
-    names(out) <- colnames(phen)[-match(c('index','nrel'),colnames(phen))]
+    headers <- c('index_phytomer', 'index', 'nrel')
+    headers <- headers[headers %in% colnames(phen)]
+    out <- vector("list",ncol(phen) - length(headers))
+    names(out) <- colnames(phen)[-match(headers,colnames(phen))]
     names(datesf1) <- c("tip","col","ssi","disp")
+    #
+    if ('index_phytomer' %in% colnames(phen)) {# index is absolute
+      nin <- phen$index_phytomer
+      nout <-  c(0,seq(nf))
+      if (length(na.omit(phen$index_phytomer)) < 2)
+        stop(paste("setAdel : not enough data in phenTable for id_phen:",index))
+    } else {#index is relative to n phytomer potentielnout <- c(0,seq(nf))/nf
+      nin <- phen$nrel
+      nout <- c(0,seq(nf))/nf
+      if (length(na.omit(phen$nrel)) < 2)
+        stop(paste("setAdel : not enough data in phenTable for id_phen:",index))
+    }
     for (i in 1:4) {
       w <- names(out)[i]
-      out[[w]] <- openapprox(phen$nrel,phen[,w],nout) + datesf1[[w]] 
+      if (length(na.omit(phen[,w])) < 2)
+        stop(paste("setAdel : not enough data in phenTable for id_phen:",index, 'column:', w))
+      out[[w]] <- openapprox(nin,phen[,w],nout,extrapolate=FALSE) + datesf1[[w]]
     }
     res <- data.frame(cbind(n=c(0,seq(nf)),do.call("cbind",out)))
   }
@@ -98,11 +127,22 @@ predictPed <- function(pheno,phyto,index,nf,earT) {
   
 #setAdel performs the dressing (geometry, tiller number ...) of plants from parameters and duplicate them for a given number of outputed plants
 #
-setAdel <- function(axeT,dimT,phenT,earT,ssisenT,geoLeaf,geoAxe,nplants=1,sample='random',seed=NULL,xy_db=NULL,sr_db=NULL) {
+#debug load defaults
+#axeT=devT$axeT;dimT=devT$dimT;phenT=devT$phenT;earT=devT$earT;ssisenT=devT$ssisenT;nplants=1;sample='random';seed=NULL;xy_db=xydb;sr_db=srdb;ssipars=NULL
+#
+setAdel <- function(axeT,dimT,phenT,earT,ssisenT,geoLeaf,geoAxe,nplants=1,sample='random',seed=NULL,xy_db=NULL,sr_db=NULL,ssipars=NULL) {
 
+  # Handle semantic of nf, N_phytomer and N_phytomer_potentiel, that depend on the history of adel.
+  #
+  if ("nf"%in%colnames(axeT)) {#first version of adel: N_phytomer_potentiel = nf & N_phytomer = nf
+    colnames(axeT)[match("nf",colnames(axeT))] <- "N_phytomer_potentiel"
+    axeT <- cbind(axeT,N_phytomer = axeT$N_phytomer_potentiel)
+  } else if (!"N_phytomer_potentiel"%in%colnames(axeT)) {# old plantgen (before may 2015)
+    axeT <- cbind(axeT,N_phytomer_potentiel = axeT$N_phytomer)
+  }  
   #prise en chage nouveaux noms
-  conv <- c("id_plt","id_axis","N_phytomer","TT_stop_axis","TT_del_axis","id_dim","id_phen","id_ear","TT_em_phytomer1","TT_col_phytomer1","TT_sen_phytomer1","TT_del_phytomer1")
-  names(conv) <- c("plant","axe","nf","end","disp","dimIndex","phenIndex","earIndex","emf1","ligf1","senf1","dispf1")
+  conv <- c("id_plt","id_axis","N_phytomer","N_phytomer_potentiel","TT_stop_axis","TT_del_axis","id_dim","id_phen","id_ear","TT_em_phytomer1","TT_col_phytomer1","TT_sen_phytomer1","TT_del_phytomer1")
+  names(conv) <- c("plant","axe","nf_end","nf","end","disp","dimIndex","phenIndex","earIndex","emf1","ligf1","senf1","dispf1")
   colnames(axeT)[colnames(axeT) %in% conv] <- names(conv)[na.omit(match(colnames(axeT),conv))]
   #
   conv <- c("id_dim","index_rel_phytomer","L_blade","W_blade","L_sheath","W_sheath","L_internode","W_internode")
@@ -133,8 +173,9 @@ setAdel <- function(axeT,dimT,phenT,earT,ssisenT,geoLeaf,geoAxe,nplants=1,sample
     earT <- data.frame(index = 1,em_ear = 100, em_ped = 200, end_gf = 1000, l_ped = 0, d_ped = 0, l_ear = 0, Sp_ear = 0, l_ear_awn = 0)
   }
   
-  if (is.null(ssisenT))
-    ssisenT <- data.frame(ndel=1:4,rate1=0.07,dssit1=c(0,1.2,2.5,3),dssit2=c(1.2,2.5,3.7,4))
+  if (is.null(ssisenT)) 
+    if (is.null(ssipars))#otherwise, use ssipars
+      ssisenT <- data.frame(ndel=1:4,rate1=0.07,dssit1=c(0,1.2,2.5,3),dssit2=c(1.2,2.5,3.7,4))
  
   if (!"incB"%in%colnames(dimT)) 
     dimT <- cbind(dimT,incB = -999,dincB = 0)
@@ -143,49 +184,63 @@ setAdel <- function(axeT,dimT,phenT,earT,ssisenT,geoLeaf,geoAxe,nplants=1,sample
     useAzim <- TRUE
     dimT <- cbind(dimT,pAngle = -999,dpAngle = 0)
   }
+
+  if (!"HS_final"%in%colnames(axeT))
+    axeT <- cbind(axeT, HS_final = ifelse(is.na(axeT$end), 1, NA) * pmin(axeT$nf_end,axeT$nf))
+
+
+  
   
   plantdb <- by(axeT,list(axeT$plant),function(x) {
-    if (! 0 %in% x$axe)
+    if (! "MS" %in% x$axe)
       stop(paste("No main stem found for plant",x$plant[1],", Check axeT table"))
     x})
   #sampling nplants in the database
   if (sample == 'random')
     plnb <- ceiling(runif(nplants) * length(unique(axeT$plant)))
-  else
-    plnb <- rep(seq(plantdb),lenght.out=nplants)[1:nplants]
+  else 
+    plnb <- rep(seq(plantdb),length.out=nplants)
   #
   out <- vector("list",nplants)
   names(out) <- names(plantdb)[plnb]
   for (p in seq(out)) {
+    #print(p)
     #axeTable from axeT and geoAxe or dimT if azim/azdev in colums
     pT <- plantdb[[plnb[p]]]
     axeTable <- data.frame(axe = pT$axe,
                            nf = pT$nf,
+                           nf_end = pT$nf_end,
                            emf1 = pT$emf1,
                            end = pT$end,
                            disp = pT$disp,
                            azT = sapply(pT$axe,geoAxe$azT),
+                           azTb = sapply(pT$axe,geoAxe$azTb),
                            incT = sapply(pT$axe,geoAxe$incT),
                            dredT = sapply(pT$axe,geoAxe$dredT),
-                           hasEar = !is.na(pT$earIndex)
+                           hasEar = is.na(pT$end),
+                           HS_final = pT$HS_final
                            )
-    #phytoT from dimT and geoleaf
+    #phytoT and leafT from dimT and geoleaf
     nomsdim <- c("Ll","Lw","Gl","Gd","El","Ed","pAngle","dpAngle","incB","dincB")
     #row = phytomer number + 3 (peduncle, ear, awns)
     nfM <- max(pT$nf) + 3
+    if (! all(is.finite(c(nfM,nrow(pT)))))
+      stop("setAdel: Can't create phytoT array")
     phytoT <- array(NA,dim=c(nfM,length(nomsdim)+3,nrow(pT)),dimnames=list(seq(nfM),c(nomsdim,"Azim","Lindex","Lseed"),pT$axe))
     for (a in seq(nrow(pT))) {
       nf <- pT$nf[a]
-      pred <- predictDim(dimT,pT$dimIndex[a],nf)[,nomsdim]
+      nf_end <- pT$nf_end[a]
+      idaxe <- pT$axe[a]
+      pred <- predictDim(dimT,pT$dimIndex[a],nf, nf_end)[,nomsdim]
       if (!is.null(pred))
         phytoT[seq(nf),nomsdim,a] <- unlist(pred)
       phytoT[seq(nf),"incB",a] <- phytoT[seq(nf),"incB",a] + (runif(nf) - .5) * phytoT[seq(nf),"dincB",a]
       if (useAzim) 
-        phytoT[seq(nf),"Azim",a] <- sapply(seq(nf),function(n) geoLeaf$Azim(a,n,nf-n))
+        phytoT[seq(nf),"Azim",a] <- sapply(seq(nf),function(n) geoLeaf$Azim(idaxe,n,nf))
       else
         phytoT[seq(nf),"Azim",a] <- phytoT[seq(nf),"pAngle",a] + (runif(nf) - .5) * phytoT[seq(nf),"dpAngle",a]
       #
-      lindex <- sapply(seq(nf),function(n) geoLeaf$Lindex(a,n,nf-n))
+      lindex <- sapply(seq(nf),function(n) geoLeaf$Lindex(idaxe,n,nf))
       lseed <- runif(nf)
       if (is.null(xy_db)) {
         phytoT[seq(nf),"Lindex",a] <- lindex
@@ -194,14 +249,17 @@ setAdel <- function(axeT,dimT,phenT,earT,ssisenT,geoLeaf,geoAxe,nplants=1,sample
       else  {
         lindex <- sapply(lindex,function(x) ifelse(x %in% seq(xy_db),x,seq(xy_db)[which.min(abs(x - seq(xy_db)))]))
         lindex <- sapply(lindex,function(x) ifelse(x %in% seq(sr_db),x,seq(sr_db)[which.min(abs(x - seq(sr_db)))]))
+        # uses R-style indexing convention for lindex and lseed : they vary from 1 to length(object_list)
         phytoT[seq(nf),"Lindex",a] <- lindex
-        phytoT[seq(nf),"Lseed",a] <- sapply(seq(lseed),function(x) round(lseed[x] * length(xy_db[[lindex[x]]])))
+        phytoT[seq(nf),"Lseed",a] <- sapply(seq(lseed),function(x) {index = round(lseed[x] * length(xy_db[[lindex[x]]])); ifelse(index==0,1,index)})
       }
       #
       phytoT[(nf+1):(nf+3),,a] <- 0
+      phytoT[(nf+1):(nf+3),c('Lindex', 'Lseed'),a] <- -999
       if (!is.na(pT$earIndex[a])) {
         phytoT[(nf+1):(nf+2),"El",a] <- unlist(earT[pT$earIndex[a],c("l_ped","l_ear")])
-        phytoT[nf+3,"El",a] <- unlist(earT[pT$earIndex[a],"l_ear_awn"] - earT[pT$earIndex[a],"l_ear"])
+        if (earT[pT$earIndex[a],"l_ear_awn"] > earT[pT$earIndex[a],"l_ear"])
+          phytoT[nf+3,"El",a] <- unlist(earT[pT$earIndex[a],"l_ear_awn"] - earT[pT$earIndex[a],"l_ear"])
         phytoT[nf+1,"Ed",a] <- unlist(earT[pT$earIndex[a],"d_ped"])
         if (earT[pT$earIndex[a],"l_ear"] > 0)
           phytoT[(nf+2):(nf+3),"Ed",a] <- unlist(earT[pT$earIndex[a],"Sp_ear"]/earT[pT$earIndex[a],"l_ear"])
@@ -213,15 +271,17 @@ setAdel <- function(axeT,dimT,phenT,earT,ssisenT,geoLeaf,geoAxe,nplants=1,sample
     if (!"dispf1"%in%colnames(pT))
       print("Missing input for leaf desapearance in axeT (see docAdel.txt")
     for (a in seq(nrow(pT)))
-      phenoT[[a]] <- predictPhen(phenT,pT$phenIndex[a],pT$nf[a],pT[a,c("emf1","ligf1","senf1","dispf1")])
+      phenoT[[a]] <- predictPhen(phenT,pT$phenIndex[a],pT$nf[a],pT[a,c("emf1","ligf1","senf1","dispf1")], pT$nf_end[a])
     # date of start and end of peduncle elongation
     pedT <- vector("list",nrow(pT))
     names(pedT) <- pT$axe
     for (a in seq(nrow(pT))) 
       if (!is.na(pT$earIndex[a]))
         pedT[[a]] <- predictPed(phenoT[[a]],phytoT[,,a],pT$earIndex[a],pT$nf[a],earT)
-    
-    out[[p]] <- list(refp=names(out)[p],axeT = axeTable,phytoT=phytoT,pheno=phenoT,pedT = pedT,ssisenT=ssisenT)
+    if (!is.null(ssisenT))
+      out[[p]] <- list(refp=names(out)[p],axeT = axeTable,phytoT=phytoT,pheno=phenoT,pedT = pedT,ssisenT=ssisenT)
+    else
+      out[[p]] <- list(refp=names(out)[p],axeT = axeTable,phytoT=phytoT,pheno=phenoT,pedT = pedT,ssipars=ssipars)
   }
   out
 }

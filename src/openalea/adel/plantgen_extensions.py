@@ -638,7 +638,7 @@ class GreenLeaves:
         return a, rmse
 
     def hs_t1(self, nff=None):
-        return self.hsfit.HSflag(nff) - self.n_elongated_internode
+        return float(self.hsfit.HSflag(nff)) - self.n_elongated_internode
 
     def dn_nff(self, nff=None):
         return 0.5 * (self.hs_t2(nff) - self.hs_t2())
@@ -647,7 +647,7 @@ class GreenLeaves:
         return self.GL_bolting + self.dn_nff(nff)
 
     def hs_t2(self, nff=None):
-        return self.hsfit.HSflag(nff)
+        return float(self.hsfit.HSflag(nff))
 
     def n2(self, nff=None):
         return self.GL_flag + self.dn_nff(nff)
@@ -1116,7 +1116,7 @@ class AxePop:
             for c in cardnff.loc[int(nff)].index:
                 d[int(c)] = cardinalities(
                     cohort_nff_modalities[int(nff)][int(c)],
-                    int(cardnff.loc[int(nff), c]),
+                    int(cardnff.loc[int(nff), c].values),
                 )
             cohort_nff_cardinalities[int(nff)] = d
         cohort_nff = {

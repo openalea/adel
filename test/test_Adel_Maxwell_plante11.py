@@ -1,6 +1,7 @@
 """Test stability of Adel for simulating a reference plant (Maxwell, plant 11, pareameterised by M. Abichou/B.Andrieu, EGC Grignon"""
-import pathlib
+from pathlib import Path
 from functools import reduce
+import numpy as np
 
 from openalea.adel.AdelR import devCsv, setAdel, RunAdel, genGeoLeaf, genGeoAxe, \
     csvAsDict
@@ -10,7 +11,8 @@ from .conftest import pytest_r_skip
 
 @pytest_r_skip
 def test_organ_length():
-    dir = str(pathlib.Path(__file__).parent.resolve() / "data" / "test_Adel_Maxwell_plante11/Maxwell_")
+    datadir = Path(__file__).parent if '__file__' in globals() else Path(".")
+    dir = str(datadir.resolve() / "data" / "test_Adel_Maxwell_plante11/Maxwell_")
     sufix = "_plante11.csv"
     axeTpath = dir + "axeT" + sufix
     dimTpath = dir + "dimT" + sufix
@@ -39,4 +41,4 @@ def test_organ_length():
     ):
         sim = reduce(lambda x, y: x + y, (t[k].tolist() for t in cantables))
         exp = expected[k]
-        # np.testing.assert_allclose(sim,exp)
+        np.testing.assert_allclose(sim,exp)
