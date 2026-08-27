@@ -639,4 +639,5 @@ getAxeT <- function(plants) do.call('rbind', mapply(function(idpl,pl) {df=pl$axe
 getPhenT <- function(plants, axe='MS') do.call('rbind', mapply(function(idpl,pl) {df=pl$pheno[[axe]];df$plant=idpl;df},seq(plants),plants,SIMPLIFY=FALSE))
 #
 getPhytoT <- function(plants, axe='MS') do.call('rbind', mapply(function(idpl,pl) {df=data.frame(pl$phytoT[,,axe]);df$plant=idpl;df$axe=axe;df$n=seq(nrow(df));df},seq(plants),plants,SIMPLIFY=FALSE))
-
+#
+AxeDfList <- function(axeArray) setNames(lapply(seq_len(dim(axeArray)[3]), function(i) {as.data.frame(axeArray[, , i])}),dimnames(axeArray)[[3]])

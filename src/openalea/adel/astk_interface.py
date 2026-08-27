@@ -12,6 +12,7 @@ from openalea.adel.AdelR import (
     getPhytoT,
     saveRData,
     readRData,
+    setAdelpars
 )
 from openalea.adel.newmtg import move_properties
 import openalea.adel.data_samples as adel_data
@@ -207,32 +208,47 @@ class AdelWheat(Adel):
             for i in range(steps)
         )
 
+    def set_adel_pars(self):
+        return setAdelpars(self.pars)
+
+    def run_adel(self, age=10):
+        if self.duplicate is None:
+            return RunAdel(age, self.pars, adelpars=self.run_adel_pars)
+        else:
+            canopy_quot, canopy_rem = None, None
+            if self.nrem > 0:
+                canopy_quot = RunAdel(age, self.pars_quot, adelpars=self.run_adel_pars)
+            if self.nrem > 0:
+                canopy_rem = RunAdel(age, self.pars_rem, adelpars=self.run_adel_pars)
+            return canopy_quot, canopy_rem
+
     def setup_canopy(self, age=10):
+
+        self.canopy_age = age
+
         if "stand" not in self.meta:
             self.new_stand(age=age)
 
         if self.duplicate is None:
-            self.canopy_age = age
-            canopy = RunAdel(age, self.pars, adelpars=self.run_adel_pars)
+            canopy = self.run_adel(age)
             stand = list(zip(self.positions, self.plant_azimuths))
             g = self.build_mtg(
                 canopy, stand, aborting_tiller_reduction=self.aborting_tiller_reduction
             )
         else:
+            cquot, crem = self.run_adel(age)
+            gquot, grem = None, None
             # produce plants positioned at origin
-            grem = None
             if self.nrem > 0:
-                canopy = RunAdel(age, self.pars_rem, adelpars=self.run_adel_pars)
                 grem = self.build_mtg(
-                    canopy,
+                    crem,
                     stand=None,
                     aborting_tiller_reduction=self.aborting_tiller_reduction,
                 )
 
             if self.nquot > 0:
-                canopy = RunAdel(age, self.pars_quot, adelpars=self.run_adel_pars)
                 gquot = self.build_mtg(
-                    canopy,
+                    cquot,
                     stand=None,
                     aborting_tiller_reduction=self.aborting_tiller_reduction,
                 )
