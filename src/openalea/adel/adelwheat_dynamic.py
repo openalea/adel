@@ -106,13 +106,13 @@ class AdelWheatDyn(AdelWheat):
         return g
 
     def update_geometry(
-        self, g, SI_units=False, properties_to_convert={"lengths": [], "areas": []}
+        self, g, SI_units=None, properties_to_convert={"lengths": [], "areas": []}
     ):
         """Update MTG geometry.
 
         :Parameters:
             - `g` (:class:`openalea.mtg.mtg.MTG`) - The MTG to update the geometry.
-            - `SI_units` (:class:`bool`) - A boolean indicating whether the MTG properties are expressed in SI units.
+            - `SI_units` (:class:`bool`) - deprecated : use scene _unit to specify unit for scene and properties.
             - `properties_to_convert` (:class:`dict` of :class:`pandas.DataFrame`) - A dictionnary with the list of length properties area properties to be converted.
         :Returns:
             MTG with updated geometry
@@ -120,8 +120,9 @@ class AdelWheatDyn(AdelWheat):
             :class:`openalea.mtg.mtg.MTG`
         """
 
-        if SI_units:
-            self.convert_to_ADEL_units(g, properties_to_convert)
+        if SI_units is not None:
+            raise ValueError('SI_units is deprecated, use scene _unit to specify unit for both scene and mtg properties, use dev_T unit to provide adel inputs in another unit')
+            #self.convert_to_ADEL_units(g, properties_to_convert)
 
         # update elements
         g = update_organ_elements(g, self.leaves, self.split, self.phyllochron())
