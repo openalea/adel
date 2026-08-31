@@ -407,18 +407,6 @@ getIncT <- function(axename, HS, incBase, start_incT=1, incT_rate=30) {
   incT
 }
 #
-# hide tiller base if enclosed in sheaths
-#
-hide_tiller_base <- function(dat, axename, incT, ht) {
-  if (axename != "MS" && incT <= 3) { #Do not represent basal part of first metamer for non inclining tillers
-    dat$Lv[1] =  min(dat$Ll[1],max(0, dat$Ll[1] + dat$Gl[1] + dat$El[1] -  ht))
-    dat$Lr[1] = min(dat$Lv[1],dat$Lr[1])
-    dat$Gv[1] =  min(dat$Gl[1],max(0, dat$Gl[1] + dat$El[1] -  ht))
-    dat$Ev[1] =  min(dat$El[1],max(0, dat$El[1] -  ht))
-  }
-  dat
-}
-#
 #returns stack of visible elements of the stem of an axe
 stemElements <- function(desc) {
   metamer <- NULL
@@ -530,7 +518,6 @@ getdesc <- function(kinlist,plantlist,pars=list("senescence_leaf_shrink" = 0.5,"
           ht <- kin$MS[t,axilrank+1,"ht"] # length of the tube the axe emerge from
         }
         incT <- getIncT(axename, HS_axe, dataxe$incT, start_incT, incT_rate)
-        dat <- hide_tiller_base(dat, axename, incT, ht)
         dat <- axe_inclination(dat, incT, dataxe$dredT)
 
         #azimuts : Attention new 21 fev 2011 : azimuts en relatif / phytomere precedent !
