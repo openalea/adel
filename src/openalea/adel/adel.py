@@ -22,7 +22,7 @@ from openalea.adel.postprocessing import (
     plot_statistics,
     midrib_statistics,
 )
-from openalea.adel.newmtg import exposed_areas, exposed_areas2canS, stem_elements, duplicate, mtg_factory
+from openalea.adel.newmtg import exposed_areas, exposed_areas2canS, stem_elements, stem_bases, duplicate, mtg_factory
 
 
 def flat_list(nested_list):
@@ -342,15 +342,21 @@ class Adel:
         areas["TT"] = TT
         return areas
 
+    def get_stem_bases(self, g):
+        return stem_bases(g)
+
     def get_stem_elements(self, g):
+        bases = self.get_stem_bases(g)
         desc = self.get_exposed_areas(g)
+        desc = pandas.concat([desc, bases]).drop_duplicates().sort_values('vid')
 
         result = []
 
-        for (plant, axe), axe_desc in desc.groupby(["plant", "axe"]):
+        for (pid, plant, axe), axe_desc in desc.groupby(["refplant_id", "plant", "axe"]):
             stem = stem_elements(axe_desc, axe=axe)
             stem["axe"] = axe
             stem["plant"] = plant
+            stem["refplant_id"] = str(int(pid))
             result.append(stem)
 
         return pandas.concat(result, ignore_index=True)

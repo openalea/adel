@@ -197,6 +197,39 @@ class AdelWheat(Adel):
     def set_adel_pars(self):
         return setAdelpars(self.pars)
 
+
+    def axe_inclination(self, g):
+        # Axe inclinitation slightly differs from adelR one as base angle is not dynamic
+        stems = self.get_stem_elements(g)
+        pars = self.set_adel_pars()
+        result = []
+        for (pid, axe), stem in stems.groupby(["refplant_id", "axe"]):
+            incT = pars[pid]['axeT'].set_index('axe')['incT'][axe]
+            dredT = pars[pid]['axeT'].set_index('axe')['dredT'][axe]
+            if incT > 0:
+                result.append((stem.vid.iat[0], stem.plant.iat[0], stem.axe.iat[0], stem.metamer.iat[0], stem.elt.iat[0], incT))
+            if dredT > 0 and sum(stem.dl) > 1e-6:
+                alpha = (90 - incT) * numpy.pi / 180
+                hc = stem["dl"].cumsum().to_numpy()
+                dc = hc * numpy.cos(alpha)
+                # check first stem element going outside dredT cylynder
+                outside = numpy.flatnonzero(dc >= dredT)
+                if len(outside) > 0:
+                    # inc first outside element to end at dredt
+                    nd = outside[0]
+                    beta = numpy.arccos((dredT - dc[nd - 1]) / (hc[nd] - hc[nd - 1]))
+                    inc = -(beta - alpha) / numpy.pi * 180
+                    result.append((stem.vid.iat[nd], stem.plant.iat[nd], stem.axe.iat[nd], stem.metamer.iat[nd],
+                                   stem.elt.iat[nd], inc))
+                    # inc next stem element to vertical
+                    if nd < len(stem) - 1:
+                        nd += 1
+                        inc = -(numpy.pi / 2 - beta) / numpy.pi * 180
+                        result.append((stem.vid.iat[nd], stem.plant.iat[nd], stem.axe.iat[nd], stem.metamer.iat[nd],
+                                       stem.elt.iat[nd], inc))
+
+        return pandas.DataFrame(result, columns=['vid', 'plant', 'axe', 'metamer', 'elt', 'inclination'])
+
     def run_adel(self, age=10, as_df=False):
         if self.duplicate is None:
             df = RunAdel(age, self.pars, adelpars=self.run_adel_pars)
