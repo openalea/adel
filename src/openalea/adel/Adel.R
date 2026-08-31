@@ -393,6 +393,31 @@ kinLvis <- function(kinlist,pars=NULL) {
 # stem inclination is beared by visible sheaths (option 0) or by nodes (option 1)
 # leaf inclination indicates whether leaf base angle is dynamic or not
 #
+#compute incT
+getIncT <- function(axename, HS, incBase, start_incT=1, incT_rate=30) {
+  if (axename == "MS") {
+    incT <- incBase
+  } else {
+    if (HS > start_incT) {
+      incT <- max(3,min(incBase, incT_rate * (HS - start_incT)))
+    } else {
+      incT <- 3
+    }
+  }
+  incT
+}
+#
+# hide tiller base if enclosed in sheaths
+#
+hide_tiller_base <- function(dat, axename, incT, ht) {
+  if (axename != "MS" && incT <= 3) { #Do not represent basal part of first metamer for non inclining tillers
+    dat$Lv[1] =  min(dat$Ll[1],max(0, dat$Ll[1] + dat$Gl[1] + dat$El[1] -  ht))
+    dat$Lr[1] = min(dat$Lv[1],dat$Lr[1])
+    dat$Gv[1] =  min(dat$Gl[1],max(0, dat$Gl[1] + dat$El[1] -  ht))
+    dat$Ev[1] =  min(dat$El[1],max(0, dat$El[1] -  ht))
+  }
+  dat
+}
 #
 #returns stack of visible elements of the stem of an axe
 stemElements <- function(desc) {
@@ -416,29 +441,14 @@ stemElements <- function(desc) {
 #
 # Compute inclinations of stem elements
 #
-axe_inclination <- function(dat, HS, ht, axename, incBase, dredT, start_incT=1, incT_rate=30,epsillon=1e-6) {
+axe_inclination <- function(dat, incT, dredT, epsillon=1e-6) {
   nbphy <- nrow(dat)#inclus ear,ped et awn
       # Calcul des inclinaisons de tiges
       # 1er phyto = entrenoeud a incT
   Einc <- rep(0,nbphy)
   Ginc <- rep(0,nbphy)
-  if (axename == "MS") {
-    incT <- incBase
-  } else {
-    if (HS > start_incT) {
-      incT <- max(3,min(incBase, incT_rate * (HS - start_incT)))
-    } else {
-      incT <- 3
-    }
-  }
   Einc[1] <- incT
-  if (axename != "MS" && incT <= 3) { #Do not represent basal part of first metamer for non inclining tillers
-    dat$Lv[1] =  min(dat$Ll[1],max(0, dat$Ll[1] + dat$Gl[1] + dat$El[1] -  ht))
-    dat$Lr[1] = min(dat$Lv[1],dat$Lr[1])
-    dat$Gv[1] =  min(dat$Gl[1],max(0, dat$Gl[1] + dat$El[1] -  ht))
-    dat$Ev[1] =  min(dat$El[1],max(0, dat$El[1] -  ht))
-  }
-                                        # redressement (if any)
+      # redressement (if any)
   if (dredT > 0 & sum(dat$Ev+dat$Gv) > epsillon) {
           #distance inserton talle -> extremite stemElements
     stem <- stemElements(dat)
@@ -519,7 +529,9 @@ getdesc <- function(kinlist,plantlist,pars=list("senescence_leaf_shrink" = 0.5,"
           axilrank <- ms_pos(axename)
           ht <- kin$MS[t,axilrank+1,"ht"] # length of the tube the axe emerge from
         }
-        dat <- axe_inclination(dat, HS_axe, ht, axename, dataxe$incT, dataxe$dredT, start_incT, incT_rate)
+        incT <- getIncT(axename, HS_axe, dataxe$incT, start_incT, incT_rate)
+        dat <- hide_tiller_base(dat, axename, incT, ht)
+        dat <- axe_inclination(dat, incT, dataxe$dredT)
 
         #azimuts : Attention new 21 fev 2011 : azimuts en relatif / phytomere precedent !
         Laz <- datp$Azim
