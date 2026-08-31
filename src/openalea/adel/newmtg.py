@@ -1139,8 +1139,8 @@ def stem_elements(exposed_areas, axe='MS'):
     for i, row in desc.iterrows():
         if row["element"] == "StemElement":
             if row["length"] > 0:
-                rows.append((row["metamer"], row["organ"], row["length"]))
-    return pandas.DataFrame(rows, columns=["metamer", "elt", "dl"])
+                rows.append((row["vid"], row["metamer"], row["organ"], row["length"]))
+    return pandas.DataFrame(rows, columns=["vid", "metamer", "elt", "dl"])
 
 
 def replicate(g, target=1):

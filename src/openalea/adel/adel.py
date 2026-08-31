@@ -347,11 +347,12 @@ class Adel:
 
         result = []
 
-        for axe, axe_desc in desc.groupby("axe"):
+        for (plant, axe), axe_desc in desc.groupby(["plant", "axe"]):
             stem = stem_elements(axe_desc, axe=axe)
             stem["axe"] = axe
+            stem["plant"] = plant
             result.append(stem)
-            
+
         return pandas.concat(result, ignore_index=True)
 
     def axis_statistics(self, g):
