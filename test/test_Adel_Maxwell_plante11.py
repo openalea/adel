@@ -3,8 +3,8 @@ from pathlib import Path
 from functools import reduce
 import numpy as np
 
-from openalea.adel.AdelR import devCsv, setAdel, RunAdel, genGeoLeaf, genGeoAxe, \
-    csvAsDict
+from openalea.adel.AdelR import devCsv, csvAsDict
+from openalea.adel.astk_interface import AdelWheat
 
 from .conftest import pytest_r_skip
 
@@ -20,10 +20,8 @@ def test_organ_length():
     earTpath = dir + "earT.csv"
     ssi2senpath = dir + "ssi2sen.csv"
     devT = devCsv(axeTpath, dimTpath, phenTpath, earTpath, ssi2senpath)
-    geoLeaf = genGeoLeaf()
-    geoAxe = genGeoAxe()
-    pars = setAdel(devT, geoLeaf, geoAxe, 1, seed=1)
-    cantables = [RunAdel(x, pars) for x in range(0, 2300, 100)]
+    adel = AdelWheat(devT=devT, seed=1)
+    cantables = [adel.run_adel(x) for x in range(0, 2300, 100)]
     expected = csvAsDict(dir + "reference_simulation.csv")
     for k in (
         "TT",
