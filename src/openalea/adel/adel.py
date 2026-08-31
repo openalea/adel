@@ -22,7 +22,7 @@ from openalea.adel.postprocessing import (
     plot_statistics,
     midrib_statistics,
 )
-from openalea.adel.newmtg import exposed_areas, exposed_areas2canS, duplicate, mtg_factory
+from openalea.adel.newmtg import exposed_areas, exposed_areas2canS, stem_elements, duplicate, mtg_factory
 
 
 def flat_list(nested_list):
@@ -341,6 +341,18 @@ class Adel:
             TT = self.meta_informations(g)["canopy_age"]
         areas["TT"] = TT
         return areas
+
+    def get_stem_elements(self, g):
+        desc = self.get_exposed_areas(g)
+
+        result = []
+
+        for axe, axe_desc in desc.groupby("axe"):
+            stem = stem_elements(axe_desc, axe=axe)
+            stem["axe"] = axe
+            result.append(stem)
+            
+        return pandas.concat(result, ignore_index=True)
 
     def axis_statistics(self, g):
         meta = self.meta_informations(g)

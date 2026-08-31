@@ -1131,6 +1131,18 @@ def exposed_areas2canS(exposed_areas):
     return d
 
 
+def stem_elements(exposed_areas, axe='MS'):
+    """Equivalent of Adel.R stemElements query"""
+    rows = []
+    desc = exposed_areas[exposed_areas.axe==axe]
+
+    for i, row in desc.iterrows():
+        if row["element"] == "StemElement":
+            if row["length"] > 0:
+                rows.append((row["metamer"], row["organ"], row["length"]))
+    return pandas.DataFrame(rows, columns=["metamer", "elt", "dl"])
+
+
 def replicate(g, target=1):
     """replicate the plants in g up to obtain target new plants"""
     current = g.nb_vertices(scale=1)
