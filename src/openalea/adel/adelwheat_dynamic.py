@@ -126,6 +126,9 @@ class AdelWheatDyn(AdelWheat):
 
         # update elements
         g = update_organ_elements(g, self.leaves, self.split, self.phyllochron())
+        inclinations = self.axe_inclination(g)
+        newinc = inclinations.set_index("vid")["inclination"].to_dict()
+        g.property('inclination').update(newinc)
         g = mtg_interpreter(g, self.leaves, min_length=self.min_length, face_up=self.face_up, classic=self.classic)
         pos = g.property("position")
         az = g.property("azimuth")
