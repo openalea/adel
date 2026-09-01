@@ -8,7 +8,13 @@
 #Load R files for Adel.R
 #
 AdelRfiles <- c("Adel.R","setAdel.R","UseAdel.R")
-sapply(AdelRfiles,source)
+Adel_source_path <- file.path(
+    "..", "..", "..", "src", "openalea", "adel"
+)
+sapply(
+    file.path(Adel_source_path, AdelRfiles),
+    source
+)
 #
 #run the model with csv files
 #
@@ -32,13 +38,11 @@ detach()
 #
 #generate a list of plant to simulate from parameters
 pl <- setAdel(pars$axeT, pars$dimT, pars$phenT, pars$earT, pars$ssisenT, geoLeaf, geoAxe, nplants=1, xy_db=xydb, sr_db=srdb, seed=1)
-#run the model as a whole from plant list to AleaChn
-canopy <- runAdel(-61,pl)[[1]]
-#
 ref <- sapply(seq(0,2200,100),function(x) runAdel(x,pl)[[1]],simplify=FALSE)
-#
 write.csv(do.call('rbind',ref),'Maxwell_reference_simulation.csv',row.names=FALSE)
-#
+
+#run the model as a whole from plant list to AleaChn
+canopy <- runAdel(-61,pl)[[1]]#
 Scanopy <- canL2canS(canopy,srdb)
 #
 chn <- genString(canopy)

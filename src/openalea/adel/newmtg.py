@@ -1052,7 +1052,7 @@ def exposed_areas(g):
     )
     for vid in g.vertices_iter(scale=g.max_scale()):
         n = g.node(vid)
-        if n.length > 0 and not n.label.startswith("Hidden"):
+        if 'length' in n.properties() and n.length > 0 and not n.label.startswith("Hidden"):
             organ = n.complex()
             metamer = organ.complex()
             axe = metamer.complex()
@@ -1129,6 +1129,63 @@ def exposed_areas2canS(exposed_areas):
         # hack
         d["d_basecol"] = 0
     return d
+
+def stem_bases(g):
+    """returns a Dataframe with all stem base elements in g, same format as exposed_areas"""
+    data = {}
+    what = (
+        "length",
+        "area",
+        "green_length",
+        "green_area",
+        "senesced_length",
+        "senesced_area",
+    )
+    for vid in g.vertices_iter(scale=g.max_scale()):
+        n = g.node(vid)
+        organ = n.complex()
+        metamer = organ.complex()
+        axe = metamer.complex()
+        plant = axe.complex()
+        numphy = int("".join(list(metamer.label)[7:]))
+        if numphy == 1 and organ.label.startswith("internode") and n.label.startswith('Stem'):
+            nf = axe.nff
+            node_data = {
+                "plant": plant.label,
+                "axe": axe.label,
+                "metamer": numphy,
+                "organ": organ.label,
+                "vid": vid,
+                "ntop": nf - numphy + 1,
+                "element": n.label,
+                "refplant_id": plant.refplant_id,
+                "nff": nf,
+                "HS_final": axe.HS_final,
+                "L_shape": metamer.L_shape,
+            }
+            properties = n.properties()
+            node_data.update({k: properties[k] for k in what})
+            if "species" in plant.properties():
+                node_data.update({"species": plant.species})
+            else:
+                node_data.update({"species": 0})
+            data[vid] = node_data
+    df = pandas.DataFrame(data).T
+    # hack
+    df["d_basecol"] = 0
+    return df
+
+
+def stem_elements(exposed_areas, axe='MS'):
+    """Equivalent of Adel.R stemElements query"""
+    rows = []
+    desc = exposed_areas[exposed_areas.axe==axe]
+
+    for i, row in desc.iterrows():
+        if row["element"] == "StemElement":
+            if row["length"] > 0 or (row["organ"] == "internode" and row["metamer"] == 1):
+                rows.append((row["vid"], row["metamer"], row["organ"], row["length"]))
+    return pandas.DataFrame(rows, columns=["vid", "metamer", "elt", "dl"])
 
 
 def replicate(g, target=1):

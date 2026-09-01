@@ -162,6 +162,13 @@ def gen_adel_input_data(
     # update values defined in openalea.adel.plantgen.params from values in inner_params
     attribute_names = set(dir(params))
     attribute_names.intersection_update(list(inner_params.keys()))
+
+    original_params = {
+        key: getattr(params, key)
+        for key in inner_params
+        if hasattr(params, key)
+    }
+
     params.__dict__.update(
         dict(
             [
@@ -616,6 +623,10 @@ of the MS are documented by the user, then this will lead to an error."
         axeT_user=axeT_user,
         TT_t1_user=TT_t1_user,
     )
+
+    # restore original params
+    for key, value in original_params.items():
+        setattr(params, key, value)
 
     return (
         axeT_,

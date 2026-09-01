@@ -194,7 +194,7 @@ def final_leaf_number(ms_nff=12, cohort=1, inner_parameters={}):
         params.SECONDARY_STEM_LEAVES_NUMBER_COEFFICIENTS,
     )
     _nff = numpy.vectorize(tools.calculate_tiller_final_leaves_number)
-    return numpy.where(cohort == 1, ms_nff, _nff(ms_nff, cohort, a1_a2))
+    return numpy.where(cohort == 1, ms_nff, _nff(ms_nff, cohort, a1_a2)).item()
 
 
 # define classes for structuring/handling the different botanical models found in pgen
@@ -638,7 +638,7 @@ class GreenLeaves:
         return a, rmse
 
     def hs_t1(self, nff=None):
-        return float(self.hsfit.HSflag(nff)) - self.n_elongated_internode
+        return self.hsfit.HSflag(nff) - self.n_elongated_internode
 
     def dn_nff(self, nff=None):
         return 0.5 * (self.hs_t2(nff) - self.hs_t2())
@@ -647,7 +647,7 @@ class GreenLeaves:
         return self.GL_bolting + self.dn_nff(nff)
 
     def hs_t2(self, nff=None):
-        return float(self.hsfit.HSflag(nff))
+        return self.hsfit.HSflag(nff)
 
     def n2(self, nff=None):
         return self.GL_flag + self.dn_nff(nff)
@@ -1111,14 +1111,12 @@ class AxePop:
             for k, v in cohort_decimal_nff.items()
         }
         cohort_nff_cardinalities = {}
-        for nff in nff_MS_cardinalities:
-            d = {}
-            for c in cardnff.loc[int(nff)].index:
-                d[int(c)] = cardinalities(
-                    cohort_nff_modalities[int(nff)][int(c)],
-                    int(cardnff.loc[int(nff), c].values),
-                )
-            cohort_nff_cardinalities[int(nff)] = d
+        for (nff, c), n in cardnff["axe"].items():
+            cohort_nff_cardinalities.setdefault(int(nff), {})[int(c)] = cardinalities(
+                cohort_nff_modalities[int(nff)][int(c)],
+                int(n),
+            )
+
         cohort_nff = {
             k: {kk: card2list(vv) for kk, vv in v.items()}
             for k, v in cohort_nff_cardinalities.items()

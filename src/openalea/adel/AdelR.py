@@ -58,6 +58,7 @@ RcheckAxeDyn = robj.globalEnv["checkAxeDyn"]
 RgetAxeT = robj.globalEnv["getAxeT"]
 RgetPhenT = robj.globalEnv["getPhenT"]
 RgetPhytoT = robj.globalEnv["getPhytoT"]
+RAxeDfList = robj.globalEnv["AxeDfList"]
 # RgetLeafT = robj.globalEnv['getLeafT']
 
 
@@ -116,6 +117,32 @@ def dataframeAsdict(df):
             )  # r delegator is replaced by rx/rx2 in new rpy2
     return d
 
+def axeDfdict(axe_array):
+    """convert a [,,axe] Rarray to python axe list of dict"""
+    if r["is.null"](axe_array)[0]:
+        return None
+    return RlistAsDict(RAxeDfList(axe_array))
+
+
+def setAdelpars(Rpars):
+    """convert output of setAdel R object to python readable object"""
+    Rplants = RlistAsDict(Rpars)
+    pyplants = {}
+    for p in Rplants:
+        rout = RlistAsDict(Rplants[p])
+        pyout = {}
+        pyout['refp'] = rout['refp'][0]
+        pyout['axeT'] = pandas.DataFrame(dataframeAsdict(rout['axeT']))
+        _phytoT = axeDfdict(rout['phytoT'])
+        pyout['phytoT'] = {axe: pandas.DataFrame(dataframeAsdict(df)) for axe, df in _phytoT.items()}
+        _pheno = RlistAsDict(rout['pheno'])
+        pyout['pheno'] = {axe: pandas.DataFrame(dataframeAsdict(df)) for axe, df in _pheno.items()}
+        _pedT = RlistAsDict(rout['pedT'])
+        pyout['pedT'] = {axe: pandas.DataFrame(dataframeAsdict(df)) for axe, df in _pedT.items()}
+        if 'ssisenT' in rout:
+            pyout['ssisenT'] = pandas.DataFrame(dataframeAsdict(rout['ssisenT']))
+        pyplants[p] = pyout
+    return pyplants
 
 def _is_iterable(x):
     try:
