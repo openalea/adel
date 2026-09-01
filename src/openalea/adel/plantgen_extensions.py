@@ -194,7 +194,7 @@ def final_leaf_number(ms_nff=12, cohort=1, inner_parameters={}):
         params.SECONDARY_STEM_LEAVES_NUMBER_COEFFICIENTS,
     )
     _nff = numpy.vectorize(tools.calculate_tiller_final_leaves_number)
-    return numpy.where(cohort == 1, ms_nff, _nff(ms_nff, cohort, a1_a2))
+    return numpy.where(cohort == 1, ms_nff, _nff(ms_nff, cohort, a1_a2)).item()
 
 
 # define classes for structuring/handling the different botanical models found in pgen
@@ -638,7 +638,7 @@ class GreenLeaves:
         return a, rmse
 
     def hs_t1(self, nff=None):
-        return float(self.hsfit.HSflag(nff)) - self.n_elongated_internode
+        return self.hsfit.HSflag(nff) - self.n_elongated_internode
 
     def dn_nff(self, nff=None):
         return 0.5 * (self.hs_t2(nff) - self.hs_t2())
@@ -647,7 +647,7 @@ class GreenLeaves:
         return self.GL_bolting + self.dn_nff(nff)
 
     def hs_t2(self, nff=None):
-        return float(self.hsfit.HSflag(nff))
+        return self.hsfit.HSflag(nff)
 
     def n2(self, nff=None):
         return self.GL_flag + self.dn_nff(nff)
