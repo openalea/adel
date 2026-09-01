@@ -5,8 +5,10 @@ from openalea.adel.plantgen_extensions import TillerEmission, TillerRegression, 
     AxePop, PlantGen, HaunStage
 from openalea.adel.echap_leaf import echap_leaves
 from openalea.mtg.mtg import MTG
+from .conftest import pytest_r_skip
 
 
+@pytest_r_skip
 def test_init_MTG_with_tillers():
 
     nplants=1
