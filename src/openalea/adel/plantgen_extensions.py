@@ -1111,14 +1111,12 @@ class AxePop:
             for k, v in cohort_decimal_nff.items()
         }
         cohort_nff_cardinalities = {}
-        for nff in nff_MS_cardinalities:
-            d = {}
-            for c in cardnff.loc[int(nff)].index:
-                d[int(c)] = cardinalities(
-                    cohort_nff_modalities[int(nff)][int(c)],
-                    int(cardnff.loc[int(nff), c].values),
-                )
-            cohort_nff_cardinalities[int(nff)] = d
+        for (nff, c), n in cardnff["axe"].items():
+            cohort_nff_cardinalities.setdefault(int(nff), {})[int(c)] = cardinalities(
+                cohort_nff_modalities[int(nff)][int(c)],
+                int(n),
+            )
+
         cohort_nff = {
             k: {kk: card2list(vv) for kk, vv in v.items()}
             for k, v in cohort_nff_cardinalities.items()
