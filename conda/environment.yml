@@ -16,6 +16,13 @@ dependencies:
   - openalea.astk
   - openalea.widgets
   - openalea.core
+  # metafspm's (installed by hand with pip install -e ../metafspm, until it is published in openalea3)
+  - pyyaml
+  - numpy
+  - numba
+  - scipy
+  - pandas
+  - pytest
   - pip
   # let pip install the rest using pyproject.toml (if you are okay with conda/pip mix)
   - pip:
