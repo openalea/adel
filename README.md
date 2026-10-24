@@ -30,7 +30,7 @@ gramineaous plant.
 ## Content
 
 The package hosts generic data structure and simulation tools for
-gramineaous plants(Fournier & Pradal, unpublished), the Adel-Maize
+gramineous plants(Fournier & Pradal, unpublished), the Adel-Maize
 (Fournier & Andrieu, 1998), Adel-Wheat (Fournier et al. 2003) models,
 together with the wheat parameterization model of Abichou et al. (2013)
 and the plastic leaf model of Fournier & Pradal (2012)
@@ -48,6 +48,6 @@ mamba env create -n adel -c openalea3 -c conda-forge openalea.adel
 
 ```bash
 git clone 'https://github.com/openalea/adel.git'
-cd caribu
+cd adel
 mamba env create -n adel_dev -f ./conda/environment.yml
 ```

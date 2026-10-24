@@ -45,7 +45,7 @@ test:
     - test/data/**
   commands:
     - cd test
-    - pytest -v --ignore=test_povray.py --ignore=test_dataflow.py --ignore=test_plantgen.py
+    - pytest -v --ignore=test_povray.py --ignore=test_dataflow.py
 
 about:
   home: {{ home }}

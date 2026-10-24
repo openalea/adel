@@ -3,7 +3,7 @@ import random
 from openalea.adel.plantgen import params, tools, plantgen_interface, plantgen_core
 import numpy as np
 import pandas
-from pathlib import Path as path
+from pathlib import Path
 import tempfile
 
 
@@ -33,7 +33,7 @@ MS_leaves_number_probabilities = {
 ears_density = 25
 GL_number = {1117.0: 5.6, 1212.1: 5.4, 1368.7: 4.9, 1686.8: 2.4, 1880.0: 0.0}
 delais_TT_stop_del_axis = 600
-TT_hs_break = np.NaN  # linear mode
+TT_hs_break = np.nan  # linear mode
 TT_flag_ligulation = {
     "MS": 1078.0,
     "T1": 1148.0,
@@ -42,21 +42,21 @@ TT_flag_ligulation = {
     "T4": 1178.0,
 }
 number_of_ears = plants_number * ears_density / float(plants_density)
-
-expected_results_dir = path(__file__).parent.resolve() / path("data/test_plantgen")
+this_dir = Path(__file__).parent if '__file__' in globals() else Path(".")
+expected_results_dir = this_dir.resolve() / "data" / "test_plantgen"
 default_expected_results_dir = expected_results_dir.joinpath("default")
 min_min_expected_results_dir = expected_results_dir.joinpath("min_min")
 short_short_expected_results_dir = expected_results_dir.joinpath("short_short")
 full_full_expected_results_dir = expected_results_dir.joinpath("full_full")
 
-tmp_results_directory = path(tempfile.mkdtemp(suffix="_plantgen_results"))
+tmp_results_directory = Path(tempfile.mkdtemp(suffix="_plantgen_results"))
 default_results = tmp_results_directory.joinpath("default")
 if not default_results.exists():
     default_results.mkdir()
 relative_tolerance = 10e-3
 absolute_tolerance = 10e-3
 
-OUTPUTS_PRECISION = 10
+OUTPUTS_PRECISION = 7
 
 FLOAT_FORMAT = "%.{}f".format(OUTPUTS_PRECISION)
 
@@ -125,7 +125,10 @@ def test_phenology_functions():
     )
     print("The results have been saved to %s" % test_table_filepath)
     assert len(dynT_) == len(expected_dynT)
-    assert dynT_["id_axis"] == expected_dynT["id_axis"]
+    pandas.testing.assert_series_equal(
+        dynT_["id_axis"],
+        expected_dynT["id_axis"]
+    )
     dynT_ = dynT_.drop("id_axis", axis=1)
     expected_dynT = expected_dynT.drop(["id_axis"], axis=1)
     np.testing.assert_allclose(
