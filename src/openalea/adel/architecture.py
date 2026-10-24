@@ -36,7 +36,8 @@ import pandas as pd
 from openalea.metafspm.coupling.component import (NewComplexes, NewNodes, StructuralComponent, input_variable,
                                                    parameter, state_variable)
 from openalea.metafspm.data_structure.configs import PropsConfig, ScalesConfig
-from openalea.metafspm.solve.decorator import segmentation
+from openalea.metafspm.solve.decorator import postsegmentation, segmentation
+from openalea.adel.leaf_shapes import LeafShapes
 
 BY = "model_shoot_architecture"
 DESCRIPTOR = "descriptor"
@@ -48,6 +49,11 @@ def doc(unit, description, value_comment=""):
     """The documentation entries of a declaration."""
     return dict(unit=unit, unit_comment="", description=description, min_value="", max_value="",
                 value_comment=value_comment, references="", DOI="")
+
+
+def outputs(k):
+    """The return annotation of a step with k outputs besides its own: (values, name, values, ...)."""
+    return tuple[(np.ndarray,) + (str, np.ndarray) * k]
 
 
 def bearer_of(axis_name):
@@ -140,10 +146,39 @@ class ShootArchitecture(StructuralComponent):
     shape_seed: int = state_variable(**doc('adim', "The blade's shape in its class (Lseed)", "-1: none"),
                                      state_variable_type=DESCRIPTOR, initialize=-1, scale=SCALES.Organ, dtype='int')
 
+    organ_area: float = state_variable(**doc('m2', "The organ's visible area (its visible elements')"),
+                                       state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Organ)
+
     # --- The elements ---
     element_index: int = state_variable(**doc('adim', "The element's position in its organ, from 0"),
                                         state_variable_type=DESCRIPTOR, initialize=0, scale=SCALES.SubOrgan,
                                         dtype='int')
+    length: float = state_variable(**doc('m', "The element's length"), state_variable_type=DESCRIPTOR,
+                                   initialize=0., scale=SCALES.SubOrgan)
+    area: float = state_variable(**doc('m2', "The element's area"), state_variable_type=DESCRIPTOR, initialize=0.,
+                                 scale=SCALES.SubOrgan)
+    green_length: float = state_variable(**doc('m', "The element's green length"), state_variable_type=DESCRIPTOR,
+                                         initialize=0., scale=SCALES.SubOrgan)
+    green_area: float = state_variable(**doc('m2', "The element's green area"), state_variable_type=DESCRIPTOR,
+                                       initialize=0., scale=SCALES.SubOrgan)
+    senesced_length: float = state_variable(**doc('m', "The element's senesced length"),
+                                            state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.SubOrgan)
+    senesced_area: float = state_variable(**doc('m2', "The element's senesced area"), state_variable_type=DESCRIPTOR,
+                                          initialize=0., scale=SCALES.SubOrgan)
+    is_green: int = state_variable(**doc('adim', "1 when the element is more green than senesced"),
+                                   state_variable_type=DESCRIPTOR, initialize=1, scale=SCALES.SubOrgan, dtype='int')
+    rolled_part: float = state_variable(**doc('m', "The blade element's rolled length"),
+                                        state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.SubOrgan)
+    rolled_diameter: float = state_variable(**doc('m', "The blade element's rolled part's diameter"),
+                                            state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.SubOrgan)
+    width: float = state_variable(**doc('m', "The blade element's mean width"), state_variable_type=DESCRIPTOR,
+                                  initialize=0., scale=SCALES.SubOrgan)
+    flat_base: float = state_variable(**doc('adim', "The blade element's flat part's base, relative to the "
+                                                    "blade's visible length (Adel's srb)", "NaN: no flat part"),
+                                      state_variable_type=DESCRIPTOR, initialize=np.nan, scale=SCALES.SubOrgan)
+    flat_top: float = state_variable(**doc('adim', "The blade element's flat part's top, relative to the blade's "
+                                                   "visible length (Adel's srt)", "NaN: no flat part"),
+                                     state_variable_type=DESCRIPTOR, initialize=np.nan, scale=SCALES.SubOrgan)
 
     # --- Parameters ---
     axes_table: object = parameter(**doc('', "Adel's axeT: one row per axis of the population's plants (plant, axe, "
@@ -154,6 +189,8 @@ class ShootArchitecture(StructuralComponent):
                                  default=1)
     n_sect: int = parameter(**doc('adim', "The number of elements of a blade"), by=BY, default=1)
     length_unit: float = parameter(**doc('m', "The tables' length unit in m (Adel's cm: 0.01)"), by=BY, default=0.01)
+    leaves: object = parameter(**doc('', "The leaf shape database (LeafShapes; None: Adel's samples)"), by=BY,
+                               default=None)
 
     # --- The plant's structure ---
 
@@ -309,6 +346,143 @@ class ShootArchitecture(StructuralComponent):
                                values["final_leaf_number"], branched=False)
                 count[a] = rank
         return count, "new_phytomers", batch.new_nodes(self._dimension_arrays(), self._variable_specs)
+
+    # --- The elements ---
+
+    def _kinds(self):
+        """Per node: its element kind (0 hidden, 1 stem, 2 leaf) and its organ's (0 internode, 1 sheath, 2 blade),
+        read from the MPG's labels once per topology."""
+        ds = self.data_structure
+        key = (ds.topology_version, ds.n_nodes())
+        cache = self.__dict__.get("_kinds_cache")
+        if cache is None or cache[0] != key:
+            g = ds._mtg
+            labels = g.labels
+            element = {labels.SubOrgan.HiddenElement: 0, labels.SubOrgan.StemElement: 1,
+                       labels.SubOrgan.LeafElement: 2}
+            organ = {labels.Organ.StemInternode: 0, labels.Organ.Sheath: 1, labels.Organ.Blade: 2}
+            nodes = ds.entity_ids("node").tolist()
+            cache = (key, np.array([element.get(g.label(v), -1) for v in nodes]),
+                     np.array([organ.get(g.label(g.complex(v)), -1) for v in nodes]))
+            self.__dict__["_kinds_cache"] = cache
+        return cache[1], cache[2]
+
+    def _leaf_shapes(self):
+        if self.leaves is None:
+            self.__dict__.setdefault("_default_leaves", LeafShapes.samples())
+            return self.__dict__["_default_leaves"]
+        return self.leaves
+
+    @postsegmentation
+    def _length(self, length, element_index, organ_length, visible_length, organ_senesced_length, rolled_length,
+                diameter, shape_mature_length, shape_max_width, shape_class) -> outputs(12):
+        """The elements from their organs' lengths (Adel's internode_elements, sheath_elements, blade_elements):
+        a stem organ's hidden element (its length out of sight) and visible one, its green and senesced parts; a
+        blade's hidden part, and its sectors along its mature shape (its visible part the shape's top), each one's
+        green and senesced parts, rolled part, flat part and width; areas from the diameters and the shapes' width
+        profiles; the organs' visible areas."""
+        ds = self.data_structure
+        element_kind, organ_kind = self._kinds()
+        organ = np.asarray(ds.owner("Organ"))
+        n = element_kind.size
+        l, l_visible = organ_length[organ], visible_length[organ]
+        l_senesced, l_rolled = organ_senesced_length[organ], rolled_length[organ]
+        out = {name: np.zeros(n) for name in ("area", "green_length", "green_area", "senesced_length",
+                                              "senesced_area", "rolled_part", "rolled_diameter", "width")}
+        out["length"] = np.zeros(n)
+        out["flat_base"], out["flat_top"] = np.full(n, np.nan), np.full(n, np.nan)
+        is_green = np.ones(n, dtype=int)
+        hidden = np.maximum(l - l_visible, 0.)
+
+        # Stem organs (internodes, sheaths): a cylinder of the organ's diameter
+        stem = organ_kind < 2
+        d = diameter[organ]
+        green = l_visible - np.minimum(l_senesced, l_visible)
+        senesced = l_visible - green
+        these = stem & (element_kind == 0)
+        out["length"][these] = hidden[these]
+        out["area"][these] = np.pi * hidden[these] * d[these]
+        these = stem & (element_kind == 1)
+        out["length"][these] = l_visible[these]
+        out["area"][these] = np.pi * l_visible[these] * d[these]
+        out["green_length"][these], out["senesced_length"][these] = green[these], senesced[these]
+        out["green_area"][these] = np.pi * green[these] * d[these]
+        out["senesced_area"][these] = np.pi * senesced[these] * d[these]
+        is_green[these] = green[these] >= senesced[these]
+
+        # Blades: the visible part is the mature shape's top
+        shapes = self._leaf_shapes()
+        blade = organ_kind == 2
+        mature, max_width = shape_mature_length[organ], shape_max_width[organ]
+        classes = shape_class[organ]
+        has_shape = blade & (classes >= 1) & (mature > 0)
+        these = blade & (element_kind == 0)
+        out["length"][these] = hidden[these]
+        shaped = these & has_shape & (hidden > 0)
+        out["area"][shaped] = shapes.relative_area(classes[shaped], (mature[shaped] - l[shaped]) / mature[shaped],
+                                                   (mature[shaped] - l_visible[shaped]) / mature[shaped]) * mature[
+            shaped] * max_width[shaped]
+        sector = blade & (element_kind == 2) & has_shape & (l_visible > 1e-6)
+        if sector.any():
+            self._blade_sectors(out, is_green, sector, element_index, l_visible, l_senesced, l_rolled, mature,
+                                max_width, classes, organ, shapes)
+
+        # The organs' visible areas
+        visible = ((element_kind == 1) & stem) | ((element_kind == 2) & blade)
+        areas = np.bincount(organ[visible], weights=out["area"][visible], minlength=len(ds.entity_ids("Organ")))
+        return (out["length"], "area", out["area"], "green_length", out["green_length"], "green_area",
+                out["green_area"], "senesced_length", out["senesced_length"], "senesced_area", out["senesced_area"],
+                "is_green", is_green, "rolled_part", out["rolled_part"], "rolled_diameter", out["rolled_diameter"],
+                "width", out["width"], "flat_base", out["flat_base"], "flat_top", out["flat_top"], "organ_area",
+                areas)
+
+    @staticmethod
+    def _blade_sectors(out, is_green, sector, element_index, l_visible, l_senesced, l_rolled, mature, max_width,
+                       classes, organ, shapes):
+        """Each visible blade's sectors (Adel's blade_elements): sector k covers [(k - 1), k] · L / n_sect of the
+        mature shape (L its length), its visible part above L - visible length, its senesced part above L -
+        senesced length, its flat part above L - (visible - rolled) length."""
+        k = element_index[sector]
+        n_sect = np.bincount(organ[sector], minlength=organ.max() + 1)[organ[sector]]
+        L, w = mature[sector], max_width[sector]
+        visible = l_visible[sector]
+        rolled = np.clip(l_rolled[sector], 0., visible)
+        rolled = np.where(rolled < 1e-6, 0., rolled)
+        flat = visible - rolled
+        green = visible - np.minimum(l_senesced[sector], visible)
+        senesced = visible - green
+        limit_visible, limit_senesced, limit_rolled = L - visible, L - senesced, L - flat
+        step = L / n_sect
+        top = k * step
+        visible_part = np.minimum(step, np.maximum(0., top - limit_visible))
+        base = top - visible_part
+        green_top = np.minimum(top, np.maximum(base, limit_senesced))
+        green_part, senesced_part = green_top - base, top - green_top
+        c = classes[sector]
+        green_area = np.where(green_part > 0, shapes.relative_area(c, base / L, green_top / L) * L * w, 0.)
+        senesced_area = np.where(senesced_part > 0, shapes.relative_area(c, green_top / L, top / L) * L * w, 0.)
+        total = green_area + senesced_area
+        flat_part = np.minimum(visible_part, np.maximum(0., top - limit_rolled))
+        has_flat = flat_part > 0
+        flat_bottom = top - flat_part
+        flat_green_top = np.minimum(top, np.maximum(flat_bottom, limit_senesced))
+        with np.errstate(divide="ignore", invalid="ignore"):
+            rolled_part = np.where(flat_part < visible_part, visible_part - flat_part, 0.)
+            rolled_diameter = np.where(rolled_part > 0, total * rolled_part / visible_part / np.pi / rolled_part, 0.)
+            green_width = np.where(green_part > 0, shapes.mean_width(c, base / L, green_top / L) * w, 0.)
+            senesced_width = np.where(senesced_part > 0, shapes.mean_width(c, green_top / L, top / L) * w, 0.)
+            mean_width = np.maximum(green_width, senesced_width)
+        index = np.flatnonzero(sector)
+        visible_any = visible_part > 0
+        out["length"][index] = np.where(visible_any, senesced_part + green_part, 0.)
+        out["area"][index] = np.where(visible_any, total, 0.)
+        out["green_length"][index], out["green_area"][index] = green_part, green_area
+        out["senesced_length"][index], out["senesced_area"][index] = senesced_part, senesced_area
+        out["rolled_part"][index], out["rolled_diameter"][index] = rolled_part, rolled_diameter
+        out["width"][index] = mean_width
+        out["flat_base"][index] = np.where(has_flat, (flat_bottom - limit_visible) / visible, np.nan)
+        out["flat_top"][index] = np.where(has_flat, (top - limit_visible) / visible, np.nan)
+        is_green[index] = green_part > senesced_part
 
     @staticmethod
     def _predecessor(g, axis, rank, axis_of, plant, bearer_row, insertion_rank):
