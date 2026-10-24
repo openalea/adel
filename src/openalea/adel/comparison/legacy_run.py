@@ -10,11 +10,15 @@ its records: the reference ShootArchitecture is compared with.
                          label, scale, complex, topological parent and edge type, its properties (geometry left out),
                          and each element's triangles in the scene's frame (PlantGL's tesselation of its geometry)
 
-The scenario (given_lengths): on the main stem, metamer n appears at (n - 1) phyllochrons (add_metamer); its blade
-grows linearly to its final length (phytoT's Ll) in 1.6 phyllochrons, its sheath (Gl) from 1 phyllochron for 1, its
-internode (El) from 2 phyllochrons for 1.5; the blade visible above the previous sheath, the sheath above it too, the
-internode half visible; the blade senesces from 5 phyllochrons for 3; its age is the thermal time since it appeared.
-Lengths in the legacy's unit (cm, phytoT's), thermal time in °Cd.
+The tables (harness_tables): the legacy's samples (data_samples.axeTable(): the main stem and 3 tillers; phytoT(): the
+main stem's ranks), each tiller given the main stem's first nf ranks, its lengths and diameters 0.9 times.
+
+The scenario (given_lengths), from the main stem's first leaf (its emf1), on every axis: metamer n appears at the axis' first leaf (axeTable's emf1) plus (n - 1)
+phyllochrons (add_metamer; a tiller's axis added with its first metamer, add_axe); its blade grows linearly to its
+final length (phytoT's Ll) in 1.6 phyllochrons, its sheath (Gl) from 1 phyllochron for 1, its internode (El) from 2
+phyllochrons for 1.5; the blade visible above the previous sheath, the sheath above it too, the internode half
+visible; the blade senesces from 5 phyllochrons for 3; its age is the thermal time since it appeared. Lengths in the
+legacy's unit (cm, phytoT's), thermal time in °Cd.
 """
 from dataclasses import dataclass, field
 
@@ -24,6 +28,8 @@ import openalea.plantgl.all as pgl
 from openalea.adel.legacy import data_samples
 from openalea.adel.legacy.adel_dynamic import AdelDyn
 from openalea.adel.legacy.echap_leaf import echap_leaves
+from openalea.adel.legacy.mtg_editions import add_axe, find_metamers
+import pandas as pd
 
 PHYLLOCHRON = 88.92                                    # °Cd, the legacy's default for the main stem
 
@@ -69,8 +75,36 @@ def shape_indices(phytoT, leaves, nff, top_leaves=4):
     return adapted
 
 
-def given_lengths(thermal_time, n_metamers, phytoT, axe="MS", phyllochron=PHYLLOCHRON):
-    """{rank n: {organ: {property: value}}} at *thermal_time* for the metamers appeared (rank n from 1)."""
+def harness_tables(leaves="samples", tiller_factor=0.9):
+    """(axes table, phytomer table): the samples', each tiller with the main stem's first nf ranks (lengths and
+    diameters times *tiller_factor*), the shape indices those of the leaf database."""
+    axes, phytomers = data_samples.axeTable(), data_samples.phytoT()
+    main = phytomers.loc[phytomers["axe"] == "MS"]
+    rows = [phytomers]
+    for _, axis in axes.loc[axes["axe"] != "MS"].iterrows():
+        tiller = main.loc[main["n"] <= int(axis["nf"])].copy()
+        tiller["axe"] = axis["axe"]
+        for name in ("Ll", "Lw", "Gl", "Gd", "El", "Ed"):
+            tiller[name] = tiller[name] * tiller_factor
+        rows.append(tiller)
+    phytomers = pd.concat(rows, ignore_index=True)
+    nff = int(axes.loc[axes["axe"] == "MS", "nf"].iloc[0])
+    return axes, shape_indices(phytomers, leaves, nff)
+
+
+def start(axes):
+    """The scenario's start: the main stem's first leaf (its emf1, °Cd)."""
+    return float(axes.loc[axes["axe"] == "MS", "emf1"].iloc[0])
+
+
+def given_lengths(thermal_time, axes, phytoT, phyllochron=PHYLLOCHRON):
+    """{axis: {rank n: {organ: {property: value}}}} at *thermal_time*: the metamers appeared on each axis."""
+    return {axis["axe"]: axis_lengths(thermal_time, int(axis["nf"]), float(axis["emf1"]), phytoT, axis["axe"],
+                                      phyllochron) for _, axis in axes.iterrows()}
+
+
+def axis_lengths(thermal_time, n_metamers, first_leaf, phytoT, axe, phyllochron=PHYLLOCHRON):
+    """{rank n: {organ: {property: value}}} of one axis at *thermal_time* (rank n from 1)."""
     dims = phytoT.loc[phytoT["axe"] == axe].set_index("n")
     out = {}
     previous_sheath = 0.
@@ -79,7 +113,7 @@ def given_lengths(thermal_time, n_metamers, phytoT, axe="MS", phyllochron=PHYLLO
         return float(np.clip((thermal_time - start) / duration, 0., 1.))
 
     for n in range(1, n_metamers + 1):
-        appeared = (n - 1) * phyllochron
+        appeared = first_leaf + (n - 1) * phyllochron
         if thermal_time < appeared:
             break
         Ll, Gl, El = (float(dims.loc[n, name]) for name in ("Ll", "Gl", "El"))
@@ -122,27 +156,31 @@ def record(g) -> Record:
 def legacy_run(n_steps=40, thermal_time_step=10., leaves="echap", seed=1, record_every=1, record_states=True,
                phyllochron=PHYLLOCHRON):
     """*n_steps* steps of *thermal_time_step* °Cd of the legacy's dynamic geometry on the given lengths."""
-    axeT, phytoT = data_samples.axeTable(), data_samples.phytoT()
+    axes, phytoT = harness_tables(leaves)
     adel = AdelDyn(seed=seed, leaves=leaf_database(leaves))
     run = LegacyRun(adel=adel)
-    g = adel.build_stand(axeT)
-    nff = int(axeT.loc[axeT["axe"] == "MS", "nf"].iloc[0])
-    phytoT = shape_indices(phytoT, leaves, nff)
+    g = adel.build_stand(axes)
     labels = g.property("label")
     for step in range(n_steps + 1):
-        thermal_time = step * thermal_time_step
-        lengths = given_lengths(thermal_time, nff, phytoT, phyllochron=phyllochron)
-        metamers = [v for v in g.vertices(scale=3) if labels[v].startswith("metamer") and labels[v] != "metamer0"]
-        for _ in range(len(lengths) - len(metamers)):
-            adel.add_metamer(g, phytoT)
-        metamers = sorted((v for v in g.vertices(scale=3) if labels[v].startswith("metamer")
-                           and labels[v] != "metamer0"), key=lambda v: int(labels[v][7:]))
-        for rank, metamer in enumerate(metamers, start=1):
-            for organ in g.components(metamer):
-                values = lengths[rank].get(labels[organ])
-                if values:
-                    for name, value in values.items():
-                        g.property(name)[organ] = value
+        lengths = given_lengths(start(axes) + step * thermal_time_step, axes, phytoT, phyllochron=phyllochron)
+        for _, axis in axes.iterrows():
+            name = axis["axe"]
+            if not lengths[name]:
+                continue
+            if name != "MS":
+                add_axe(g, name, plant_number=1, axis_properties=dict(
+                    HS_final=float(axis["HS_final"]) if axis["HS_final"] == axis["HS_final"] else float(axis["nf"]),
+                    nff=int(axis["nf"]), hasEar=bool(int(axis["hasEar"])), azimuth=0))
+            _, _, metamers = find_metamers(g, 1, name)
+            for _ in range(len(lengths[name]) - (len(metamers) - 1)):            # metamer0 aside
+                adel.add_metamer(g, phytoT, plant=1, axe=name)
+            _, _, metamers = find_metamers(g, 1, name)
+            for metamer in metamers:
+                rank = int(labels[metamer][len("metamer"):])
+                for organ in g.components(metamer):
+                    values = lengths[name].get(rank, {}).get(labels[organ])
+                    for property_name, value in (values or {}).items():
+                        g.property(property_name)[organ] = value
         g = adel.update_geometry(g, phyllochron={"MS": phyllochron, "T1": phyllochron})
         if record_states and (step % record_every == 0 or step == n_steps):
             run.steps.append(record(g))

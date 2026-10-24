@@ -1,0 +1,399 @@
+"""
+Adel's shoot architecture as a metafspm StructuralComponent: the plants' topology in the MPG (axes, phytomers, organs,
+elements), the organs' dimensions and shapes, their elements, and their geometry for light models and display. The
+organs' lengths are given by other models (development, senescence), as cnwgrass gives them to Adel's AdelDyn.
+
+    table = pd.DataFrame([dict(plant="p0", model=MyModel, x=0., y=0., z=0., rotation=0.,
+                               scenario={"parameters": {"axes_table": axeT, "phytomer_table": phytoT,
+                                                        "table_plant": 1}})])
+
+with MyModel.initiators = (ShootArchitecture,).
+
+The plant's structure, in the MPG:
+
+    Plant
+     └─ Axis (ShootAxis)              the main stem, each tiller (one per row of the plant's axes table)
+         └─ GrowthUnit (ShootGrowthUnit)
+             └─ Phytomer (ShootPhytomer)   one per rank, created when the axis' phytomer_number asks for it
+                 ├─ Organ StemInternode    a HiddenElement, then a StemElement (<)
+                 ├─ Organ Sheath           the same, its first element branched (+) on the internode's last
+                 └─ Organ Blade            a HiddenElement (its part in the sheaths' tube), then n_sect
+                                           LeafElements (<), on the sheath's last element
+
+Axes appear when the plant's axis_number asks for them, in its axes table's order, each with its first phytomer;
+phytomers when their axis' phytomer_number asks for them. A phytomer's internode follows the previous one's (<); a
+tiller's first internode is branched (+) on its bearer's phytomer at its insertion rank (Adel's names: 'T1' on the main stem's phytomer 1, 'T1.2' on T1's phytomer 2). The
+elements are stable: created with their organ, their lengths and areas updated, never rebuilt.
+
+The tables are Adel's (its axeT and phytoT, one row per axis and per axis and rank, every plant of the population in
+them, column 'plant'); `table_plant`, a per-plant parameter, says which of their plants a plant is.
+"""
+from dataclasses import dataclass
+
+import numpy as np
+import pandas as pd
+
+from openalea.metafspm.coupling.component import (NewComplexes, NewNodes, StructuralComponent, input_variable,
+                                                   parameter, state_variable)
+from openalea.metafspm.data_structure.configs import PropsConfig, ScalesConfig
+from openalea.metafspm.solve.decorator import segmentation
+
+BY = "model_shoot_architecture"
+DESCRIPTOR = "descriptor"
+SCALES = ScalesConfig
+ORGANS = ("internode", "sheath", "blade")
+
+
+def doc(unit, description, value_comment=""):
+    """The documentation entries of a declaration."""
+    return dict(unit=unit, unit_comment="", description=description, min_value="", max_value="",
+                value_comment=value_comment, references="", DOI="")
+
+
+def bearer_of(axis_name):
+    """(the bearer axis' name, the insertion rank) of an axis by Adel's names: MS has none; 'T1' is on MS's phytomer
+    1, 'T1.2' on T1's phytomer 2."""
+    if axis_name == "MS":
+        return None, 0
+    code = axis_name[1:].split(".")
+    return ("MS" if len(code) == 1 else "T" + ".".join(code[:-1])), int(code[-1])
+
+
+def phytomer_layout(labels, n_sect):
+    """A phytomer's complexes and elements, in creation order:
+    complexes [(anchor, scale, label)] with anchor "unit" (the axis' GrowthUnit) or the index of an earlier complex;
+    elements [(complex index, parent, edge, label, organ, index in organ)] with parent "previous" (the internode's
+    predecessor: the previous internode's last element, the bearer's, or none) or the index of an earlier element."""
+    complexes = [("unit", SCALES.Phytomer, labels.Phytomer.Shoot),
+                 (0, SCALES.Organ, labels.Organ.StemInternode),
+                 (0, SCALES.Organ, labels.Organ.Sheath),
+                 (0, SCALES.Organ, labels.Organ.Blade)]
+    elements = [(1, "previous", None, labels.SubOrgan.HiddenElement, 0, 0),
+                (1, 0, "<", labels.SubOrgan.StemElement, 0, 1),
+                (2, 1, "+", labels.SubOrgan.HiddenElement, 1, 0),
+                (2, 2, "<", labels.SubOrgan.StemElement, 1, 1),
+                (3, 3, "<", labels.SubOrgan.HiddenElement, 2, 0)]
+    for k in range(n_sect):
+        elements.append((3, len(elements) - 1, "<", labels.SubOrgan.LeafElement, 2, k + 1))
+    return complexes, elements
+
+
+@dataclass
+class ShootArchitecture(StructuralComponent):
+    """Adel's shoot architecture: topology, organs' dimensions and shapes, elements, geometry."""
+
+    # --- Inputs: what development and senescence models write ---
+    axis_number: float = input_variable(**doc('adim', "The number of the plant's axes emerged, in its axes table's "
+                                                      "order (the main stem first)"),
+                                        by='model_development', initialize=1., scale=SCALES.Plant)
+    phytomer_number: float = input_variable(**doc('adim', "The number of phytomers the axis has (its development)"),
+                                            by='model_development', initialize=0., scale=SCALES.Axis)
+    organ_length: float = input_variable(**doc('m', "The organ's length"), by='model_development', initialize=0.,
+                                         scale=SCALES.Organ)
+    visible_length: float = input_variable(**doc('m', "The organ's length out of the sheaths' tube"),
+                                           by='model_development', initialize=0., scale=SCALES.Organ)
+    rolled_length: float = input_variable(**doc('m', "The blade's rolled length in the sheaths' tube"),
+                                          by='model_development', initialize=0., scale=SCALES.Organ)
+    organ_senesced_length: float = input_variable(**doc('m', "The organ's senesced length"),
+                                                  by='model_senescence', initialize=0., scale=SCALES.Organ)
+    age: float = input_variable(**doc('°Cd', "The blade's age (its shape class when the database has ages)"),
+                                by='model_development', initialize=0., scale=SCALES.Organ)
+
+    # --- The axes (from the axes table) ---
+    axis_row: int = state_variable(**doc('adim', "The axis' row in the axes table"), state_variable_type=DESCRIPTOR,
+                                   initialize=-1, scale=SCALES.Axis, dtype='int')
+    bearer_row: int = state_variable(**doc('adim', "The bearer axis' row in the axes table", "-1: the main stem"),
+                                     state_variable_type=DESCRIPTOR, initialize=-1, scale=SCALES.Axis, dtype='int')
+    insertion_rank: int = state_variable(**doc('adim', "The rank of the bearer's phytomer the axis is on"),
+                                         state_variable_type=DESCRIPTOR, initialize=0, scale=SCALES.Axis, dtype='int')
+    axis_phytomers: int = state_variable(**doc('adim', "The number of phytomers the axis has in the MPG"),
+                                         state_variable_type=DESCRIPTOR, initialize=0, scale=SCALES.Axis, dtype='int')
+    final_leaf_number: int = state_variable(**doc('adim', "The axis' final number of leaves (Adel's nf)"),
+                                            state_variable_type=DESCRIPTOR, initialize=0, scale=SCALES.Axis,
+                                            dtype='int')
+    final_haun_stage: float = state_variable(**doc('adim', "The axis' final Haun stage (Adel's HS_final)"),
+                                             state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Axis)
+    has_ear: int = state_variable(**doc('adim', "1 when the axis bears an ear"), state_variable_type=DESCRIPTOR,
+                                  initialize=0, scale=SCALES.Axis, dtype='int')
+
+    # --- The phytomers and organs (from the phytomer table, at their creation) ---
+    phytomer_rank: int = state_variable(**doc('adim', "The phytomer's rank on its axis, from 1"),
+                                        state_variable_type=DESCRIPTOR, initialize=0, scale=SCALES.Phytomer,
+                                        dtype='int')
+    organ_rank: int = state_variable(**doc('adim', "The organ's phytomer rank"), state_variable_type=DESCRIPTOR,
+                                     initialize=0, scale=SCALES.Organ, dtype='int')
+    ntop: int = state_variable(**doc('adim', "The organ's rank from the axis' top leaf (1: the flag leaf)"),
+                               state_variable_type=DESCRIPTOR, initialize=0, scale=SCALES.Organ, dtype='int')
+    diameter: float = state_variable(**doc('m', "The stem organ's diameter (phytomer table: Ed, Gd)"),
+                                     state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Organ)
+    organ_azimuth: float = state_variable(**doc('°', "The organ's azimuth (the internode's: phytomer table's Azim)"),
+                                          state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Organ)
+    inclination: float = state_variable(**doc('°', "The organ's inclination"), state_variable_type=DESCRIPTOR,
+                                        initialize=0., scale=SCALES.Organ)
+    shape_mature_length: float = state_variable(**doc('m', "The blade's final length (phytomer table: Ll)"),
+                                                state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Organ)
+    shape_max_width: float = state_variable(**doc('m', "The blade's maximal width (phytomer table: Lw)"),
+                                            state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Organ)
+    shape_class: int = state_variable(**doc('adim', "The blade's shape class in the leaf database (Lindex)",
+                                            "-1: none"), state_variable_type=DESCRIPTOR, initialize=-1,
+                                      scale=SCALES.Organ, dtype='int')
+    shape_seed: int = state_variable(**doc('adim', "The blade's shape in its class (Lseed)", "-1: none"),
+                                     state_variable_type=DESCRIPTOR, initialize=-1, scale=SCALES.Organ, dtype='int')
+
+    # --- The elements ---
+    element_index: int = state_variable(**doc('adim', "The element's position in its organ, from 0"),
+                                        state_variable_type=DESCRIPTOR, initialize=0, scale=SCALES.SubOrgan,
+                                        dtype='int')
+
+    # --- Parameters ---
+    axes_table: object = parameter(**doc('', "Adel's axeT: one row per axis of the population's plants (plant, axe, "
+                                             "nf, HS_final, hasEar, ...)"), by=BY, default=None)
+    phytomer_table: object = parameter(**doc('', "Adel's phytoT: one row per plant, axis and rank (plant, axe, n, Ll, "
+                                                 "Lw, Gl, Gd, El, Ed, Azim, Lindex, Lseed)"), by=BY, default=None)
+    table_plant: int = parameter(**doc('adim', "The plant's number in the tables (their column 'plant')"), by=BY,
+                                 default=1)
+    n_sect: int = parameter(**doc('adim', "The number of elements of a blade"), by=BY, default=1)
+    length_unit: float = parameter(**doc('m', "The tables' length unit in m (Adel's cm: 0.01)"), by=BY, default=0.01)
+
+    # --- The plant's structure ---
+
+    @classmethod
+    def initiate_plant(cls, g, plant, parameters):
+        """The plant's main stem (its Axis, GrowthUnit) and its first phytomer."""
+        axes, phytomers = parameters["axes_table"], parameters["phytomer_table"]
+        number = int(parameters.get("table_plant", cls.table_plant))
+        n_sect = int(parameters.get("n_sect", cls.n_sect))
+        unit = float(parameters.get("length_unit", cls.length_unit))
+        rows = axes.reset_index(drop=True)
+        mine = cls._plant_rows(rows, number)
+        main_stem = mine[0]
+        scales, labels = g.scales, g.labels
+        axis = g.add_component(plant, **PropsConfig(scale=scales.Axis, edge_type='/', label=labels.Axis.Shoot))
+        unit_vid = g.add_component(axis, **PropsConfig(scale=scales.GrowthUnit, edge_type='/',
+                                                       label=labels.GrowthUnit.Shoot))
+        for name, value in dict(cls._axis_values(rows, main_stem), phytomer_number=1., axis_phytomers=1).items():
+            g.property(name)[axis] = value
+        g.property("axis_number")[plant] = 1.
+        dimensions = cls._dimensions(phytomers, rows, unit)
+        complexes, elements = phytomer_layout(labels, n_sect)
+        created = []
+        for anchor, scale, label in complexes:
+            parent = unit_vid if anchor == "unit" else created[anchor]
+            created.append(g.add_component(parent, **PropsConfig(scale=scale, edge_type='/', label=label)))
+        cls._set_phytomer(g, created, dimensions, main_stem, 1, int(rows.loc[main_stem, "nf"]))
+        vids = []
+        for complex_index, parent, edge, label, _, index in elements:
+            if parent == "previous":
+                vid = g.add_component(created[complex_index], **PropsConfig(scale=scales.SubOrgan, edge_type='/',
+                                                                            label=label))
+            else:
+                vid = g.add_component_with_topo(created[complex_index], vids[parent], **PropsConfig(
+                    scale=scales.SubOrgan, edge_type=edge, label=label))
+            g.property("element_index")[vid] = index
+            vids.append(vid)
+
+    @staticmethod
+    def _plant_rows(rows, number):
+        """The rows of plant *number* in the axes table: its main stem first, then its tillers in table order."""
+        mine = rows.index[rows["plant"] == number].tolist()
+        main = [row for row in mine if rows.loc[row, "axe"] == "MS"]
+        if not main:
+            raise ValueError(f"no main stem of plant {number} in the axes table")
+        return main + [row for row in mine if row not in main]
+
+    @staticmethod
+    def _axis_values(rows, row):
+        """An axis' values from its row of the axes table (its bearer's row among the same plant's)."""
+        name = rows.loc[row, "axe"]
+        bearer, rank = bearer_of(name)
+        same_plant = rows.index[(rows["plant"] == rows.loc[row, "plant"]) & (rows["axe"] == bearer)].tolist()
+        haun_stage = rows.loc[row, "HS_final"]
+        return dict(axis_row=row, bearer_row=same_plant[0] if same_plant else -1, insertion_rank=rank,
+                    final_leaf_number=int(rows.loc[row, "nf"]), has_ear=int(rows.loc[row, "hasEar"]),
+                    final_haun_stage=float(haun_stage) if pd.notna(haun_stage) else float(rows.loc[row, "nf"]))
+
+    @staticmethod
+    def _dimensions(phytomers, axes, unit):
+        """{column: array (axis row, rank)} of the phytomer table, lengths in m; NaN where an axis has no rank."""
+        columns = {"Ll": unit, "Lw": unit, "Gl": unit, "Gd": unit, "El": unit, "Ed": unit, "Azim": 1., "Lindex": 1.,
+                   "Lseed": 1.}
+        ranks = int(phytomers["n"].max())
+        out = {name: np.full((len(axes), ranks + 1), np.nan) for name in columns}
+        keyed = phytomers.set_index(["plant", "axe", "n"])
+        for row, (plant, axe) in enumerate(zip(axes["plant"], axes["axe"])):
+            if (plant, axe) not in {k[:2] for k in keyed.index}:
+                continue
+            these = keyed.loc[(plant, axe)]
+            for name, factor in columns.items():
+                out[name][row, these.index.to_numpy(dtype=int)] = these[name].to_numpy(dtype=float) * factor
+        return out
+
+    @classmethod
+    def _set_phytomer(cls, g, created, dimensions, row, rank, nff):
+        """A phytomer's and its organs' values on the MPG (initiate_plant's)."""
+        for name, value in cls._phytomer_values(dimensions, np.array([row]), np.array([rank]),
+                                                np.array([nff])).items():
+            level, values = value
+            for vid, v in zip([created[i] for i in level], values):
+                g.property(name)[vid] = np.asarray(v).reshape(-1)[0].item()     # this one phytomer's
+
+    @staticmethod
+    def _phytomer_values(dimensions, rows, ranks, nff):
+        """{variable: (complex positions in a phytomer's layout, values per phytomer per position)}: for phytomers
+        of axis rows *rows* at ranks *ranks*; layout positions 0 phytomer, 1 internode, 2 sheath, 3 blade."""
+        def at(name):
+            return dimensions[name][rows, ranks]
+        shape_class, shape_seed = at("Lindex"), at("Lseed")
+        valid = (shape_class != -999) & (shape_seed != -999) & np.isfinite(shape_class) & np.isfinite(shape_seed)
+        ntop = nff - ranks + 1
+        return {
+            "phytomer_rank": ([0], [ranks]),
+            "organ_rank": ([1, 2, 3], [ranks, ranks, ranks]),
+            "ntop": ([1, 2, 3], [ntop, ntop, ntop]),
+            "diameter": ([1, 2], [at("Ed"), at("Gd")]),
+            "organ_azimuth": ([1], [at("Azim")]),
+            "shape_mature_length": ([3], [at("Ll")]),
+            "shape_max_width": ([3], [at("Lw")]),
+            "shape_class": ([3], [np.where(valid, shape_class, -1).astype(int)]),
+            "shape_seed": ([3], [np.where(valid, shape_seed, -1).astype(int)]),
+        }
+
+    def _dimension_arrays(self):
+        cache = self.__dict__.get("_dimensions_cache")
+        if cache is None:
+            axes = self.axes_table.reset_index(drop=True)
+            cache = self._dimensions(self.phytomer_table, axes, float(np.asarray(self._parameter("length_unit"))[0]))
+            self.__dict__["_dimensions_cache"] = cache
+        return cache
+
+    def _parameter(self, name):
+        return self.parameter_values(name)
+
+    @segmentation
+    def _axis_phytomers(self, axis_phytomers, phytomer_number, axis_row) -> tuple[np.ndarray, str, NewNodes]:
+        """The axes the plants' axis_number asks for (in their axes table's order, each with its first phytomer, once
+        its bearer has the phytomer it is inserted on), and the phytomers the axes' phytomer_number asks for: created
+        with their organs and elements (NewNodes), their dimensions and shapes from the phytomer table."""
+        ds = self.data_structure
+        g = ds._mtg
+        rows = self.axes_table.reset_index(drop=True)
+        count = np.array(axis_phytomers, dtype=int)
+        target = np.floor(np.asarray(phytomer_number, dtype=float)).astype(int)
+        axes = np.asarray(ds.entity_ids("Axis"))
+        axis_of = {(g.complex(int(axis)), int(row)): int(axis) for axis, row in zip(axes, axis_row)}
+        batch = _Batch(g.labels, int(np.asarray(self.parameter_values("n_sect"))[0]))
+
+        # New axes, with their first phytomer
+        plants = np.asarray(ds.entity_ids("Plant"))
+        wanted = np.floor(np.asarray(ds.get("axis_number"), dtype=float)).astype(int)
+        table_plant = np.asarray(ds.parameter_view("table_plant", "Plant")).astype(int)
+        for plant, number, table in zip(plants.tolist(), wanted.tolist(), table_plant.tolist()):
+            mine = self._plant_rows(rows, table)
+            existing = [row for row in mine if (plant, row) in axis_of]
+            for row in mine[len(existing):number]:
+                values = self._axis_values(rows, row)
+                predecessor = self._predecessor(g, None, 1, axis_of, plant, values["bearer_row"],
+                                                values["insertion_rank"])
+                if predecessor is None:
+                    break                                   # its bearer's phytomer is not there yet
+                batch.axis(plant, dict(values, axis_phytomers=1))
+                batch.phytomer(None, predecessor, row, 1, values["final_leaf_number"], branched=True)
+
+        # New phytomers on the axes
+        for a, axis in enumerate(axes.tolist()):
+            values = self._axis_values(rows, int(axis_row[a]))
+            for rank in range(count[a] + 1, target[a] + 1):
+                predecessor = self._predecessor(g, axis, rank, axis_of, g.complex(axis), values["bearer_row"],
+                                                values["insertion_rank"])
+                batch.phytomer(g.components(axis)[0], predecessor, int(axis_row[a]), rank,
+                               values["final_leaf_number"], branched=False)
+                count[a] = rank
+        return count, "new_phytomers", batch.new_nodes(self._dimension_arrays(), self._variable_specs)
+
+    @staticmethod
+    def _predecessor(g, axis, rank, axis_of, plant, bearer_row, insertion_rank):
+        """The element a new phytomer's internode follows: the previous internode's last element; for an axis' first
+        phytomer, its bearer's phytomer's internode's last element (NO_PARENT for a main stem); None while that
+        phytomer does not exist."""
+        if rank > 1:
+            phytomer = g.components(g.components(axis)[0])[rank - 2]
+        elif bearer_row < 0:
+            return NewNodes.NO_PARENT
+        else:
+            bearer = axis_of.get((plant, bearer_row))
+            if bearer is None:
+                return None
+            phytomers = g.components(g.components(bearer)[0])
+            if len(phytomers) < max(insertion_rank, 1):
+                return None
+            phytomer = phytomers[max(insertion_rank, 1) - 1]
+        internode = g.components(phytomer)[0]
+        return g.components(internode)[-1]
+
+
+class _Batch:
+    """The complexes and elements of a step's new axes and phytomers, gathered for one NewNodes."""
+
+    def __init__(self, labels, n_sect):
+        self.labels = labels
+        self.complexes_layout, self.elements_layout = phytomer_layout(labels, n_sect)
+        self.anchor, self.scale, self.label, self.complex_values = [], [], [], []
+        self.parent, self.edge, self.element_label, self.complex_of, self.element_index = [], [], [], [], []
+        self.phytomers = []                                 # (layout's first complex, axis row, rank, nff)
+        self.last_unit = None
+
+    def _complex(self, anchor, scale, label, values=None):
+        self.anchor.append(anchor)
+        self.scale.append(scale)
+        self.label.append(label)
+        self.complex_values.append(values or {})
+        return len(self.anchor) - 1
+
+    def axis(self, plant, values):
+        """A new Axis of *plant* with its GrowthUnit; the next phytomer is its first."""
+        axis = self._complex(plant, SCALES.Axis, self.labels.Axis.Shoot, values)
+        self.last_unit = self._complex(-1 - axis, SCALES.GrowthUnit, self.labels.GrowthUnit.Shoot)
+
+    def phytomer(self, unit, predecessor, row, rank, nff, branched):
+        """A phytomer under the GrowthUnit *unit* (None: the new axis' just added), its internode after
+        *predecessor* (an element's id, or NO_PARENT)."""
+        unit = -1 - self.last_unit if unit is None else unit
+        base = len(self.anchor)
+        for where, scale, label in self.complexes_layout:
+            self._complex(unit if where == "unit" else -1 - (base + where), scale, label)
+        first = len(self.parent)
+        for complex_index, where, link, label, _, index in self.elements_layout:
+            if where == "previous":
+                self.parent.append(predecessor)
+                self.edge.append("+" if branched else "<")
+            else:
+                self.parent.append(-1 - (first + where))
+                self.edge.append(link)
+            self.element_label.append(label)
+            self.complex_of.append(-1 - (base + complex_index))
+            self.element_index.append(index)
+        self.phytomers.append((base, row, rank, nff))
+
+    def new_nodes(self, dimensions, specs) -> NewNodes:
+        if not self.parent:
+            return NewNodes(parent=np.zeros(0, dtype=np.int64))
+        n = len(self.anchor)
+        values = {}
+        names = {name for complex_values in self.complex_values for name in complex_values}
+        for name in names:
+            column = np.full(n, float(specs[name].default))
+            for k, complex_values in enumerate(self.complex_values):
+                if name in complex_values:
+                    column[k] = complex_values[name]
+            values[name] = column
+        bases, rows, ranks, nff = (np.array(column) for column in zip(*self.phytomers))
+        for name, (positions, per_position) in ShootArchitecture._phytomer_values(dimensions, rows, ranks,
+                                                                                  nff).items():
+            column = values.setdefault(name, np.full(n, float(specs[name].default)))
+            for position, array in zip(positions, per_position):
+                column[bases + position] = array
+        return NewNodes(parent=self.parent, edge=self.edge, label=self.element_label,
+                        values=dict(element_index=self.element_index),
+                        complexes=NewComplexes(anchor=self.anchor, scale=self.scale, label=self.label,
+                                               values=values),
+                        complex=self.complex_of)
