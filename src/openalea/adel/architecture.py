@@ -43,6 +43,7 @@ from openalea.metafspm.coupling.component import (NewComplexes, NewNodes, Struct
 from openalea.metafspm.coupling.geometry import Triangles, place, slim_cylinders
 from openalea.metafspm.data_structure.configs import PropsConfig, ScalesConfig
 from openalea.metafspm.solve.decorator import postsegmentation, segmentation
+from openalea.adel.blade_mesh import blade_element_triangles
 from openalea.adel.leaf_shapes import LeafShapes
 from openalea.adel.turtle import interpret, traversal_order
 
@@ -228,8 +229,14 @@ class ShootArchitecture(StructuralComponent):
     length_unit: float = parameter(**doc('m', "The tables' length unit in m (Adel's cm: 0.01)"), by=BY, default=0.01)
     leaves: object = parameter(**doc('', "The leaf shape database (LeafShapes; None: Adel's samples)"), by=BY,
                                default=None)
-    min_length: float = parameter(**doc('m', "The shortest element drawn (Adel's min_length, 1e-4 cm)"), by=BY,
-                                  default=1e-6)
+    min_length: float = parameter(**doc('m', "The shortest element drawn (Adel's min_length, 0.01 cm); a blade's "
+                                             "triangles smaller than its square / 100 are left out"), by=BY,
+                                  default=1e-4)
+    phyllochron: float = parameter(**doc('°Cd', "The main stem's phyllochron, for its blades' age classes in a "
+                                                "dynamic leaf database"), by=BY, default=88.92)
+    tiller_phyllochron: float = parameter(**doc('°Cd', "The tillers' phyllochron, for their blades' age classes in a "
+                                                       "dynamic leaf database (Adel's T1's for every tiller)"), by=BY,
+                                          default=91.6)
 
     # --- The plant's structure ---
 
@@ -575,23 +582,80 @@ class ShootArchitecture(StructuralComponent):
 
     def triangles(self, where=None) -> Triangles:
         """The elements' triangles (metafspm's coupling.geometry.Triangles), as Adel draws them: a stem element's
-        slim cylinder of its organ's diameter; a blade element's rolled part's, of its rolled diameter. *where*: a
-        node mask."""
+        slim cylinder of its organ's diameter; a blade element's rolled part's, of its rolled diameter, then its
+        flat part's mesh above it (blade_mesh). *where*: a node mask."""
         ds = self.data_structure
         element_kind, _ = self._kinds()
         organ = np.asarray(ds.owner("Organ"))
         length, rolled = np.asarray(ds.get("length")), np.asarray(ds.get("rolled_part"))
         minimum = float(np.asarray(self.parameter_values("min_length"))[0])
         selected = np.ones(length.size, dtype=bool) if where is None else np.asarray(where, dtype=bool)
+        leaf = selected & (element_kind == 2) & (length > 0)
         stem = selected & (element_kind == 1) & (length > 0) & (length >= minimum)
-        leaf = selected & (element_kind == 2) & (length > 0) & (rolled > 0)
-        drawn = np.flatnonzero(stem | leaf)
-        cylinder_length = np.where(stem, length, rolled)[drawn]
+        cylinder = np.flatnonzero(stem | (leaf & (rolled > 0)))
+        cylinder_length = np.where(stem, length, rolled)[cylinder]
         radius = np.where(stem, 0.5 * np.asarray(ds.get("diameter"))[organ],
-                          0.5 * np.asarray(ds.get("rolled_diameter")))[drawn]
-        position, heading, up = (frame[drawn] for frame in self.frames())
-        vertices = place(slim_cylinders(cylinder_length, radius, radius), position, heading, up)
-        return Triangles(vertices.reshape(-1, 3, 3), np.repeat(drawn, vertices.shape[1]))
+                          0.5 * np.asarray(ds.get("rolled_diameter")))[cylinder]
+        position, heading, up = self.frames()
+        vertices = place(slim_cylinders(cylinder_length, radius, radius), position[cylinder], heading[cylinder],
+                         up[cylinder]).reshape(-1, 3, 3)
+        owner = np.repeat(cylinder, 8)
+        blade_vertices, blade_owner = self._blade_triangles(leaf, rolled, minimum, organ)
+        if blade_owner.size:
+            placed = place(blade_vertices[:, None], position[blade_owner], heading[blade_owner],
+                           up[blade_owner])[:, 0]
+            vertices, owner = np.concatenate([vertices, placed]), np.concatenate([owner, blade_owner])
+        return Triangles(vertices, owner)
+
+    def _blade_triangles(self, leaf, rolled, minimum, organ):
+        """The flat parts' meshes of the blade elements *leaf* (a node mask) in their local frames, above their rolled
+        parts: (T, 3, 3) vertices, (T,) node indices. Each blade's shape is its class', seed's and, in a dynamic
+        database, its age class' (its age in its axis' phyllochrons, minus 0.3, as Adel's). An element's mesh is
+        kept from one call to the next while what it is made from is the same (its shape, visible length, flat
+        part, ...): only the grown and new ones are meshed again, every one placed again."""
+        ds = self.data_structure
+        shapes = self._leaf_shapes()
+        visible = np.asarray(ds.get("visible_length"))[organ]
+        flat_base, flat_top = np.asarray(ds.get("flat_base")), np.asarray(ds.get("flat_top"))
+        meshed = np.flatnonzero(leaf & (visible >= minimum) & np.isfinite(flat_base))
+        if meshed.size == 0 or not shapes.fitted:
+            return np.zeros((0, 3, 3)), np.zeros(0, dtype=np.int64)
+        blade = organ[meshed]
+        main = ds.map_to(np.asarray(ds.get("bearer_row"), dtype=float), "Axis", "Organ", "broadcast")[blade] < 0
+        phyllochron = np.where(main, float(np.asarray(self.parameter_values("phyllochron"))[0]),
+                               float(np.asarray(self.parameter_values("tiller_phyllochron"))[0]))
+        age_class = shapes.age_class(np.asarray(ds.get("age"))[blade] / phyllochron - 0.3)
+        shape = shapes.shape_index(np.asarray(ds.get("shape_class"))[blade], np.asarray(ds.get("shape_seed"))[blade],
+                                   age_class)
+        inclination = 1. if shapes.dynamic else None          # a dynamic database's shapes carry their inclination
+        mature, max_width = np.asarray(ds.get("shape_mature_length")), np.asarray(ds.get("shape_max_width"))
+        blade_inclination = np.asarray(ds.get("inclination"))
+        min_area = minimum ** 2 / 100.
+        vertex_ids = ds.entity_ids("node")
+        previous = self.__dict__.get("_blade_mesh_cache", {})
+        cache = {}
+        parts, owners = [], []
+        for node, organ_index, shape_index in zip(meshed.tolist(), blade.tolist(), shape.tolist()):
+            if shape_index < 0:
+                continue
+            made_from = (id(shapes), shape_index,
+                         blade_inclination[organ_index] if inclination is None else inclination, mature[organ_index],
+                         max_width[organ_index], visible[node], flat_base[node], flat_top[node], rolled[node],
+                         min_area)
+            vertex = int(vertex_ids[node])
+            kept = previous.get(vertex)
+            if kept is not None and kept[0] == made_from:
+                triangles = kept[1]
+            else:
+                triangles = blade_element_triangles(shapes.fitted[shape_index], *made_from[2:8], min_area)
+                triangles[..., 2] += rolled[node]
+            cache[vertex] = (made_from, triangles)
+            parts.append(triangles)
+            owners.append(np.full(len(triangles), node, dtype=np.int64))
+        self.__dict__["_blade_mesh_cache"] = cache
+        if not parts:
+            return np.zeros((0, 3, 3)), np.zeros(0, dtype=np.int64)
+        return np.concatenate(parts), np.concatenate(owners)
 
     @staticmethod
     def _predecessor(g, axis, rank, axis_of, plant, bearer_row, insertion_rank):

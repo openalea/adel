@@ -2,7 +2,13 @@
 harness' scenario: every element's lengths (green, senesced, rolled, hidden), its flat part's position and width
 (1e-9), and its areas and the organs' visible areas (the legacy in cm, the port in m). The areas differ: the port
 integrates the blades' width profiles exactly (linear between their points), the legacy by Simpson's rule on those
-points, least exact on small parts (a tip just out): every area within 8 %, their median within 2e-3."""
+points, least exact on small parts (a tip just out): every area within 8 %, their median within 2e-3.
+
+The widths are the mean of the width profile at a part's bounds and its points strictly inside. With echap's
+profiles (points every 0.05) and 4 elements per blade, the elements' bounds 0.25, 0.5, 0.75 fall on points: the
+legacy computes them in cm, and some round one ulp below (0.7499999999999999), the point then inside the element
+above; the port counts a point within 1e-9 of a bound as the bound (the definition's exact result). Those widths
+differ (a sixth of them, by less than 10 %); every other is the legacy's to 1e-9."""
 import numpy as np
 import pytest
 
@@ -33,16 +39,19 @@ def legacy_elements(record):
     return out
 
 
-@pytest.fixture(scope="module", params=["samples", "echap"])
+BOUNDS_ON_POINTS = {("echap", 4)}                     # the elements' bounds on the width profiles' points
+
+
+@pytest.fixture(scope="module", params=[("samples", 1), ("echap", 1), ("echap", 4), ("samples", 3)])
 def runs(request):
-    leaves = request.param
-    return (legacy_run(n_steps=STEPS, leaves=leaves, record_every=EVERY),
-            port_run(n_steps=STEPS, leaves=leaves, record_every=EVERY))
+    leaves, n_sect = request.param
+    return (request.param, legacy_run(n_steps=STEPS, leaves=leaves, record_every=EVERY, n_sect=n_sect),
+            port_run(n_steps=STEPS, leaves=leaves, record_every=EVERY, n_sect=n_sect))
 
 
 def test_the_same_elements(runs):
-    legacy, port = runs
-    differences = []
+    run_name, legacy, port = runs
+    differences, width_differences = [], []
     for legacy_record, port_record in zip(legacy.steps, port.steps):
         for key, (elements, organ_area) in legacy_elements(legacy_record).items():
             port_elements = port_record[key]["elements"]
@@ -66,10 +75,18 @@ def test_the_same_elements(runs):
                             assert np.isnan(values[port_name]), (key, label, port_name)
                         else:
                             assert values[port_name] == pytest.approx(expected, rel=1e-9, abs=1e-12)
-                    assert values["width"] == pytest.approx(legacy_values["width"] * 1e-2, rel=1e-9, abs=1e-12)
+                    if run_name in BOUNDS_ON_POINTS and legacy_values["width"]:
+                        expected = legacy_values["width"] * 1e-2
+                        width_differences.append(abs(values["width"] - expected) / expected)
+                    else:
+                        assert values["width"] == pytest.approx(legacy_values["width"] * 1e-2, rel=1e-9,
+                                                                abs=1e-12)
                 assert bool(values["is_green"]) == bool(legacy_values["is_green"]), (key, label)
             if organ_area > 0:
                 differences.append(abs(port_record[key]["organ_area"] - organ_area) / organ_area)
+    if width_differences:
+        width_differences = np.array(width_differences)
+        assert np.mean(width_differences > 1e-9) < 0.2 and width_differences.max() < 0.1
     differences = np.array(differences)
     assert differences.size and differences.max() < 0.08 and np.median(differences) < 2e-3, (
         differences.max(), np.median(differences))

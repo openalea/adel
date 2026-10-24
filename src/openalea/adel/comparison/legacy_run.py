@@ -154,12 +154,12 @@ def record(g) -> Record:
 
 
 def legacy_run(n_steps=40, thermal_time_step=10., leaves="echap", seed=1, record_every=1, record_states=True,
-               phyllochron=PHYLLOCHRON, plant_azimuth=0., inclinations=None):
+               phyllochron=PHYLLOCHRON, plant_azimuth=0., inclinations=None, n_sect=1):
     """*n_steps* steps of *thermal_time_step* °Cd of the legacy's dynamic geometry on the given lengths, the plant at
     the origin, its azimuth *plant_azimuth* (°; the legacy draws a random one). *inclinations*: {(axis, rank):
-    degrees} of internodes (the legacy's AdelDyn sets none)."""
+    degrees} of internodes (the legacy's AdelDyn sets none). *n_sect*: the number of elements of a blade."""
     axes, phytoT = harness_tables(leaves)
-    adel = AdelDyn(seed=seed, leaves=leaf_database(leaves))
+    adel = AdelDyn(seed=seed, leaves=leaf_database(leaves), nsect=n_sect)
     adel.positions, adel.plant_azimuths = [(0., 0., 0.)], np.array([float(plant_azimuth)])
     run = LegacyRun(adel=adel)
     g = adel.build_stand(axes)

@@ -56,14 +56,17 @@ class PortRun:
 
 
 def leaf_shapes(leaves):
-    return LeafShapes.echap() if leaves == "echap" else LeafShapes.samples()
+    """The legacy harness' databases (legacy_run.leaf_database): the samples, or echap's with Soissons' midribs."""
+    return LeafShapes.echap(xy_model="Soissons_byleafclass") if leaves == "echap" else LeafShapes.samples()
 
 
-def port_scene(leaves="samples", time_step=3600, rotation=0.):
+def port_scene(leaves="samples", time_step=3600, rotation=0., phyllochron=PHYLLOCHRON, n_sect=1):
     axes, phytomers = harness_tables(leaves)
     table = pd.DataFrame([dict(plant="p0", model=ShootOnly, x=0., y=0., z=0., rotation=float(rotation),
                                scenario={"parameters": dict(axes_table=axes, phytomer_table=phytomers,
-                                                            table_plant=1, leaves=leaf_shapes(leaves))})])
+                                                            table_plant=1, leaves=leaf_shapes(leaves),
+                                                            phyllochron=phyllochron,
+                                                            tiller_phyllochron=phyllochron, n_sect=n_sect)})])
     table.attrs.update(xrange=1., yrange=1.)
     return Scene(table, time_step=time_step)
 
@@ -151,8 +154,8 @@ def structure(scene):
 
 
 def port_run(n_steps=40, thermal_time_step=10., leaves="samples", record_every=1, phyllochron=PHYLLOCHRON,
-             plant_azimuth=0., inclinations=None):
-    scene = port_scene(leaves, rotation=plant_azimuth)
+             plant_azimuth=0., inclinations=None, n_sect=1):
+    scene = port_scene(leaves, rotation=plant_azimuth, phyllochron=phyllochron, n_sect=n_sect)
     axes, phytomers = harness_tables(leaves)
     run = PortRun(scene=scene)
     for step in range(n_steps + 1):
