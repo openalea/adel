@@ -20,7 +20,8 @@ from openalea.metafspm.scene.scene import Scene
 
 ORGAN_NAMES = {"StemInternode": "internode", "Sheath": "sheath", "Blade": "blade"}
 ELEMENT_VARIABLES = ("length", "area", "green_length", "green_area", "senesced_length", "senesced_area", "is_green",
-                     "rolled_part", "rolled_diameter", "width", "flat_base", "flat_top")
+                     "rolled_part", "rolled_diameter", "width", "flat_base", "flat_top", "x1", "y1", "z1", "x2", "y2",
+                     "z2")
 STAGE_INDEX = {"potential": 1, "actual": 4, "segmentation": 5, "postsegmentation": 6}
 
 
@@ -58,9 +59,9 @@ def leaf_shapes(leaves):
     return LeafShapes.echap() if leaves == "echap" else LeafShapes.samples()
 
 
-def port_scene(leaves="samples", time_step=3600):
+def port_scene(leaves="samples", time_step=3600, rotation=0.):
     axes, phytomers = harness_tables(leaves)
-    table = pd.DataFrame([dict(plant="p0", model=ShootOnly, x=0., y=0., z=0., rotation=0.,
+    table = pd.DataFrame([dict(plant="p0", model=ShootOnly, x=0., y=0., z=0., rotation=float(rotation),
                                scenario={"parameters": dict(axes_table=axes, phytomer_table=phytomers,
                                                             table_plant=1, leaves=leaf_shapes(leaves))})])
     table.attrs.update(xrange=1., yrange=1.)
@@ -101,10 +102,24 @@ def write_given(scene, lengths, unit=0.01):
         ds.set(variable, values)
 
 
-def structure(scene):
-    """{(axis, rank, organ): {"labels": [element labels], "elements": {label: {variable: value}}, variable:
-    value}}; leaf elements labelled as the legacy's, by their index (LeafElement1, ...)."""
+def write_inclinations(scene, inclinations):
+    """The internodes' inclinations, {(axis, rank): degrees}."""
     ds = scene.populations[0].data_structure
+    names = axis_names(scene)
+    organ_axis = names[ds.map_to(np.arange(names.size, dtype=float), "Axis", "Organ", "broadcast").astype(int)]
+    ranks, organs = np.asarray(ds.get("organ_rank")), organ_names(ds)
+    values = np.array(ds.get("inclination"), dtype=float)
+    for i in range(values.size):
+        if organs[i] == "internode":
+            values[i] = inclinations.get((organ_axis[i], int(ranks[i])), values[i])
+    ds.set("inclination", values)
+
+
+def structure(scene):
+    """{(axis, rank, organ): {"labels": [element labels], "elements": {label: {variable: value, "triangles": (T, 3,
+    3)}}, variable: value}}; leaf elements labelled as the legacy's, by their index (LeafElement1, ...)."""
+    ds = scene.populations[0].data_structure
+    triangles = scene.populations[0].instance.architecture.triangles()
     g = ds._mtg
     label_name = {}
     for name in ("HiddenElement", "StemElement", "LeafElement"):
@@ -128,14 +143,16 @@ def structure(scene):
             if label == "LeafElement":
                 label += str(int(element_arrays["element_index"][j]))
             values[label] = {name: element_arrays[name][j].item() for name in ELEMENT_VARIABLES}
+            values[label]["triangles"] = triangles.vertices[triangles.owner == j]
         out[(organ_axis[i], int(ranks[i]), names[i])] = dict(labels=elements, elements=values,
                                                               **{name: arrays[name][i].item() for name in variables},
                                                               organ_area=float(np.asarray(ds.get("organ_area"))[i]))
     return out
 
 
-def port_run(n_steps=40, thermal_time_step=10., leaves="samples", record_every=1, phyllochron=PHYLLOCHRON):
-    scene = port_scene(leaves)
+def port_run(n_steps=40, thermal_time_step=10., leaves="samples", record_every=1, phyllochron=PHYLLOCHRON,
+             plant_azimuth=0., inclinations=None):
+    scene = port_scene(leaves, rotation=plant_azimuth)
     axes, phytomers = harness_tables(leaves)
     run = PortRun(scene=scene)
     for step in range(n_steps + 1):
@@ -143,6 +160,7 @@ def port_run(n_steps=40, thermal_time_step=10., leaves="samples", record_every=1
         write_given(scene, lengths)
         scene.run()
         write_given(scene, lengths)                    # the organs created in the step: their lengths at once,
+        write_inclinations(scene, inclinations or {})
         run_stage(scene, "postsegmentation")          # as the legacy sets a new metamer's (the elements again)
         if step % record_every == 0 or step == n_steps:
             run.steps.append(structure(scene))

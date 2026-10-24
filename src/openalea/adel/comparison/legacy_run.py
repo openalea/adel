@@ -154,10 +154,13 @@ def record(g) -> Record:
 
 
 def legacy_run(n_steps=40, thermal_time_step=10., leaves="echap", seed=1, record_every=1, record_states=True,
-               phyllochron=PHYLLOCHRON):
-    """*n_steps* steps of *thermal_time_step* °Cd of the legacy's dynamic geometry on the given lengths."""
+               phyllochron=PHYLLOCHRON, plant_azimuth=0., inclinations=None):
+    """*n_steps* steps of *thermal_time_step* °Cd of the legacy's dynamic geometry on the given lengths, the plant at
+    the origin, its azimuth *plant_azimuth* (°; the legacy draws a random one). *inclinations*: {(axis, rank):
+    degrees} of internodes (the legacy's AdelDyn sets none)."""
     axes, phytoT = harness_tables(leaves)
     adel = AdelDyn(seed=seed, leaves=leaf_database(leaves))
+    adel.positions, adel.plant_azimuths = [(0., 0., 0.)], np.array([float(plant_azimuth)])
     run = LegacyRun(adel=adel)
     g = adel.build_stand(axes)
     labels = g.property("label")
@@ -181,6 +184,8 @@ def legacy_run(n_steps=40, thermal_time_step=10., leaves="echap", seed=1, record
                     values = lengths[name].get(rank, {}).get(labels[organ])
                     for property_name, value in (values or {}).items():
                         g.property(property_name)[organ] = value
+                    if labels[organ] == "internode" and (name, rank) in (inclinations or {}):
+                        g.property("inclination")[organ] = inclinations[(name, rank)]
         g = adel.update_geometry(g, phyllochron={"MS": phyllochron, "T1": phyllochron})
         if record_states and (step % record_every == 0 or step == n_steps):
             run.steps.append(record(g))

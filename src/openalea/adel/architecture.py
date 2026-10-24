@@ -22,11 +22,16 @@ The plant's structure, in the MPG:
 
 Axes appear when the plant's axis_number asks for them, in its axes table's order, each with its first phytomer;
 phytomers when their axis' phytomer_number asks for them. A phytomer's internode follows the previous one's (<); a
-tiller's first internode is branched (+) on its bearer's phytomer at its insertion rank (Adel's names: 'T1' on the main stem's phytomer 1, 'T1.2' on T1's phytomer 2). The
+tiller's first internode is branched (+) on its bearer's phytomer at its insertion rank, at its internode's base (its
+first element), as Adel inserts it (Adel's names: 'T1' on the main stem's phytomer 1, 'T1.2' on T1's phytomer 2). The
 elements are stable: created with their organ, their lengths and areas updated, never rebuilt.
 
 The tables are Adel's (its axeT and phytoT, one row per axis and per axis and rank, every plant of the population in
 them, column 'plant'); `table_plant`, a per-plant parameter, says which of their plants a plant is.
+
+The elements are placed by Adel's turtle (openalea.adel.turtle), from each plant's position and rotation: their base
+x1, y1, z1, their end x2, y2, z2, and the frame they are drawn in (heading_x…, up_x…), at each step after their
+lengths. triangles() gives their triangles (metafspm's coupling.geometry.Triangles) for light models and display.
 """
 from dataclasses import dataclass
 
@@ -35,9 +40,11 @@ import pandas as pd
 
 from openalea.metafspm.coupling.component import (NewComplexes, NewNodes, StructuralComponent, input_variable,
                                                    parameter, state_variable)
+from openalea.metafspm.coupling.geometry import Triangles, place, slim_cylinders
 from openalea.metafspm.data_structure.configs import PropsConfig, ScalesConfig
 from openalea.metafspm.solve.decorator import postsegmentation, segmentation
 from openalea.adel.leaf_shapes import LeafShapes
+from openalea.adel.turtle import interpret, traversal_order
 
 BY = "model_shoot_architecture"
 DESCRIPTOR = "descriptor"
@@ -69,7 +76,8 @@ def phytomer_layout(labels, n_sect):
     """A phytomer's complexes and elements, in creation order:
     complexes [(anchor, scale, label)] with anchor "unit" (the axis' GrowthUnit) or the index of an earlier complex;
     elements [(complex index, parent, edge, label, organ, index in organ)] with parent "previous" (the internode's
-    predecessor: the previous internode's last element, the bearer's, or none) or the index of an earlier element."""
+    predecessor: the previous internode's last element, the bearer's internode's first, or none) or the index of an
+    earlier element."""
     complexes = [("unit", SCALES.Phytomer, labels.Phytomer.Shoot),
                  (0, SCALES.Organ, labels.Organ.StemInternode),
                  (0, SCALES.Organ, labels.Organ.Sheath),
@@ -121,6 +129,9 @@ class ShootArchitecture(StructuralComponent):
                                              state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Axis)
     has_ear: int = state_variable(**doc('adim', "1 when the axis bears an ear"), state_variable_type=DESCRIPTOR,
                                   initialize=0, scale=SCALES.Axis, dtype='int')
+    axis_azimuth: float = state_variable(**doc('°', "The axis' azimuth at its insertion (Adel's az_insertion), used "
+                                                    "when its first stem element is inclined"),
+                                         state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Axis)
 
     # --- The phytomers and organs (from the phytomer table, at their creation) ---
     phytomer_rank: int = state_variable(**doc('adim', "The phytomer's rank on its axis, from 1"),
@@ -180,6 +191,32 @@ class ShootArchitecture(StructuralComponent):
                                                    "visible length (Adel's srt)", "NaN: no flat part"),
                                      state_variable_type=DESCRIPTOR, initialize=np.nan, scale=SCALES.SubOrgan)
 
+    # --- The elements' placement (the turtle's frame where each is drawn, and its end) ---
+    x1: float = state_variable(**doc('m', "The element's base, x"), state_variable_type=DESCRIPTOR, initialize=0.,
+                               scale=SCALES.SubOrgan)
+    y1: float = state_variable(**doc('m', "The element's base, y"), state_variable_type=DESCRIPTOR, initialize=0.,
+                               scale=SCALES.SubOrgan)
+    z1: float = state_variable(**doc('m', "The element's base, z"), state_variable_type=DESCRIPTOR, initialize=0.,
+                               scale=SCALES.SubOrgan)
+    x2: float = state_variable(**doc('m', "The element's end (a blade element's: its rolled part's), x"),
+                               state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.SubOrgan)
+    y2: float = state_variable(**doc('m', "The element's end (a blade element's: its rolled part's), y"),
+                               state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.SubOrgan)
+    z2: float = state_variable(**doc('m', "The element's end (a blade element's: its rolled part's), z"),
+                               state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.SubOrgan)
+    heading_x: float = state_variable(**doc('adim', "The element's heading, x"), state_variable_type=DESCRIPTOR,
+                                      initialize=0., scale=SCALES.SubOrgan)
+    heading_y: float = state_variable(**doc('adim', "The element's heading, y"), state_variable_type=DESCRIPTOR,
+                                      initialize=0., scale=SCALES.SubOrgan)
+    heading_z: float = state_variable(**doc('adim', "The element's heading, z"), state_variable_type=DESCRIPTOR,
+                                      initialize=1., scale=SCALES.SubOrgan)
+    up_x: float = state_variable(**doc('adim', "The element's up, x (its blade's side: the shape's x is along it)"),
+                                 state_variable_type=DESCRIPTOR, initialize=-1., scale=SCALES.SubOrgan)
+    up_y: float = state_variable(**doc('adim', "The element's up, y"), state_variable_type=DESCRIPTOR, initialize=0.,
+                                 scale=SCALES.SubOrgan)
+    up_z: float = state_variable(**doc('adim', "The element's up, z"), state_variable_type=DESCRIPTOR, initialize=0.,
+                                 scale=SCALES.SubOrgan)
+
     # --- Parameters ---
     axes_table: object = parameter(**doc('', "Adel's axeT: one row per axis of the population's plants (plant, axe, "
                                              "nf, HS_final, hasEar, ...)"), by=BY, default=None)
@@ -191,6 +228,8 @@ class ShootArchitecture(StructuralComponent):
     length_unit: float = parameter(**doc('m', "The tables' length unit in m (Adel's cm: 0.01)"), by=BY, default=0.01)
     leaves: object = parameter(**doc('', "The leaf shape database (LeafShapes; None: Adel's samples)"), by=BY,
                                default=None)
+    min_length: float = parameter(**doc('m', "The shortest element drawn (Adel's min_length, 1e-4 cm)"), by=BY,
+                                  default=1e-6)
 
     # --- The plant's structure ---
 
@@ -484,10 +523,80 @@ class ShootArchitecture(StructuralComponent):
         out["flat_top"][index] = np.where(has_flat, (top - limit_visible) / visible, np.nan)
         is_green[index] = green_part > senesced_part
 
+    # --- The placement and the triangles ---
+
+    def _traversal(self):
+        """Per node: its position in Adel's traversal (turtle.traversal_order), and whether it is its plant's base;
+        once per topology."""
+        ds = self.data_structure
+        key = (ds.topology_version, ds.n_nodes())
+        cache = self.__dict__.get("_traversal_cache")
+        if cache is None or cache[0] != key:
+            g = ds._mtg
+            nodes = ds.entity_ids("node").tolist()
+            base = np.array([g.parent(v) is None for v in nodes])
+            cache = (key, traversal_order(g, nodes), base)
+            self.__dict__["_traversal_cache"] = cache
+        return cache[1], cache[2]
+
+    @postsegmentation
+    def _x1(self, length, rolled_part, inclination, organ_azimuth, axis_azimuth, bearer_row,
+            phytomer_rank) -> outputs(11):
+        """The elements' placement, their frames by Adel's turtle (turtle.interpret): each one's base, heading and up
+        where it is drawn, and its end; from its plant's position and rotation, on the elements' lengths."""
+        ds = self.data_structure
+        g = ds._mtg
+        element_kind, organ_kind = self._kinds()
+        order, plant_base = self._traversal()
+        organ, axis = np.asarray(ds.owner("Organ")), np.asarray(ds.owner("Axis"))
+        plant, phytomer = np.asarray(ds.owner("Plant")), np.asarray(ds.owner("Phytomer"))
+        plants = ds.entity_ids("Plant").tolist()
+        plant_position = np.array([[g.property(name).get(v, 0.) for name in ("x", "y", "z")] for v in plants],
+                                  dtype=float).reshape(-1, 3)
+        plant_rotation = np.array([g.property("rotation").get(v, 0.) for v in plants], dtype=float)
+        axis_is_main = np.asarray(bearer_row) < 0
+        stem = element_kind == 1
+        position, heading, up, end = interpret(
+            order, element_kind.astype(np.int64), plant_base, axis.astype(np.int64), axis_is_main,
+            (np.asarray(phytomer_rank)[phytomer] == 1) & ~axis_is_main[axis], plant_position[plant],
+            plant_rotation[plant], np.asarray(axis_azimuth, dtype=float)[axis],
+            np.where(stem, np.asarray(inclination, dtype=float)[organ], 0.),
+            np.where(stem & (organ_kind == 0), np.asarray(organ_azimuth, dtype=float)[organ], 0.),
+            np.asarray(length, dtype=float), np.asarray(rolled_part, dtype=float))
+        return (position[:, 0], "y1", position[:, 1], "z1", position[:, 2], "x2", end[:, 0], "y2", end[:, 1], "z2",
+                end[:, 2], "heading_x", heading[:, 0], "heading_y", heading[:, 1], "heading_z", heading[:, 2],
+                "up_x", up[:, 0], "up_y", up[:, 1], "up_z", up[:, 2])
+
+    def frames(self):
+        """(position, heading, up), each (n, 3): the elements' frames where they are drawn."""
+        ds = self.data_structure
+        names = (("x1", "y1", "z1"), ("heading_x", "heading_y", "heading_z"), ("up_x", "up_y", "up_z"))
+        return tuple(np.stack([np.asarray(ds.get(name), dtype=float) for name in frame], axis=1) for frame in names)
+
+    def triangles(self, where=None) -> Triangles:
+        """The elements' triangles (metafspm's coupling.geometry.Triangles), as Adel draws them: a stem element's
+        slim cylinder of its organ's diameter; a blade element's rolled part's, of its rolled diameter. *where*: a
+        node mask."""
+        ds = self.data_structure
+        element_kind, _ = self._kinds()
+        organ = np.asarray(ds.owner("Organ"))
+        length, rolled = np.asarray(ds.get("length")), np.asarray(ds.get("rolled_part"))
+        minimum = float(np.asarray(self.parameter_values("min_length"))[0])
+        selected = np.ones(length.size, dtype=bool) if where is None else np.asarray(where, dtype=bool)
+        stem = selected & (element_kind == 1) & (length > 0) & (length >= minimum)
+        leaf = selected & (element_kind == 2) & (length > 0) & (rolled > 0)
+        drawn = np.flatnonzero(stem | leaf)
+        cylinder_length = np.where(stem, length, rolled)[drawn]
+        radius = np.where(stem, 0.5 * np.asarray(ds.get("diameter"))[organ],
+                          0.5 * np.asarray(ds.get("rolled_diameter")))[drawn]
+        position, heading, up = (frame[drawn] for frame in self.frames())
+        vertices = place(slim_cylinders(cylinder_length, radius, radius), position, heading, up)
+        return Triangles(vertices.reshape(-1, 3, 3), np.repeat(drawn, vertices.shape[1]))
+
     @staticmethod
     def _predecessor(g, axis, rank, axis_of, plant, bearer_row, insertion_rank):
         """The element a new phytomer's internode follows: the previous internode's last element; for an axis' first
-        phytomer, its bearer's phytomer's internode's last element (NO_PARENT for a main stem); None while that
+        phytomer, its bearer's phytomer's internode's first element (NO_PARENT for a main stem); None while that
         phytomer does not exist."""
         if rank > 1:
             phytomer = g.components(g.components(axis)[0])[rank - 2]
@@ -500,7 +609,7 @@ class ShootArchitecture(StructuralComponent):
             phytomers = g.components(g.components(bearer)[0])
             if len(phytomers) < max(insertion_rank, 1):
                 return None
-            phytomer = phytomers[max(insertion_rank, 1) - 1]
+            return g.components(g.components(phytomers[max(insertion_rank, 1) - 1])[0])[0]
         internode = g.components(phytomer)[0]
         return g.components(internode)[-1]
 
