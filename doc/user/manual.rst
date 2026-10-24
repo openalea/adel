@@ -766,7 +766,7 @@ The following dataflow demonstrates how to use ``plantgen`` through Visualea:
    :width: 100%
    :align: center
 
-   The openalea.adel.Tutorials.plantgen dataflow 
+   The openalea.adel.legacy.Tutorials.plantgen dataflow 
 
 The user must select existing data nodes to set the input and ouput tables.
 
@@ -777,11 +777,11 @@ Visualea:
    :width: 100%
    :align: center
 
-   The openalea.adel.Tutorials.plantgen_csv dataflow 
+   The openalea.adel.legacy.Tutorials.plantgen_csv dataflow 
 
 In this case the user must give the paths of csv files for inputs and outputs. 
 
-.. warning:: the paths set in openalea.adel.Tutorials.plantgen_csv will not work 
+.. warning:: the paths set in openalea.adel.legacy.Tutorials.plantgen_csv will not work 
              on your computer. You have to adapt them to your needs.
 
 Finally, the node ``read_plantgen_inputs`` permits to define the values of the input ports of 
@@ -796,7 +796,7 @@ the dataflow becomes:
        :width: 100%
        :align: center
         
-       The openalea.adel.Tutorials.plantgen_csv_inputs dataflow 
+       The openalea.adel.legacy.Tutorials.plantgen_csv_inputs dataflow 
    
 ``read_plantgen_inputs`` permits the user to store the values of the input ports, 
 so he can reuse them later.
@@ -840,11 +840,11 @@ See :mod:`documentation of params <openalea.adel.plantgen.params>` for more info
 Description of Adel's outputs
 *******************************
 
-The function :func:`RunAdel <openalea.adel.AdelR.RunAdel>` permits to simulate 3D architectural 
+The function :func:`RunAdel <openalea.adel.legacy.AdelR.RunAdel>` permits to simulate 3D architectural 
 development of the shoots of wheat plants, according to a list of dates (thermal times) and 
 Adel's inputs (see :ref:`adel_input`). 
 
-:func:`RunAdel <openalea.adel.AdelR.RunAdel>` returns a Python dictionary. Each key 
+:func:`RunAdel <openalea.adel.legacy.AdelR.RunAdel>` returns a Python dictionary. Each key 
 of the dictionary represents an output.   
 The following table describes each of these outputs.
 
@@ -910,11 +910,11 @@ The following table describes each of these outputs.
       - relative haun stage (haun stage - numphy)
       
 
-Then, the function :func:`mtg_factory <openalea.adel.newmtg.mtg_factory>` permits to 
-construct a MTG from the output of :func:`RunAdel <openalea.adel.AdelR.RunAdel>`.
+Then, the function :func:`mtg_factory <openalea.adel.legacy.newmtg.mtg_factory>` permits to 
+construct a MTG from the output of :func:`RunAdel <openalea.adel.legacy.AdelR.RunAdel>`.
 
-Finally, the function :func:`mtg_interpreter <openalea.adel.mtg_interpreter.mtg_interpreter>` permits to 
-add a geometry to the MTG computed by :func:`mtg_factory <openalea.adel.newmtg.mtg_factory>`. 
+Finally, the function :func:`mtg_interpreter <openalea.adel.legacy.mtg_interpreter.mtg_interpreter>` permits to 
+add a geometry to the MTG computed by :func:`mtg_factory <openalea.adel.legacy.newmtg.mtg_factory>`. 
 
 The resulting MTG has the following properties:
 

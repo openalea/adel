@@ -65,7 +65,7 @@ Discussions = "https://github.com/openalea/adel/discussions"
 Changelog = "https://github.com/openalea/adel/releases"
 
 [project.entry-points."wralea"]
-"adel" = "openalea.adel"
+"adel" = "openalea.adel.legacy"
 
 [tool.conda.environment]
 channels = [

@@ -487,7 +487,7 @@ def _check_results(to_compare, dynT_user_completeness, dimT_user_completeness):
 #     # test the visualea node
 #     pm = PackageManager()
 #     pm.init(verbose=False)
-#     res = run(('openalea.adel.Tutorials', 'plantgen'), {}, pm=pm)
+#     res = run(('openalea.adel.legacy.Tutorials', 'plantgen'), {}, pm=pm)
 #     assert res == []
 
 

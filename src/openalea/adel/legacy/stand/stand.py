@@ -206,7 +206,7 @@ def planter(scene, distribution):
     """
     from openalea.plantgl.all import AxisRotation, Transform4, Translation
 
-    from openalea.adel import symbol
+    from openalea.adel.legacy import symbol
 
     new_scene = symbol.CanScene()
 

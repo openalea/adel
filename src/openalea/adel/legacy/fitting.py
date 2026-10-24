@@ -322,7 +322,7 @@ def leaf_to_mesh(x, y, r, twist_start=0, twist_end=0, **kwds):
 def _mesh(
     leaf, length_max, length, radius_max, antisens=True, functor=leaf_to_mesh, **kwds
 ):
-    from openalea.adel.leaf.curvature import curvature_xys, curvature2xy
+    from openalea.adel.legacy.leaf.curvature import curvature_xys, curvature2xy
 
     if length <= 0.0:
         return

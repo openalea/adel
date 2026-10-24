@@ -35,7 +35,7 @@ def leaves_db():
 
 
 def _devT():
-    from openalea.adel.AdelR import _devCsv
+    from openalea.adel.legacy.AdelR import _devCsv
 
     axeT = datadir + "/data/axeTCa0N.csv"
     dimT = datadir + "/data/dimTCa0N.csv"
@@ -47,7 +47,7 @@ def _devT():
 
 
 def devT():
-    from openalea.adel.AdelR import devCsv
+    from openalea.adel.legacy.AdelR import devCsv
 
     axeT = datadir + "/data/axeTCa0N.csv"
     dimT = datadir + "/data/dimTCa0N.csv"
@@ -73,7 +73,7 @@ def xydb():
 
 
 def wheat_leaf_db():
-    from openalea.adel.wheat.extract_wheat import extract_leaf_info
+    from openalea.adel.legacy.wheat.extract_wheat import extract_leaf_info
     import openalea.adel.legacy.fitting as fitting
 
     leaves = extract_leaf_info(

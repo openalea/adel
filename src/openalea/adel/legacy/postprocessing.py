@@ -150,7 +150,7 @@ def color_ground_cover(
 
     """
     import cv2
-    from openalea.adel.povray.povray import PovRay
+    from openalea.adel.legacy.povray.povray import PovRay
 
     newscene, domain = replicate_scene(scene, domain, replicate=replicate)
 

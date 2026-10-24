@@ -10,18 +10,18 @@ Reference guide
 .. currentmodule:: openalea.adel.__init__
 
 
-:mod:`openalea.adel.fitting` module
+:mod:`openalea.adel.legacy.fitting` module
 ===============================================
-.. automodule:: openalea.adel.fitting
+.. automodule:: openalea.adel.legacy.fitting
     :members:
     :undoc-members:
     :inherited-members:
     :show-inheritance:
     :synopsis: doc todo
 
-:mod:`openalea.adel.label` module
+:mod:`openalea.adel.legacy.label` module
 ===============================================
-.. automodule:: openalea.adel.label
+.. automodule:: openalea.adel.legacy.label
     :members:
     :undoc-members:
     :inherited-members:
@@ -29,27 +29,27 @@ Reference guide
     :synopsis: doc todo
 
 
-:mod:`openalea.adel.symbol` module
+:mod:`openalea.adel.legacy.symbol` module
 ===============================================
-.. automodule:: openalea.adel.symbol
+.. automodule:: openalea.adel.legacy.symbol
     :members:
     :undoc-members:
     :inherited-members:
     :show-inheritance:
     :synopsis: doc todo
 
-:mod:`openalea.adel.AdelR` module
+:mod:`openalea.adel.legacy.AdelR` module
 ===============================================
-.. automodule:: openalea.adel.AdelR
+.. automodule:: openalea.adel.legacy.AdelR
     :members:
     :undoc-members:
     :inherited-members:
     :show-inheritance:
     :synopsis: doc todo
 
-:mod:`openalea.adel.mtg` module
+:mod:`openalea.adel.legacy.mtg` module
 ===============================================
-.. automodule:: openalea.adel.mtg
+.. automodule:: openalea.adel.legacy.mtg
     :members:
     :undoc-members:
     :inherited-members:
@@ -101,18 +101,18 @@ Reference guide
     :show-inheritance:
     :synopsis: 
     
-:mod:`openalea.adel.newmtg` module
+:mod:`openalea.adel.legacy.newmtg` module
 =========================================================
-.. automodule:: openalea.adel.newmtg
+.. automodule:: openalea.adel.legacy.newmtg
     :members:
     :undoc-members:
     :inherited-members:
     :show-inheritance:
     :synopsis: 
     
-:mod:`openalea.adel.mtg_interpreter` module
+:mod:`openalea.adel.legacy.mtg_interpreter` module
 =========================================================
-.. automodule:: openalea.adel.mtg_interpreter
+.. automodule:: openalea.adel.legacy.mtg_interpreter
     :members:
     :undoc-members:
     :inherited-members:
