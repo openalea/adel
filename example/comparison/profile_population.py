@@ -3,7 +3,8 @@ The time of ShootArchitecture's steps and triangles against the legacy's (AdelDy
 on stands of 1 to 16 plants grown on the harness' scenario (the organs' lengths given at each step), every step's
 geometry computed (as a light model at each step needs it).
 
-Only the models' calls are timed: the harness' writing of the given lengths (Python loops on both sides) is left out.
+Only the models' calls are timed: on the legacy's side, the harness' writing of the given lengths (Python loops) is
+left out; on the port's, the scene's step includes GivenDevelopment's (vectorised, a small part of it).
 
     python example/comparison/profile_population.py [n_steps]
 """
@@ -13,7 +14,7 @@ import time
 import numpy as np
 
 from openalea.adel.comparison.legacy_run import Planting, given_lengths, harness_tables, leaf_database, start
-from openalea.adel.comparison.port_run import port_scene, write_given
+from openalea.adel.comparison.port_run import port_scene
 from openalea.adel.legacy.adel_dynamic import AdelDyn
 from openalea.adel.legacy.mtg_editions import add_axe, find_metamers
 import pandas as pd
@@ -64,13 +65,10 @@ def legacy_time(plants, n_steps, leaves="echap"):
 
 
 def port_time(plants, n_steps, leaves="echap"):
-    axes, phytomers = harness_tables(leaves)
-    scene = port_scene(leaves, plants=plants)
+    scene = port_scene(leaves, plants=plants, thermal_time_step=THERMAL_TIME_STEP)
     architecture = scene.populations[0].instance.architecture
     stepping, meshing = 0., 0.
     for step in range(n_steps + 1):
-        write_given(scene, [given_lengths(start(axes) + step * THERMAL_TIME_STEP - plant.delay, axes, phytomers)
-                            for plant in plants])
         begin = time.perf_counter()
         scene.run()
         stepping += time.perf_counter() - begin

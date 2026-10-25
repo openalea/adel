@@ -32,6 +32,23 @@ them, column 'plant'); `table_plant`, a per-plant parameter, says which of their
 The elements are placed by Adel's turtle (openalea.adel.turtle), from each plant's position and rotation: their base
 x1, y1, z1, their end x2, y2, z2, and the frame they are drawn in (heading_x…, up_x…), at each step after their
 lengths. triangles() gives their triangles (metafspm's coupling.geometry.Triangles) for light models and display.
+
+The coupling contract, what other models write and read (lengths in m, on the DataStructure):
+
+- a development model writes, per Plant, `axis_number` (its axes emerged, in its axes table's order); per Axis,
+  `phytomer_number` (its phytomers initiated); per Organ, `organ_length`, `visible_length` (out of the sheaths' tube),
+  a blade's `rolled_length` and `age`, and optionally a blade's `shape_mature_length` and `shape_max_width` (its
+  final dimensions, the phytomer table's at its creation, as elongwheat's lamina_Lmax and leaf_Wmax);
+- a senescence model writes, per Organ, `organ_senesced_length`;
+- ShootArchitecture derives the elements from them at each call (their lengths, areas, green and senesced parts,
+  placement): the elements are its own, the others read them, they do not write them;
+- a growth or metabolism model reads the elements' `area`, `green_area`, `senesced_area`, the organs' `organ_area`;
+- a light model reads triangles() (each triangle's element, its node index) and gives its results back per element
+  (Triangles.per_owner).
+
+The organs a call creates get their lengths at the next call; a development model giving them at once (as cnwgrass
+after add_metamer) writes them after the call and calls ShootArchitecture again (comparison.given_development's
+GivenShoot).
 """
 from dataclasses import dataclass
 
@@ -113,6 +130,12 @@ class ShootArchitecture(StructuralComponent):
                                                   by='model_senescence', initialize=0., scale=SCALES.Organ)
     age: float = input_variable(**doc('°Cd', "The blade's age (its shape class when the database has ages)"),
                                 by='model_development', initialize=0., scale=SCALES.Organ)
+    shape_mature_length: float = input_variable(**doc('m', "The blade's final length, its shape's length",
+                                                      "at its creation, the phytomer table's Ll"),
+                                                by='model_development', initialize=0., scale=SCALES.Organ)
+    shape_max_width: float = input_variable(**doc('m', "The blade's maximal width, its shape's width",
+                                                  "at its creation, the phytomer table's Lw"),
+                                            by='model_development', initialize=0., scale=SCALES.Organ)
 
     # --- The axes (from the axes table) ---
     axis_row: int = state_variable(**doc('adim', "The axis' row in the axes table"), state_variable_type=DESCRIPTOR,
@@ -148,10 +171,6 @@ class ShootArchitecture(StructuralComponent):
                                           state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Organ)
     inclination: float = state_variable(**doc('°', "The organ's inclination"), state_variable_type=DESCRIPTOR,
                                         initialize=0., scale=SCALES.Organ)
-    shape_mature_length: float = state_variable(**doc('m', "The blade's final length (phytomer table: Ll)"),
-                                                state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Organ)
-    shape_max_width: float = state_variable(**doc('m', "The blade's maximal width (phytomer table: Lw)"),
-                                            state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Organ)
     shape_class: int = state_variable(**doc('adim', "The blade's shape class in the leaf database (Lindex)",
                                             "-1: none"), state_variable_type=DESCRIPTOR, initialize=-1,
                                       scale=SCALES.Organ, dtype='int')

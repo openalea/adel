@@ -10,7 +10,7 @@ its records: the reference ShootArchitecture is compared with.
                          label, scale, complex, topological parent and edge type, its properties (geometry left out),
                          and each element's triangles in the scene's frame (PlantGL's tesselation of its geometry)
 
-The tables (harness_tables): the legacy's samples (data_samples.axeTable(): the main stem and 3 tillers; phytoT(): the
+The tables (harness_tables): the legacy's samples (data_samples.axeTable(): the main stem and 4 tillers; phytoT(): the
 main stem's ranks), each tiller given the main stem's first nf ranks, its lengths and diameters 0.9 times.
 
 The scenario (given_lengths), from the main stem's first leaf (its emf1), on every axis: metamer n appears at the axis' first leaf (axeTable's emf1) plus (n - 1)
@@ -32,6 +32,7 @@ from openalea.adel.legacy.mtg_editions import add_axe, find_metamers
 import pandas as pd
 
 PHYLLOCHRON = 88.92                                    # °Cd, the legacy's default for the main stem
+T1_OFFSET = 0.0285                                     # cm, AdelDyn.update_geometry's: T1's elements raised by it
 
 
 @dataclass
@@ -209,3 +210,33 @@ def legacy_run(n_steps=40, thermal_time_step=10., leaves="echap", seed=1, record
             run.recorded_steps.append(step)
     run.g = g
     return run
+
+
+def turtle_placement(triangles, plant, axis):
+    """The legacy's triangles (cm) of a plant's (*plant*: its Planting) element on *axis*, without update_geometry's
+    second placement (the plant's position again, its azimuth's degrees read as radians) and T1 offset: as its turtle
+    placed them, ShootArchitecture's placement."""
+    angle = -plant.azimuth                             # the legacy gives the degrees to an angle in radians
+    rotation = np.array([[np.cos(angle), -np.sin(angle), 0.], [np.sin(angle), np.cos(angle), 0.], [0., 0., 1.]])
+    out = (triangles - [plant.x, plant.y, 0.]) @ rotation.T
+    if axis.startswith("T1"):
+        out[..., 2] -= T1_OFFSET
+    return out
+
+
+def legacy_canopy(record, plants):
+    """(vertices (T, 3, 3) in m, green (T,)) of a Record's elements, placed as the legacy's turtle placed them
+    (turtle_placement; *plants*: the run's [Planting]); green: the element is more green than senesced."""
+    vertices, green = [], []
+    is_green = record.props.get("is_green", {})
+    for element, triangles in record.triangles.items():
+        if record.scale[element] != 5 or not len(triangles):
+            continue
+        axis = record.complex[record.complex[record.complex[element]]]
+        plant = record.complex[axis]
+        number = int(record.label[plant][len("plant"):])
+        vertices.append(turtle_placement(triangles, plants[number - 1], record.label[axis]) * 1e-2)
+        green.append(np.full(len(triangles), bool(is_green.get(element, True))))
+    if not vertices:
+        return np.zeros((0, 3, 3)), np.zeros(0, dtype=bool)
+    return np.concatenate(vertices), np.concatenate(green)

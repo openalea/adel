@@ -14,13 +14,12 @@ offset taken off."""
 import numpy as np
 import pytest
 
-from openalea.adel.comparison.legacy_run import legacy_run
+from openalea.adel.comparison.legacy_run import T1_OFFSET, legacy_run
 from openalea.adel.comparison.port_run import port_run
 
 from test_elements import legacy_elements
 
 STEPS, EVERY = 120, 20
-T1_OFFSET = 0.0285                                     # cm, AdelDyn.update_geometry's
 INCLINATIONS = {("MS", 3): 10., ("T1", 1): 30., ("T2", 1): 25., ("T1", 2): 15., ("T3", 1): 20.}
 SCENARIOS = {"vertical": dict(leaves="echap", plant_azimuth=0., inclinations=None),
              "vertical, 4 blade elements": dict(leaves="echap", plant_azimuth=0., inclinations=None, n_sect=4),
