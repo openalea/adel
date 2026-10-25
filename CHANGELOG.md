@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   PlantGL), `openalea.adel.development` (a simple scenario development, scenes of plants), `openalea.adel.display`
   (the shoot's colours for metafspm's drawings).
 - Examples (`example/canopy.py`, `generated_plants.py`, `tillers.py`, `light_coupling.py`, `example/comparison`) and
-  the tutorial `example/notebook/tutorial_shoot_architecture.ipynb`.
+  the tutorial `example/tutorials/tutorial_shoot_architecture.ipynb`.
 
 - `pyproject.toml` file following [OpenAlea Guidelines](https://openalea.readthedocs.io/en/latest/development/guidelines.html).
 - [OpenAlea svg](./doc/_static/openalea_web.svg) logo for documentation.

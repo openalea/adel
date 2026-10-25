@@ -80,7 +80,7 @@ triangles = architecture.triangles()                   # every triangle and its 
   colours (`openalea.adel.display.state_colors`).
 
 Examples: `example/canopy.py`, `example/generated_plants.py`, `example/tillers.py`, `example/light_coupling.py` (a
-toy light model coupled through the triangles). The tutorial is `example/notebook/tutorial_shoot_architecture.ipynb`.
+toy light model coupled through the triangles). The tutorial is `example/tutorials/tutorial_shoot_architecture.ipynb`.
 
 ### The legacy and the comparisons
 
