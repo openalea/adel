@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tiller inclination by static Adel's rules; compared with the legacy's AdelDyn (`test/comparison`).
 - `openalea.adel.tables` (sample and generated plants), `openalea.adel.leaf_shapes` (leaf databases fitted without
   PlantGL), `openalea.adel.development` (a simple scenario development, scenes of plants), `openalea.adel.display`
-  (matplotlib drawings).
+  (the shoot's colours for metafspm's drawings).
 - Examples (`example/canopy.py`, `generated_plants.py`, `tillers.py`, `light_coupling.py`, `example/comparison`) and
   the tutorial `example/notebook/tutorial_shoot_architecture.ipynb`.
 

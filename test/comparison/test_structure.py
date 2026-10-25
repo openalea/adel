@@ -1,7 +1,7 @@
 """ShootArchitecture's structure against the legacy's (AdelDyn), on the harness' scenario: every axis' (the main stem
-and its tillers) phytomers and organs at each step, their elements (the legacy's base and top sentinels aside; the legacy keeps the elements its
-organs' current lengths need, a subsequence of the port's stable ones), dimensions (the legacy in cm, the port in m)
-and shapes."""
+and its tillers) phytomers and organs at each step, their elements (the legacy's base and top sentinels aside; the
+legacy keeps the elements its organs' current lengths need, a subsequence of the port's stable ones), dimensions (the
+legacy in cm, the port in m) and shapes."""
 import numpy as np
 import pytest
 

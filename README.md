@@ -55,10 +55,11 @@ Development and senescence models write the organs' lengths. The coupling contra
 A canopy of plants is one population, in one MPG:
 
 ```python
-from openalea.adel.development import shoot_scene, sown_stand
+from openalea.adel.development import random_delays, shoot_scene, sown_stand
 from openalea.adel.leaf_shapes import LeafShapes
 
-scene = shoot_scene(sown_stand(20), leaves=LeafShapes.echap(), n_sect=2, thermal_time_step=10.)
+scene = shoot_scene(sown_stand(20), delays=random_delays(20), leaves=LeafShapes.echap(), n_sect=2,
+                    thermal_time_step=10.)
 for _ in range(100):
     scene.run()                                        # 10 °Cd of development, then the shoot
 architecture = scene.populations[0].instance.architecture
@@ -73,7 +74,10 @@ triangles = architecture.triangles()                   # every triangle and its 
   model of both components, and `shoot_scene` builds a scene of such plants.
 - **Tillers:** vertical by default, as AdelDyn's. With `tiller_inclination=1` they are inclined by static Adel's rules
   (Adel.R's getIncT and axe_inclination: incT ramping with the Haun stage, straightening at dredT).
-- **Display** (`openalea.adel.display`): matplotlib drawings of the triangles.
+- **Plants and the soil:** each plant is sown at minus its sowing depth (metafspm's `Planting`, m), by default 0.9
+  times its coleoptile's length; T1 starts at the coleoptile's top, as T2.
+- **Display:** metafspm's matplotlib drawings of the triangles (`openalea.metafspm.display`), with the shoot's
+  colours (`openalea.adel.display.state_colors`).
 
 Examples: `example/canopy.py`, `example/generated_plants.py`, `example/tillers.py`, `example/light_coupling.py` (a
 toy light model coupled through the triangles). The tutorial is `example/notebook/tutorial_shoot_architecture.ipynb`.

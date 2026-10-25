@@ -11,14 +11,14 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 
-from openalea.adel.comparison.legacy_run import legacy_canopy, legacy_run
+from openalea.adel.comparison.legacy_run import StandPlant, legacy_canopy, legacy_run
 from openalea.adel.comparison.port_run import coleoptile_top, port_run
-from openalea.adel.development import Planting
-from openalea.adel.display import draw, state_colors
+from openalea.adel.display import state_colors
 from openalea.metafspm.coupling.geometry import Triangles
+from openalea.metafspm.display import draw
 
-PLANTS = [Planting(0., 0., 0., 0.), Planting(15., 0., 40., 30.), Planting(0., 12., 130., 60.),
-          Planting(15., 12., 250., 15.)]
+PLANTS = [StandPlant(0., 0., 0., 0.), StandPlant(15., 0., 40., 30.), StandPlant(0., 12., 130., 60.),
+          StandPlant(15., 12., 250., 15.)]
 
 if __name__ == "__main__":
     n_steps = int(sys.argv[1]) if len(sys.argv) > 1 else 90

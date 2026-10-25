@@ -13,9 +13,8 @@ import time
 
 import numpy as np
 
-from openalea.adel.comparison.legacy_run import given_lengths, harness_tables, leaf_database, start
+from openalea.adel.comparison.legacy_run import StandPlant, given_lengths, harness_tables, leaf_database, start
 from openalea.adel.comparison.port_run import port_scene
-from openalea.adel.development import Planting
 from openalea.adel.legacy.adel_dynamic import AdelDyn
 from openalea.adel.legacy.mtg_editions import add_axe, find_metamers
 import pandas as pd
@@ -26,7 +25,7 @@ THERMAL_TIME_STEP = 10.
 def stand(n_plants, spacing=12.):
     """n_plants on a square grid (cm), their azimuths and delays spread."""
     side = int(np.ceil(np.sqrt(n_plants)))
-    return [Planting(x=(k % side) * spacing, y=(k // side) * spacing, azimuth=(97. * k) % 360., delay=(13. * k) % 60.)
+    return [StandPlant(x=(k % side) * spacing, y=(k // side) * spacing, azimuth=(97. * k) % 360., delay=(13. * k) % 60.)
             for k in range(n_plants)]
 
 

@@ -1,8 +1,8 @@
 """
-A canopy of 20 wheat plants grown by ShootArchitecture: Adel's sample plant (its default tables), four rows sown
-15 cm apart, the plants a few days apart in their development (ScenarioDevelopment writes their organs' lengths), the
-leaf shapes by age class (echap's). The canopy drawn at three times, its elements green or senesced, and its green and senesced areas
-over time.
+A canopy of 20 wheat plants grown by ShootArchitecture: Adel's sample plant (its default tables), four rows sown 15 cm
+apart, the plants a few days apart in their development (ScenarioDevelopment writes their organs' lengths), the leaf
+shapes by age class (echap's). The canopy drawn at three times, its elements green or senesced, and its green and
+senesced areas over time.
 
     python example/canopy.py [n_steps]               (canopy.png in the working directory)
 """
@@ -11,9 +11,10 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 
-from openalea.adel.development import shoot_scene, sown_stand
-from openalea.adel.display import draw, state_colors
+from openalea.adel.development import random_delays, shoot_scene, sown_stand
+from openalea.adel.display import state_colors
 from openalea.adel.leaf_shapes import LeafShapes
+from openalea.metafspm.display import draw
 
 N_PLANTS = 20
 THERMAL_TIME_STEP = 10.                                # °Cd per step
@@ -21,7 +22,8 @@ THERMAL_TIME_STEP = 10.                                # °Cd per step
 
 def grow(n_steps, shown):
     """The canopy's triangles and its elements' state at the steps *shown*, and its areas at every step."""
-    scene = shoot_scene(sown_stand(N_PLANTS), leaves=LeafShapes.echap(xy_model="Soissons_byleafclass"), n_sect=2,
+    scene = shoot_scene(sown_stand(N_PLANTS), delays=random_delays(N_PLANTS),
+                        leaves=LeafShapes.echap(xy_model="Soissons_byleafclass"), n_sect=2,
                         thermal_time_step=THERMAL_TIME_STEP)
     ds = scene.populations[0].data_structure
     architecture = scene.populations[0].instance.architecture

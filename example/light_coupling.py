@@ -15,11 +15,11 @@ from dataclasses import dataclass
 import matplotlib.pyplot as plt
 import numpy as np
 
-from openalea.adel.architecture import SCALES, doc
-from openalea.adel.development import ScenarioShoot, shoot_scene, sown_stand
-from openalea.adel.display import draw, value_colors
+from openalea.adel.architecture import SCALES
+from openalea.adel.development import ScenarioShoot, random_delays, shoot_scene, sown_stand
 from openalea.adel.leaf_shapes import LeafShapes
 from openalea.metafspm.coupling.component import FunctionalComponent, input_variable, parameter, state_variable
+from openalea.metafspm.display import draw, value_colors
 from openalea.metafspm.solve.decorator import rate
 
 THERMAL_TIME_STEP = 10.
@@ -54,14 +54,14 @@ def beer_law(triangles, n_elements, extinction, column_width):
 class ToyLight(FunctionalComponent):
     """The light fraction each element receives, from the shoot's triangles; the light it absorbs, by its green
     area."""
-    green_area: float = input_variable(**doc('m2', "The element's green area"), by='model_shoot_architecture',
+    green_area: float = input_variable(unit='m2', description="The element's green area", by='model_shoot_architecture',
                                        initialize=0., scale=SCALES.SubOrgan)
-    light_fraction: float = state_variable(**doc('adim', "The light fraction the element receives"),
+    light_fraction: float = state_variable(unit='adim', description="The light fraction the element receives",
                                            state_variable_type="intensive", initialize=0., scale=SCALES.SubOrgan)
-    absorbed: float = state_variable(**doc('m2', "The element's green area times its light fraction"),
+    absorbed: float = state_variable(unit='m2', description="The element's green area times its light fraction",
                                      state_variable_type="extensive", initialize=0., scale=SCALES.SubOrgan)
-    extinction: float = parameter(**doc('adim', "The extinction coefficient"), by="ToyLight", default=0.5)
-    column_width: float = parameter(**doc('m', "The width of the columns"), by="ToyLight", default=0.05)
+    extinction: float = parameter(unit='adim', description="The extinction coefficient", by="ToyLight", default=0.5)
+    column_width: float = parameter(unit='m', description="The width of the columns", by="ToyLight", default=0.05)
 
     shoot = None                                       # the StructuralComponent giving the triangles
 
@@ -89,7 +89,8 @@ class LitShoot(ScenarioShoot):
 if __name__ == "__main__":
     n_steps = int(sys.argv[1]) if len(sys.argv) > 1 else 100
     plants = sown_stand(20)
-    scene = shoot_scene(plants, model=LitShoot, leaves=LeafShapes.echap(xy_model="Soissons_byleafclass"), n_sect=2,
+    scene = shoot_scene(plants, delays=random_delays(len(plants)), model=LitShoot,
+                        leaves=LeafShapes.echap(xy_model="Soissons_byleafclass"), n_sect=2,
                         thermal_time_step=THERMAL_TIME_STEP)
     ds = scene.populations[0].data_structure
     for _ in range(n_steps + 1):

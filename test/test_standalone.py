@@ -3,9 +3,10 @@
 import numpy as np
 import pytest
 
-from openalea.adel.development import Planting, shoot_scene
+from openalea.adel.development import shoot_scene
 from openalea.adel.leaf_shapes import LeafShapes
 from openalea.adel.tables import sample_tables, wheat_tables
+from openalea.metafspm import Planting
 
 VARIABLES = ("organ_length", "visible_length", "organ_area", "inclination", "shape_class", "shape_mature_length")
 
@@ -47,7 +48,7 @@ def test_generated_tables():
 
 
 def test_plants_of_their_own_in_one_population():
-    plants = [Planting(), Planting(x=15.), Planting(x=30.)]
+    plants = [Planting(), Planting(x=0.15), Planting(x=0.3)]
     own = [dict(leaf_number=9, tiller_number=0), dict(leaf_number=12, tiller_number=2, longest_blade_length=0.25),
            dict(leaf_number=12, tiller_number=2, longest_blade_length=0.25)]
     scene = shoot_scene(plants, plant_parameters=own, phyllochron=100.)

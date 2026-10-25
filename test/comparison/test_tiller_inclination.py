@@ -5,10 +5,10 @@ several steps of a canopy's growth. And their geometry: a straightened tiller's 
 import numpy as np
 import pytest
 
-from openalea.adel.development import Planting
+from openalea.adel.comparison.legacy_run import StandPlant
 from openalea.adel.comparison.port_run import axis_names, organ_names, port_scene
 
-PLANTS = [Planting(), Planting(x=12., azimuth=70., delay=40.)]
+PLANTS = [StandPlant(), StandPlant(x=12., azimuth=70., delay=40.)]
 
 
 def get_inc_t(axis_name, haun_stage, inc_base, start_inc_t=1, inc_t_rate=30):

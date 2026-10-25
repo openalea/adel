@@ -9,15 +9,14 @@ The port starts T1 at the coleoptile's top: the legacy's T1 is moved there (port
 import numpy as np
 import pytest
 
-from openalea.adel.comparison.legacy_run import legacy_run, turtle_placement
-from openalea.adel.development import Planting
+from openalea.adel.comparison.legacy_run import StandPlant, legacy_run, turtle_placement
 from openalea.adel.comparison.port_run import coleoptile_top, port_run
 
 from test_geometry import legacy_drawn
 
 STEPS, EVERY = 120, 30
-PLANTS = [Planting(0., 0., 0., 0.), Planting(15., 0., 40., 30.), Planting(0., 12., 130., 60.),
-          Planting(15., 12., 250., 15.)]
+PLANTS = [StandPlant(0., 0., 0., 0.), StandPlant(15., 0., 40., 30.), StandPlant(0., 12., 130., 60.),
+          StandPlant(15., 12., 250., 15.)]
 
 
 @pytest.fixture(scope="module")

@@ -13,27 +13,16 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from openalea.adel.comparison.legacy_run import PHYLLOCHRON, harness_tables
-from openalea.adel.development import Planting, ScenarioShoot, shoot_scene
+from openalea.adel.comparison.legacy_run import PHYLLOCHRON, StandPlant, harness_tables
+from openalea.adel.development import ScenarioShoot, shoot_scene
 from openalea.adel.leaf_shapes import LeafShapes
+from openalea.metafspm.scene.population import Planting
 from openalea.metafspm.scene.scene import Scene
 
 ORGAN_NAMES = {"StemInternode": "internode", "Sheath": "sheath", "Blade": "blade"}
 ELEMENT_VARIABLES = ("length", "area", "green_length", "green_area", "senesced_length", "senesced_area", "is_green",
                      "rolled_part", "rolled_diameter", "width", "flat_base", "flat_top", "x1", "y1", "z1", "x2", "y2",
                      "z2")
-STAGE_INDEX = {"potential": 1, "actual": 4, "segmentation": 5, "postsegmentation": 6}
-
-
-def run_stage(scene, stage):
-    """Run only ShootArchitecture's steps of one stage (its row in the Choregrapher's growth schedule)."""
-    architecture = scene.populations[0].instance.architecture
-    architecture.pull_available_inputs()
-    _, groups = architecture.__dict__["_choregraphy"]
-    for priority, functors in groups.items():
-        if eval(priority)[3] == STAGE_INDEX[stage]:
-            for functor in functors:
-                functor()
 
 
 @dataclass
@@ -50,13 +39,15 @@ def leaf_shapes(leaves):
 
 def port_scene(leaves="samples", time_step=3600, rotation=0., phyllochron=PHYLLOCHRON, n_sect=1, plants=None,
                thermal_time_step=10., model=ScenarioShoot, parameters=None):
-    """The scene of the harness' plants (*plants*: [Planting], positions in cm, delays in °Cd; by default one plant at
-    the origin, its rotation *rotation*; sown at z = 0, as the legacy's), every plant on the tables' plant 1, the leaf
-    database fitted once for all;
-    each scene.run() is *thermal_time_step* °Cd of the scenario (the first one its start). *model*: the plant model,
+    """The scene of the harness' plants (*plants*: [StandPlant], positions in cm, delays in °Cd; by default one plant
+    at the origin, its rotation *rotation*; sown at z = 0, as the legacy's), every plant on the tables' plant 1, the
+    leaf database fitted once for all; each scene.run() is *thermal_time_step* °Cd of the scenario (the first one its
+    start). *model*: the plant model,
     ScenarioShoot or one extending it; *parameters*: other parameters of the plants (e.g. tiller_inclination=1)."""
     axes, phytomers = harness_tables(leaves)
-    return shoot_scene(plants or [Planting(azimuth=rotation)], model=model, time_step=time_step, sowing_depth=0.,
+    plants = plants or [StandPlant(azimuth=rotation)]
+    return shoot_scene([Planting(x=plant.x * 0.01, y=plant.y * 0.01, rotation=plant.azimuth) for plant in plants],
+                       delays=[plant.delay for plant in plants], model=model, time_step=time_step, sowing_depth=0.,
                        axes_table=axes, phytomer_table=phytomers, table_plant=1, leaves=leaf_shapes(leaves),
                        phyllochron=phyllochron, tiller_phyllochron=phyllochron, n_sect=n_sect,
                        thermal_time_step=thermal_time_step, **(parameters or {}))
@@ -137,7 +128,7 @@ def port_run(n_steps=40, thermal_time_step=10., leaves="samples", record_every=1
     """The legacy harness' run (legacy_run's options) on ShootArchitecture; with *plants*, run.steps[i] is a list of
     the plants' structure records."""
     plants_given = plants
-    plants = plants or [Planting(azimuth=plant_azimuth)]
+    plants = plants or [StandPlant(azimuth=plant_azimuth)]
     scene = port_scene(leaves, phyllochron=phyllochron, n_sect=n_sect, plants=plants,
                        thermal_time_step=thermal_time_step)
     run = PortRun(scene=scene)
@@ -145,7 +136,7 @@ def port_run(n_steps=40, thermal_time_step=10., leaves="samples", record_every=1
         scene.run()
         if inclinations:
             write_inclinations(scene, inclinations)
-            run_stage(scene, "postsegmentation")      # as the legacy sets a new metamer's (the elements again)
+            scene.populations[0].instance.architecture.run_stage("postsegmentation")    # the elements again
         if step % record_every == 0 or step == n_steps:
             records = [structure(scene, plant) for plant in range(len(plants))]
             run.steps.append(records if plants_given else records[0])

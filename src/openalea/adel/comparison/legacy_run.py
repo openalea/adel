@@ -13,19 +13,18 @@ its records: the reference ShootArchitecture is compared with.
 The tables (harness_tables): Adel's sample plant (tables.sample_tables: the main stem and 4 tillers, each tiller given
 the main stem's first nf ranks, its lengths and diameters 0.9 times).
 
-The scenario (given_lengths), from the main stem's first leaf (its emf1), on every axis: metamer n appears at the axis' first leaf (axeTable's emf1) plus (n - 1)
-phyllochrons (add_metamer; a tiller's axis added with its first metamer, add_axe); its blade grows linearly to its
-final length (phytoT's Ll) in 1.6 phyllochrons, its sheath (Gl) from 1 phyllochron for 1, its internode (El) from 2
-phyllochrons for 1.5; the blade visible above the previous sheath, the sheath above it too, the internode half
-visible; the blade senesces from 5 phyllochrons for 3; its age is the thermal time since it appeared. Lengths in the
-legacy's unit (cm, phytoT's), thermal time in °Cd.
+The scenario (given_lengths), from the main stem's first leaf (its emf1), on every axis: metamer n appears at the axis'
+first leaf (axeTable's emf1) plus (n - 1) phyllochrons (add_metamer; a tiller's axis added with its first metamer,
+add_axe); its blade grows linearly to its final length (phytoT's Ll) in 1.6 phyllochrons, its sheath (Gl) from 1
+phyllochron for 1, its internode (El) from 2 phyllochrons for 1.5; the blade visible above the previous sheath, the
+sheath above it too, the internode half visible; the blade senesces from 5 phyllochrons for 3; its age is the thermal
+time since it appeared. Lengths in the legacy's unit (cm, phytoT's), thermal time in °Cd.
 """
 from dataclasses import dataclass, field
 
 import numpy as np
 
 import openalea.plantgl.all as pgl
-from openalea.adel.development import Planting
 from openalea.adel.legacy import data_samples
 from openalea.adel.tables import echap_shape_indices, sample_tables
 from openalea.adel.legacy.adel_dynamic import AdelDyn
@@ -36,6 +35,16 @@ import pandas as pd
 PHYLLOCHRON = 88.92                                    # °Cd, the legacy's default for the main stem
 T1_OFFSET = 0.0285                                     # cm, AdelDyn.update_geometry's: T1's elements raised by it
 # (the port starts T1 at the coleoptile's top instead: turtle.traversal_order, port_run.coleoptile_top)
+
+
+@dataclass
+class StandPlant:
+    """A plant of the harness' stand, in the legacy's units: its position (cm), its azimuth (°) and its delay (°Cd:
+    its scenario starts that much later)."""
+    x: float = 0.
+    y: float = 0.
+    azimuth: float = 0.
+    delay: float = 0.
 
 
 @dataclass
@@ -141,10 +150,10 @@ def legacy_run(n_steps=40, thermal_time_step=10., leaves="echap", seed=1, record
     """*n_steps* steps of *thermal_time_step* °Cd of the legacy's dynamic geometry on the given lengths, the plant at
     the origin, its azimuth *plant_azimuth* (°; the legacy draws a random one). *inclinations*: {(axis, rank):
     degrees} of internodes (the legacy's AdelDyn sets none). *n_sect*: the number of elements of a blade. *plants*: a
-    stand of several plants ([Planting]; then *plant_azimuth* is not used), the same tables for all (AdelDyn's
+    stand of several plants ([StandPlant]; then *plant_azimuth* is not used), the same tables for all (AdelDyn's
     add_metamer reads its phytomer table's first rows whatever the plant)."""
     axes, phytoT = harness_tables(leaves)
-    plants = plants or [Planting(azimuth=plant_azimuth)]
+    plants = plants or [StandPlant(azimuth=plant_azimuth)]
     adel = AdelDyn(seed=seed, leaves=leaf_database(leaves), nsect=n_sect, nplants=len(plants))
     adel.positions = [(float(p.x), float(p.y), 0.) for p in plants]
     adel.plant_azimuths = np.array([float(p.azimuth) for p in plants])
@@ -185,7 +194,7 @@ def legacy_run(n_steps=40, thermal_time_step=10., leaves="echap", seed=1, record
 
 
 def turtle_placement(triangles, plant, axis, coleoptile_top=None):
-    """The legacy's triangles (cm) of a plant's (*plant*: its Planting) element on *axis*, without update_geometry's
+    """The legacy's triangles (cm) of a plant's (*plant*: its StandPlant) element on *axis*, without update_geometry's
     second placement (the plant's position again, its azimuth's degrees read as radians) and T1 offset: as its turtle
     placed them, ShootArchitecture's placement; T1's (and its tillers') moved by *coleoptile_top* (cm, the port's
     start of T1 at the coleoptile's top, port_run.coleoptile_top)."""
@@ -201,7 +210,7 @@ def turtle_placement(triangles, plant, axis, coleoptile_top=None):
 
 def legacy_canopy(record, plants, coleoptile_tops=None):
     """(vertices (T, 3, 3) in m, green (T,)) of a Record's elements, placed as the legacy's turtle placed them
-    (turtle_placement; *plants*: the run's [Planting]; *coleoptile_tops*: per plant, m, T1 moved there as the port
+    (turtle_placement; *plants*: the run's [StandPlant]; *coleoptile_tops*: per plant, m, T1 moved there as the port
     places it); green: the element is more green than senesced."""
     vertices, green = [], []
     is_green = record.props.get("is_green", {})

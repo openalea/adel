@@ -18,8 +18,8 @@ import numpy as np
 from matplotlib import colormaps
 
 from openalea.adel.development import shoot_scene
-from openalea.adel.display import draw
 from openalea.adel.leaf_shapes import LeafShapes
+from openalea.metafspm.display import draw
 
 THERMAL_TIME_STEP = 10.
 

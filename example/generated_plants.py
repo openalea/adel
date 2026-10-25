@@ -12,10 +12,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import colormaps
 
-from openalea.adel.development import Planting, shoot_scene
-from openalea.adel.display import draw
+from openalea.adel.development import shoot_scene
+from openalea.metafspm import Planting
+from openalea.metafspm.display import draw
 
-PLANTS = [Planting(x=0.), Planting(x=25.), Planting(x=50.)]
+PLANTS = [Planting(x=0.), Planting(x=0.25), Planting(x=0.5)]
 OWN = [dict(leaf_number=9, tiller_number=1, longest_blade_length=0.12, longest_blade_width=0.010),
        dict(leaf_number=11, tiller_number=2, longest_blade_length=0.18, longest_blade_width=0.014),
        dict(leaf_number=13, tiller_number=4, longest_blade_length=0.25, longest_blade_width=0.018)]
