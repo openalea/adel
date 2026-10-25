@@ -32,6 +32,8 @@ them, column 'plant'); `table_plant`, a per-plant parameter, says which of their
 The elements are placed by Adel's turtle (openalea.adel.turtle), from each plant's position and rotation: their base
 x1, y1, z1, their end x2, y2, z2, and the frame they are drawn in (heading_x…, up_x…), at each step after their
 lengths. triangles() gives their triangles (metafspm's coupling.geometry.Triangles) for light models and display.
+The axes are vertical, as AdelDyn's; with tiller_inclination=1, inclined by static Adel's rules from the axes table
+(incT ramping with the axes' Haun stage, the straightening at dredT, the azimuths azTb and azT: _inclination).
 
 The coupling contract, what other models write and read (lengths in m, on the DataStructure):
 
@@ -62,7 +64,7 @@ from openalea.metafspm.data_structure.configs import PropsConfig, ScalesConfig
 from openalea.metafspm.solve.decorator import postsegmentation, segmentation
 from openalea.adel.blade_mesh import blade_element_triangles
 from openalea.adel.leaf_shapes import LeafShapes
-from openalea.adel.turtle import interpret, traversal_order
+from openalea.adel.turtle import base_inclination, interpret, stem_inclinations, traversal_order
 
 BY = "model_shoot_architecture"
 DESCRIPTOR = "descriptor"
@@ -130,6 +132,8 @@ class ShootArchitecture(StructuralComponent):
                                                   by='model_senescence', initialize=0., scale=SCALES.Organ)
     age: float = input_variable(**doc('°Cd', "The blade's age (its shape class when the database has ages)"),
                                 by='model_development', initialize=0., scale=SCALES.Organ)
+    haun_stage: float = input_variable(**doc('adim', "The axis' Haun stage (its tillers' inclination ramps with it)"),
+                                       by='model_development', initialize=0., scale=SCALES.Axis)
     shape_mature_length: float = input_variable(**doc('m', "The blade's final length, its shape's length",
                                                       "at its creation, the phytomer table's Ll"),
                                                 by='model_development', initialize=0., scale=SCALES.Organ)
@@ -156,6 +160,19 @@ class ShootArchitecture(StructuralComponent):
     axis_azimuth: float = state_variable(**doc('°', "The axis' azimuth at its insertion (Adel's az_insertion), used "
                                                     "when its first stem element is inclined"),
                                          state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Axis)
+    table_inclination: float = state_variable(**doc('°', "The axis' first internode's inclination (Adel's incT)",
+                                                    "used with tiller_inclination"), state_variable_type=DESCRIPTOR,
+                                              initialize=0., scale=SCALES.Axis)
+    straightening_distance: float = state_variable(**doc('m', "The horizontal distance from its insertion at which "
+                                                              "the axis straightens (Adel's dredT)", "0: none; used "
+                                                              "with tiller_inclination"),
+                                                   state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Axis)
+    insertion_azimuth: float = state_variable(**doc('°', "The axis' insertion azimuth (Adel's azTb)", "used with "
+                                                        "tiller_inclination"), state_variable_type=DESCRIPTOR,
+                                              initialize=0., scale=SCALES.Axis)
+    first_azimuth: float = state_variable(**doc('°', "The azimuth of the axis' first phytomer (Adel's azT)", "used "
+                                                    "with tiller_inclination"), state_variable_type=DESCRIPTOR,
+                                          initialize=0., scale=SCALES.Axis)
 
     # --- The phytomers and organs (from the phytomer table, at their creation) ---
     phytomer_rank: int = state_variable(**doc('adim', "The phytomer's rank on its axis, from 1"),
@@ -251,6 +268,14 @@ class ShootArchitecture(StructuralComponent):
     min_length: float = parameter(**doc('m', "The shortest element drawn (Adel's min_length, 0.01 cm); a blade's "
                                              "triangles smaller than its square / 100 are left out"), by=BY,
                                   default=1e-4)
+    tiller_inclination: int = parameter(**doc('adim', "1: the axes inclined by static Adel's rules (the axes table's "
+                                                      "incT, dredT, azTb, azT; Adel.R's getIncT, axe_inclination); 0: "
+                                                      "vertical, as AdelDyn"), by=BY, default=0)
+    inclination_start_haun_stage: float = parameter(**doc('adim', "The Haun stage from which a tiller's inclination "
+                                                                  "ramps (Adel's HSstart_inclination_tiller)"), by=BY,
+                                                    default=1.)
+    inclination_rate: float = parameter(**doc('°', "A tiller's inclination gained per Haun stage (Adel's "
+                                                   "rate_inclination_tiller)"), by=BY, default=30.)
     phyllochron: float = parameter(**doc('°Cd', "The main stem's phyllochron, for its blades' age classes in a "
                                                 "dynamic leaf database"), by=BY, default=88.92)
     tiller_phyllochron: float = parameter(**doc('°Cd', "The tillers' phyllochron, for their blades' age classes in a "
@@ -273,7 +298,8 @@ class ShootArchitecture(StructuralComponent):
         axis = g.add_component(plant, **PropsConfig(scale=scales.Axis, edge_type='/', label=labels.Axis.Shoot))
         unit_vid = g.add_component(axis, **PropsConfig(scale=scales.GrowthUnit, edge_type='/',
                                                        label=labels.GrowthUnit.Shoot))
-        for name, value in dict(cls._axis_values(rows, main_stem), phytomer_number=1., axis_phytomers=1).items():
+        for name, value in dict(cls._axis_values(rows, main_stem, unit), phytomer_number=1.,
+                                axis_phytomers=1).items():
             g.property(name)[axis] = value
         g.property("axis_number")[plant] = 1.
         dimensions = cls._dimensions(phytomers, rows, unit)
@@ -304,15 +330,23 @@ class ShootArchitecture(StructuralComponent):
         return main + [row for row in mine if row not in main]
 
     @staticmethod
-    def _axis_values(rows, row):
-        """An axis' values from its row of the axes table (its bearer's row among the same plant's)."""
+    def _axis_values(rows, row, unit):
+        """An axis' values from its row of the axes table (its bearer's row among the same plant's); lengths in m
+        (*unit*: the table's unit)."""
         name = rows.loc[row, "axe"]
         bearer, rank = bearer_of(name)
         same_plant = rows.index[(rows["plant"] == rows.loc[row, "plant"]) & (rows["axe"] == bearer)].tolist()
         haun_stage = rows.loc[row, "HS_final"]
+
+        def angle(column):                             # optional columns: 0 when missing
+            value = rows.loc[row, column] if column in rows.columns else np.nan
+            return float(value) if pd.notna(value) else 0.
+
         return dict(axis_row=row, bearer_row=same_plant[0] if same_plant else -1, insertion_rank=rank,
                     final_leaf_number=int(rows.loc[row, "nf"]), has_ear=int(rows.loc[row, "hasEar"]),
-                    final_haun_stage=float(haun_stage) if pd.notna(haun_stage) else float(rows.loc[row, "nf"]))
+                    final_haun_stage=float(haun_stage) if pd.notna(haun_stage) else float(rows.loc[row, "nf"]),
+                    table_inclination=angle("incT"), straightening_distance=angle("dredT") * unit,
+                    insertion_azimuth=angle("azTb"), first_azimuth=angle("azT"))
 
     @staticmethod
     def _dimensions(phytomers, axes, unit):
@@ -377,7 +411,8 @@ class ShootArchitecture(StructuralComponent):
         if cache is None:
             rows = self.axes_table.reset_index(drop=True)
             plant_rows = {int(number): self._plant_rows(rows, int(number)) for number in set(rows["plant"])}
-            cache = (plant_rows, {row: self._axis_values(rows, row) for row in range(len(rows))})
+            unit = float(np.asarray(self._parameter("length_unit"))[0])
+            cache = (plant_rows, {row: self._axis_values(rows, row, unit) for row in range(len(rows))})
             self.__dict__["_axes_cache"] = cache
         return cache
 
@@ -574,6 +609,41 @@ class ShootArchitecture(StructuralComponent):
             cache = (key, traversal_order(g, nodes), base)
             self.__dict__["_traversal_cache"] = cache
         return cache[1], cache[2]
+
+    @postsegmentation
+    def _inclination(self, inclination, organ_azimuth, axis_azimuth, visible_length, organ_rank, haun_stage,
+                     bearer_row, table_inclination, straightening_distance, insertion_azimuth,
+                     first_azimuth) -> outputs(2):
+        """With tiller_inclination, the stem organs' inclinations and the axes' azimuths by static Adel's rules
+        (turtle.base_inclination, stem_inclinations): each axis' first internode inclined by its base inclination, a
+        tiller straightened at its straightening distance; its insertion azimuth (azTb) and its first internode's
+        azimuth (azT). Without it, as they are (AdelDyn's: 0, the phytomer table's Azim)."""
+        ds = self.data_structure
+        on = np.asarray(ds.parameter_view("tiller_inclination", "Axis")) > 0
+        if not on.any():
+            return inclination, "organ_azimuth", organ_azimuth, "axis_azimuth", axis_azimuth
+        _, organ_kind = self._kinds()
+        n_organs = len(inclination)
+        kind = np.full(n_organs, -1)
+        kind[np.asarray(ds.owner("Organ"))] = organ_kind
+        axis = ds.map_to(np.arange(len(axis_azimuth), dtype=float), "Axis", "Organ", "broadcast").astype(np.int64)
+        start = float(np.asarray(ds.parameter_view("inclination_start_haun_stage", "Axis"))[0])
+        rate = float(np.asarray(ds.parameter_view("inclination_rate", "Axis"))[0])
+        first = base_inclination(np.asarray(table_inclination, dtype=float), np.asarray(bearer_row) < 0,
+                                 np.asarray(haun_stage, dtype=float), start, rate)
+        stem = np.flatnonzero((kind == 0) | (kind == 1))
+        stem = stem[np.lexsort((kind[stem], organ_rank[stem], axis[stem]))]
+        inclined = np.array(inclination, dtype=float)
+        computed = stem_inclinations(axis[stem], kind[stem].astype(np.int64),
+                                     np.asarray(visible_length, dtype=float)[stem], first,
+                                     np.asarray(straightening_distance, dtype=float))
+        chosen = on[axis[stem]]
+        inclined[stem[chosen]] = computed[chosen]
+        azimuth = np.array(organ_azimuth, dtype=float)
+        first_internode = (kind == 0) & (np.asarray(organ_rank) == 1) & on[axis]
+        azimuth[first_internode] = np.asarray(first_azimuth, dtype=float)[axis[first_internode]]
+        return (inclined, "organ_azimuth", azimuth, "axis_azimuth",
+                np.where(on, np.asarray(insertion_azimuth, dtype=float), axis_azimuth))
 
     @postsegmentation
     def _x1(self, length, rolled_part, inclination, organ_azimuth, axis_azimuth, bearer_row,

@@ -60,16 +60,17 @@ def leaf_shapes(leaves):
 
 
 def port_scene(leaves="samples", time_step=3600, rotation=0., phyllochron=PHYLLOCHRON, n_sect=1, plants=None,
-               thermal_time_step=10., model=GivenShoot):
+               thermal_time_step=10., model=GivenShoot, parameters=None):
     """The scene of the harness' plants (*plants*: [Planting], positions in cm, delays in °Cd; by default one plant at
     the origin, its rotation *rotation*), every plant on the tables' plant 1, the leaf database fitted once for all;
     each scene.run() is *thermal_time_step* °Cd of the scenario (the first one its start). *model*: the plant model,
-    GivenShoot or one extending it."""
+    GivenShoot or one extending it; *parameters*: other parameters of the plants (e.g. tiller_inclination=1)."""
     axes, phytomers = harness_tables(leaves)
     plants = plants or [Planting(azimuth=rotation)]
     shapes = leaf_shapes(leaves)
     parameters = dict(axes_table=axes, phytomer_table=phytomers, table_plant=1, leaves=shapes, phyllochron=phyllochron,
-                      tiller_phyllochron=phyllochron, n_sect=n_sect, thermal_time_step=thermal_time_step)
+                      tiller_phyllochron=phyllochron, n_sect=n_sect, thermal_time_step=thermal_time_step,
+                      **(parameters or {}))
     table = pd.DataFrame([dict(plant=f"p{k}", model=model, x=plant.x * 0.01, y=plant.y * 0.01, z=0.,
                                rotation=float(plant.azimuth),
                                scenario={"parameters": dict(parameters, delay=float(plant.delay))})

@@ -19,8 +19,14 @@ context's top), which the visible parts move up:
 
 interpret returns each element's frame where it is drawn (its position, heading and up) and its end (the position
 plus its length along the heading for a stem element, its rolled part's for a blade element).
+
+The stem organs' inclinations, by static Adel's rules (Adel.R's getIncT and axe_inclination; AdelDyn sets them to 0):
+an axis' first internode inclined by its base inclination (a tiller's ramps with its Haun stage, base_inclination),
+and a tiller straightened (stem_inclinations): where its stem, inclined, reaches its straightening distance from its
+insertion horizontally, the stem element there is bent so that its end falls at that distance, and the next one
+back to the vertical.
 """
-from math import acos, degrees
+from math import acos, cos, degrees, pi, radians
 
 import numpy as np
 from numba import njit
@@ -120,3 +126,54 @@ def interpret(order, kind, plant_base, axis, axis_is_main, tiller_start, plant_p
         end[i] = p
         previous_axis = a
     return position, heading, up, end
+
+
+def base_inclination(table_inclination, is_main, haun_stage, start_haun_stage=1., rate=30.):
+    """Each axis' first internode's inclination (°, Adel.R's getIncT): the table's (incT) for a main stem; a tiller's
+    3° until its Haun stage reaches *start_haun_stage*, then *rate* degrees per Haun stage, from 3° to the table's."""
+    ramp = np.maximum(3., np.minimum(table_inclination, rate * (haun_stage - start_haun_stage)))
+    return np.where(is_main, table_inclination, np.where(haun_stage > start_haun_stage, ramp, 3.))
+
+
+@njit(cache=True)
+def stem_inclinations(axis, kind, visible, first_inclination, straightening, epsilon=1e-6):
+    """The stem organs' inclinations (°, Adel.R's axe_inclination). *axis*, *kind* (0 internode, 1 sheath), *visible*
+    (their visible lengths): per organ, sorted by axis, rank and kind (each axis from its first internode); per axis:
+    its first internode's inclination and its straightening distance (Adel's dredT, in the lengths' unit; 0: none).
+    The stem's visible organs follow each other from the insertion; the first whose end is at the straightening
+    distance horizontally (the stem straight, at its first internode's inclination) is bent so that its end falls at
+    it, and the next one is turned back to the vertical."""
+    n = axis.size
+    out = np.zeros(n)
+    start = 0
+    while start < n:
+        a = axis[start]
+        stop = start
+        total = 0.
+        while stop < n and axis[stop] == a:
+            total += visible[stop]
+            stop += 1
+        out[start] = first_inclination[a]
+        if straightening[a] > 0 and total > epsilon:
+            alpha = radians(90. - first_inclination[a])
+            elements = np.array([k for k in range(start, stop) if visible[k] > 0])
+            length, distance = 0., 0.
+            for j in range(elements.size):
+                k = elements[j]
+                previous_length, previous_distance = length, distance
+                length += visible[k]
+                distance = length * cos(alpha)
+                if distance >= straightening[a]:
+                    if j > 0:
+                        beta = acos((straightening[a] - previous_distance) / (length - previous_length))
+                        out[k] = -degrees(beta - alpha)
+                        if j + 1 < elements.size:
+                            out[elements[j + 1]] = -degrees(pi / 2 - beta)
+                    else:                                  # the base inclination too large: the first one bent
+                        beta = acos(straightening[a] / length)
+                        out[start] = degrees(pi / 2 - beta)
+                        if elements.size > 1:
+                            out[elements[1]] = -out[start]
+                    break
+        start = stop
+    return out

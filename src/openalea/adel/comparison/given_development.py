@@ -4,7 +4,8 @@ and a senescence model write to ShootArchitecture (the coupling contract, openal
 time advanced at each call, vectorised on the DataStructure:
 
 - per plant, its axis_number: its axes whose first leaf appeared (axes table's emf1);
-- per axis, its phytomer_number: its metamers appeared, one per phyllochron from its first leaf, nf at most;
+- per axis, its phytomer_number: its metamers appeared, one per phyllochron from its first leaf, nf at most; its
+  haun_stage: the phyllochrons since its first leaf, nf at most;
 - per organ, its organ_length, visible_length and organ_senesced_length, and a blade's age: a blade grows linearly to
   its final length (phytomer table's Ll) in 1.6 phyllochrons, its sheath (Gl) from 1 phyllochron for 1, its internode
   (El) from 2 phyllochrons for 1.5; the blade and the sheath visible above the previous sheath, the internode half
@@ -47,6 +48,8 @@ class GivenDevelopment(FunctionalComponent):
                                         state_variable_type="descriptor", initialize=1., scale=SCALES.Plant)
     phytomer_number: float = state_variable(**doc('adim', "The number of phytomers the axis has"),
                                             state_variable_type="descriptor", initialize=0., scale=SCALES.Axis)
+    haun_stage: float = state_variable(**doc('adim', "The axis' Haun stage: the phyllochrons since its first leaf"),
+                                       state_variable_type="descriptor", initialize=0., scale=SCALES.Axis)
     organ_length: float = state_variable(**doc('m', "The organ's length"), state_variable_type="descriptor",
                                          initialize=0., scale=SCALES.Organ)
     visible_length: float = state_variable(**doc('m', "The organ's length out of the sheaths' tube"),
@@ -72,7 +75,8 @@ class GivenDevelopment(FunctionalComponent):
 
     @state
     def _thermal_time(self, thermal_time) -> tuple[np.ndarray, str, np.ndarray, str, np.ndarray, str, np.ndarray,
-                                                   str, np.ndarray, str, np.ndarray, str, np.ndarray]:
+                                                   str, np.ndarray, str, np.ndarray, str, np.ndarray, str,
+                                                   np.ndarray]:
         """The plants' thermal time advanced by a step (set at start - delay at the first call), and what is given
         at it."""
         thermal_time = np.asarray(thermal_time, dtype=float)
@@ -80,6 +84,7 @@ class GivenDevelopment(FunctionalComponent):
         thermal_time = np.where(np.isnan(thermal_time), first, thermal_time + self._plant_values("thermal_time_step"))
         given = self.given(thermal_time)
         return (thermal_time, "axis_number", given["axis_number"], "phytomer_number", given["phytomer_number"],
+                "haun_stage", given["haun_stage"],
                 "organ_length", given["organ_length"], "visible_length", given["visible_length"],
                 "organ_senesced_length", given["organ_senesced_length"], "age", given["age"])
 
@@ -111,6 +116,7 @@ class GivenDevelopment(FunctionalComponent):
         appeared = emf1[axis_row][:, None] + (ranks[None, :] - 1) * axis_phyllochron[:, None]
         phytomer_number = np.sum((axis_time[:, None] >= appeared) & (ranks[None, :] <= nf[axis_row][:, None]),
                                  axis=1).astype(float)
+        haun_stage = np.clip((axis_time - emf1[axis_row]) / axis_phyllochron, 0., nf[axis_row])
 
         # Organs: their lengths
         n_axes = len(ds.entity_ids("Axis"))
@@ -142,8 +148,9 @@ class GivenDevelopment(FunctionalComponent):
         senesced = np.where(kind == 2, blade_senesced, 0.)
         age = np.where((kind == 2) & (time >= organ_appeared), time - organ_appeared,
                        np.asarray(ds.get("age"), dtype=float))              # a blade not appeared yet keeps its age
-        return dict(axis_number=axis_number, phytomer_number=phytomer_number, organ_length=length * organ_unit,
-                    visible_length=visible * organ_unit, organ_senesced_length=senesced * organ_unit, age=age)
+        return dict(axis_number=axis_number, phytomer_number=phytomer_number, haun_stage=haun_stage,
+                    organ_length=length * organ_unit, visible_length=visible * organ_unit,
+                    organ_senesced_length=senesced * organ_unit, age=age)
 
     def _plant_values(self, name):
         return np.asarray(self.data_structure.parameter_view(name, "Plant"), dtype=float)
