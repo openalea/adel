@@ -153,39 +153,56 @@ def record(g) -> Record:
                   triangles={v: triangles(geometry[v]) for v in vertices if v in geometry})
 
 
+@dataclass
+class Planting:
+    """A plant of the harness' stand: its position (cm), its azimuth (°) and its delay (°Cd: its scenario starts
+    that much later)."""
+    x: float = 0.
+    y: float = 0.
+    azimuth: float = 0.
+    delay: float = 0.
+
+
 def legacy_run(n_steps=40, thermal_time_step=10., leaves="echap", seed=1, record_every=1, record_states=True,
-               phyllochron=PHYLLOCHRON, plant_azimuth=0., inclinations=None, n_sect=1):
+               phyllochron=PHYLLOCHRON, plant_azimuth=0., inclinations=None, n_sect=1, plants=None):
     """*n_steps* steps of *thermal_time_step* °Cd of the legacy's dynamic geometry on the given lengths, the plant at
     the origin, its azimuth *plant_azimuth* (°; the legacy draws a random one). *inclinations*: {(axis, rank):
-    degrees} of internodes (the legacy's AdelDyn sets none). *n_sect*: the number of elements of a blade."""
+    degrees} of internodes (the legacy's AdelDyn sets none). *n_sect*: the number of elements of a blade. *plants*: a
+    stand of several plants ([Planting]; then *plant_azimuth* is not used), the same tables for all (AdelDyn's
+    add_metamer reads its phytomer table's first rows whatever the plant)."""
     axes, phytoT = harness_tables(leaves)
-    adel = AdelDyn(seed=seed, leaves=leaf_database(leaves), nsect=n_sect)
-    adel.positions, adel.plant_azimuths = [(0., 0., 0.)], np.array([float(plant_azimuth)])
+    plants = plants or [Planting(azimuth=plant_azimuth)]
+    adel = AdelDyn(seed=seed, leaves=leaf_database(leaves), nsect=n_sect, nplants=len(plants))
+    adel.positions = [(float(p.x), float(p.y), 0.) for p in plants]
+    adel.plant_azimuths = np.array([float(p.azimuth) for p in plants])
+    stand_axes = pd.concat([axes.assign(plant=number) for number in range(1, len(plants) + 1)], ignore_index=True)
     run = LegacyRun(adel=adel)
-    g = adel.build_stand(axes)
+    g = adel.build_stand(stand_axes)
     labels = g.property("label")
     for step in range(n_steps + 1):
-        lengths = given_lengths(start(axes) + step * thermal_time_step, axes, phytoT, phyllochron=phyllochron)
-        for _, axis in axes.iterrows():
-            name = axis["axe"]
-            if not lengths[name]:
-                continue
-            if name != "MS":
-                add_axe(g, name, plant_number=1, axis_properties=dict(
-                    HS_final=float(axis["HS_final"]) if axis["HS_final"] == axis["HS_final"] else float(axis["nf"]),
-                    nff=int(axis["nf"]), hasEar=bool(int(axis["hasEar"])), azimuth=0))
-            _, _, metamers = find_metamers(g, 1, name)
-            for _ in range(len(lengths[name]) - (len(metamers) - 1)):            # metamer0 aside
-                adel.add_metamer(g, phytoT, plant=1, axe=name)
-            _, _, metamers = find_metamers(g, 1, name)
-            for metamer in metamers:
-                rank = int(labels[metamer][len("metamer"):])
-                for organ in g.components(metamer):
-                    values = lengths[name].get(rank, {}).get(labels[organ])
-                    for property_name, value in (values or {}).items():
-                        g.property(property_name)[organ] = value
-                    if labels[organ] == "internode" and (name, rank) in (inclinations or {}):
-                        g.property("inclination")[organ] = inclinations[(name, rank)]
+        for number, plant in enumerate(plants, start=1):
+            lengths = given_lengths(start(axes) + step * thermal_time_step - plant.delay, axes, phytoT,
+                                    phyllochron=phyllochron)
+            for _, axis in axes.iterrows():
+                name = axis["axe"]
+                if not lengths[name]:
+                    continue
+                if name != "MS":
+                    add_axe(g, name, plant_number=number, axis_properties=dict(
+                        HS_final=float(axis["HS_final"]) if axis["HS_final"] == axis["HS_final"] else float(axis["nf"]),
+                        nff=int(axis["nf"]), hasEar=bool(int(axis["hasEar"])), azimuth=0))
+                _, _, metamers = find_metamers(g, number, name)
+                for _ in range(len(lengths[name]) - (len(metamers) - 1)):            # metamer0 aside
+                    adel.add_metamer(g, phytoT, plant=number, axe=name)
+                _, _, metamers = find_metamers(g, number, name)
+                for metamer in metamers:
+                    rank = int(labels[metamer][len("metamer"):])
+                    for organ in g.components(metamer):
+                        values = lengths[name].get(rank, {}).get(labels[organ])
+                        for property_name, value in (values or {}).items():
+                            g.property(property_name)[organ] = value
+                        if labels[organ] == "internode" and (name, rank) in (inclinations or {}):
+                            g.property("inclination")[organ] = inclinations[(name, rank)]
         g = adel.update_geometry(g, phyllochron={"MS": phyllochron, "T1": phyllochron})
         if record_states and (step % record_every == 0 or step == n_steps):
             run.steps.append(record(g))

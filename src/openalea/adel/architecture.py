@@ -352,6 +352,16 @@ class ShootArchitecture(StructuralComponent):
     def _parameter(self, name):
         return self.parameter_values(name)
 
+    def _axes_lookup(self):
+        """(rows of each table plant, values of each row) of the axes table (_plant_rows, _axis_values), read once."""
+        cache = self.__dict__.get("_axes_cache")
+        if cache is None:
+            rows = self.axes_table.reset_index(drop=True)
+            plant_rows = {int(number): self._plant_rows(rows, int(number)) for number in set(rows["plant"])}
+            cache = (plant_rows, {row: self._axis_values(rows, row) for row in range(len(rows))})
+            self.__dict__["_axes_cache"] = cache
+        return cache
+
     @segmentation
     def _axis_phytomers(self, axis_phytomers, phytomer_number, axis_row) -> tuple[np.ndarray, str, NewNodes]:
         """The axes the plants' axis_number asks for (in their axes table's order, each with its first phytomer, once
@@ -359,7 +369,7 @@ class ShootArchitecture(StructuralComponent):
         with their organs and elements (NewNodes), their dimensions and shapes from the phytomer table."""
         ds = self.data_structure
         g = ds._mtg
-        rows = self.axes_table.reset_index(drop=True)
+        plant_rows, axis_values = self._axes_lookup()
         count = np.array(axis_phytomers, dtype=int)
         target = np.floor(np.asarray(phytomer_number, dtype=float)).astype(int)
         axes = np.asarray(ds.entity_ids("Axis"))
@@ -371,10 +381,10 @@ class ShootArchitecture(StructuralComponent):
         wanted = np.floor(np.asarray(ds.get("axis_number"), dtype=float)).astype(int)
         table_plant = np.asarray(ds.parameter_view("table_plant", "Plant")).astype(int)
         for plant, number, table in zip(plants.tolist(), wanted.tolist(), table_plant.tolist()):
-            mine = self._plant_rows(rows, table)
+            mine = plant_rows[table]
             existing = [row for row in mine if (plant, row) in axis_of]
             for row in mine[len(existing):number]:
-                values = self._axis_values(rows, row)
+                values = axis_values[row]
                 predecessor = self._predecessor(g, None, 1, axis_of, plant, values["bearer_row"],
                                                 values["insertion_rank"])
                 if predecessor is None:
@@ -384,7 +394,7 @@ class ShootArchitecture(StructuralComponent):
 
         # New phytomers on the axes
         for a, axis in enumerate(axes.tolist()):
-            values = self._axis_values(rows, int(axis_row[a]))
+            values = axis_values[int(axis_row[a])]
             for rank in range(count[a] + 1, target[a] + 1):
                 predecessor = self._predecessor(g, axis, rank, axis_of, g.complex(axis), values["bearer_row"],
                                                 values["insertion_rank"])
@@ -647,7 +657,7 @@ class ShootArchitecture(StructuralComponent):
             if kept is not None and kept[0] == made_from:
                 triangles = kept[1]
             else:
-                triangles = blade_element_triangles(shapes.fitted[shape_index], *made_from[2:8], min_area)
+                triangles = blade_element_triangles(*shapes.fitted[shape_index], *made_from[2:8], min_area)
                 triangles[..., 2] += rolled[node]
             cache[vertex] = (made_from, triangles)
             parts.append(triangles)

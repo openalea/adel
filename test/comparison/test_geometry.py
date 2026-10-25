@@ -29,11 +29,16 @@ SCENARIOS = {"vertical": dict(leaves="echap", plant_azimuth=0., inclinations=Non
              "inclined, azimuth 0": dict(leaves="echap", plant_azimuth=0., inclinations=INCLINATIONS)}
 
 
-def legacy_drawn(record):
-    """[(step's organ key, element label, element vid)] of the record's drawn elements (with an anchor point)."""
+def legacy_drawn(record, plant=None):
+    """[(step's organ key, element label, element vid)] of the record's drawn elements (with an anchor point), of the
+    plant numbered *plant* (from 1; None: every plant)."""
     anchors = record.props.get("anchor_point", {})
     organs = {}
     for organ in record.vertices:
+        plant_label = record.label[record.complex[record.complex[record.complex[organ]]]] if record.scale[organ] == 4 \
+            else None
+        if plant is not None and plant_label != f"plant{plant}":
+            continue
         if record.scale[organ] == 4 and record.label[organ] in ("internode", "sheath", "blade"):
             metamer = record.complex[organ]
             organs[organ] = (record.label[record.complex[metamer]], int(record.label[metamer][len("metamer"):]),

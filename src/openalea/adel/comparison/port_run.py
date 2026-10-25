@@ -15,7 +15,7 @@ import pandas as pd
 
 from openalea.adel.architecture import ShootArchitecture
 from openalea.adel.leaf_shapes import LeafShapes
-from openalea.adel.comparison.legacy_run import PHYLLOCHRON, given_lengths, harness_tables, start
+from openalea.adel.comparison.legacy_run import PHYLLOCHRON, Planting, given_lengths, harness_tables, start
 from openalea.metafspm.scene.scene import Scene
 
 ORGAN_NAMES = {"StemInternode": "internode", "Sheath": "sheath", "Blade": "blade"}
@@ -60,15 +60,25 @@ def leaf_shapes(leaves):
     return LeafShapes.echap(xy_model="Soissons_byleafclass") if leaves == "echap" else LeafShapes.samples()
 
 
-def port_scene(leaves="samples", time_step=3600, rotation=0., phyllochron=PHYLLOCHRON, n_sect=1):
+def port_scene(leaves="samples", time_step=3600, rotation=0., phyllochron=PHYLLOCHRON, n_sect=1, plants=None):
+    """The scene of the harness' plants (*plants*: [Planting], positions in cm; by default one plant at the origin,
+    its rotation *rotation*), every plant on the tables' plant 1, the leaf database fitted once for all."""
     axes, phytomers = harness_tables(leaves)
-    table = pd.DataFrame([dict(plant="p0", model=ShootOnly, x=0., y=0., z=0., rotation=float(rotation),
-                               scenario={"parameters": dict(axes_table=axes, phytomer_table=phytomers,
-                                                            table_plant=1, leaves=leaf_shapes(leaves),
-                                                            phyllochron=phyllochron,
-                                                            tiller_phyllochron=phyllochron, n_sect=n_sect)})])
+    plants = plants or [Planting(azimuth=rotation)]
+    shapes = leaf_shapes(leaves)
+    parameters = dict(axes_table=axes, phytomer_table=phytomers, table_plant=1, leaves=shapes, phyllochron=phyllochron,
+                      tiller_phyllochron=phyllochron, n_sect=n_sect)
+    table = pd.DataFrame([dict(plant=f"p{k}", model=ShootOnly, x=plant.x * 0.01, y=plant.y * 0.01, z=0.,
+                               rotation=float(plant.azimuth), scenario={"parameters": parameters})
+                          for k, plant in enumerate(plants)])
     table.attrs.update(xrange=1., yrange=1.)
     return Scene(table, time_step=time_step)
+
+
+def plant_of(ds, scale):
+    """Each entity's plant (its index among the plants) at *scale*."""
+    plants = np.arange(len(ds.entity_ids("Plant")), dtype=float)
+    return ds.map_to(plants, "Plant", scale, "broadcast").astype(int)
 
 
 def organ_names(ds):
@@ -86,20 +96,23 @@ def axis_names(scene):
 
 
 def write_given(scene, lengths, unit=0.01):
-    """Each axis' phytomer number, and its organs' given lengths (cm, legacy_run.given_lengths) in m."""
+    """Each axis' phytomer number, and its organs' given lengths (cm, legacy_run.given_lengths) in m; *lengths*: one
+    per plant."""
     ds = scene.populations[0].data_structure
     axes = scene.populations[0].instance.architecture.axes_table
-    ds.set("axis_number", np.full(len(ds.entity_ids("Plant")), float(sum(len(lengths[name]) > 0
-                                                                         for name in axes["axe"]))))
+    ds.set("axis_number", np.array([float(sum(len(mine[name]) > 0 for name in axes["axe"])) for mine in lengths]))
     names = axis_names(scene)
-    ds.set("phytomer_number", np.array([len(lengths[name]) for name in names], dtype=float))
+    axis_plant = plant_of(ds, "Axis")
+    ds.set("phytomer_number", np.array([len(lengths[plant][name]) for plant, name in zip(axis_plant, names)],
+                                       dtype=float))
     organ_axis = ds.map_to(np.arange(names.size, dtype=float), "Axis", "Organ", "broadcast").astype(int)
+    organ_plant = plant_of(ds, "Organ")
     ranks, organs = np.asarray(ds.get("organ_rank")), organ_names(ds)
     for variable, given in (("organ_length", "length"), ("visible_length", "visible_length"),
                             ("organ_senesced_length", "senesced_length"), ("age", "age")):
         values = np.array(ds.get(variable), dtype=float)
         for i in range(values.size):
-            organ = lengths[names[organ_axis[i]]].get(int(ranks[i]), {}).get(organs[i])
+            organ = lengths[organ_plant[i]][names[organ_axis[i]]].get(int(ranks[i]), {}).get(organs[i])
             if organ is not None and given in organ:
                 values[i] = organ[given] * (unit if given != "age" else 1.)
         ds.set(variable, values)
@@ -118,9 +131,10 @@ def write_inclinations(scene, inclinations):
     ds.set("inclination", values)
 
 
-def structure(scene):
+def structure(scene, plant=0):
     """{(axis, rank, organ): {"labels": [element labels], "elements": {label: {variable: value, "triangles": (T, 3,
-    3)}}, variable: value}}; leaf elements labelled as the legacy's, by their index (LeafElement1, ...)."""
+    3)}}, variable: value}} of the plant *plant* (its index); leaf elements labelled as the legacy's, by their index
+    (LeafElement1, ...)."""
     ds = scene.populations[0].data_structure
     triangles = scene.populations[0].instance.architecture.triangles()
     g = ds._mtg
@@ -137,7 +151,10 @@ def structure(scene):
     arrays = {name: np.asarray(ds.get(name)) for name in variables}
     node_index = dict(zip(np.asarray(ds.entity_ids("node")).tolist(), range(ds.n_nodes())))
     element_arrays = {name: np.asarray(ds.get(name)) for name in ELEMENT_VARIABLES + ("element_index",)}
+    organ_plant = plant_of(ds, "Organ")
     for i, organ in enumerate(organ_ids.tolist()):
+        if organ_plant[i] != plant:
+            continue
         elements = [label_name[g.label(e)] for e in g.components(organ)]
         values = {}
         for e in g.components(organ):
@@ -154,18 +171,24 @@ def structure(scene):
 
 
 def port_run(n_steps=40, thermal_time_step=10., leaves="samples", record_every=1, phyllochron=PHYLLOCHRON,
-             plant_azimuth=0., inclinations=None, n_sect=1):
-    scene = port_scene(leaves, rotation=plant_azimuth, phyllochron=phyllochron, n_sect=n_sect)
+             plant_azimuth=0., inclinations=None, n_sect=1, plants=None):
+    """The legacy harness' run (legacy_run's options) on ShootArchitecture; with *plants*, run.steps[i] is a list of
+    the plants' structure records."""
+    plants_given = plants
+    plants = plants or [Planting(azimuth=plant_azimuth)]
+    scene = port_scene(leaves, phyllochron=phyllochron, n_sect=n_sect, plants=plants)
     axes, phytomers = harness_tables(leaves)
     run = PortRun(scene=scene)
     for step in range(n_steps + 1):
-        lengths = given_lengths(start(axes) + step * thermal_time_step, axes, phytomers, phyllochron=phyllochron)
+        lengths = [given_lengths(start(axes) + step * thermal_time_step - plant.delay, axes, phytomers,
+                                 phyllochron=phyllochron) for plant in plants]
         write_given(scene, lengths)
         scene.run()
         write_given(scene, lengths)                    # the organs created in the step: their lengths at once,
         write_inclinations(scene, inclinations or {})
         run_stage(scene, "postsegmentation")          # as the legacy sets a new metamer's (the elements again)
         if step % record_every == 0 or step == n_steps:
-            run.steps.append(structure(scene))
+            records = [structure(scene, plant) for plant in range(len(plants))]
+            run.steps.append(records if plants_given else records[0])
             run.recorded_steps.append(step)
     return run

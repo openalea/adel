@@ -263,9 +263,12 @@ def _smooth(x, y, s, r):
 
 
 def _squared_distance(point, start, end):
-    """The squared distance of *point* to the line through *start* and *end*."""
-    line = end - start
-    return float(np.sum(np.cross(point - start, line) ** 2) / np.sum(line ** 2))
+    """The squared distance of *point* to the line through *start* and *end* (3-vectors as tuples: |(point - start)
+    × line|² / |line|², in PlantGL's order of operations)."""
+    lx, ly, lz = end[0] - start[0], end[1] - start[1], end[2] - start[2]
+    px, py, pz = point[0] - start[0], point[1] - start[1], point[2] - start[2]
+    cx, cy, cz = py * lz - pz * ly, pz * lx - px * lz, px * ly - py * lx
+    return (cx * cx + cy * cy + cz * cz) / (lx * lx + ly * ly + lz * lz)
 
 
 def _simplification_kept(points, number_of_points):
@@ -301,7 +304,7 @@ def _simplify(x, y, s, r, number_of_points):
     """Adel's fitting.simplify: the polyline (x, r, y) simplified to number_of_points points inside, rescaled to the
     smooth shape's abscissa, its width rescaled to the smooth shape's area (Simpson's rule on the smooth one, the
     trapezoids on the polygon)."""
-    kept = _simplification_kept(np.stack([x, r, y], axis=1), number_of_points)
+    kept = _simplification_kept(list(zip(x.tolist(), r.tolist(), y.tolist())), number_of_points)
     x_kept, y_kept, r_kept = x[kept], y[kept], r[kept]
     s_kept = curvilinear_abscissa(x_kept, y_kept)
     adjust = max(s) / max(s_kept)
