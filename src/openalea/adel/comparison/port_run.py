@@ -1,10 +1,10 @@
 """
 ShootArchitecture (openalea.adel.architecture) driven on the legacy harness' scenario (legacy_run.given_lengths): the
-phytomer numbers and organ lengths given at each step by GivenDevelopment (given_development), as cnwgrass' development
-and senescence would write them.
+phytomer numbers and organ lengths given at each step by ScenarioDevelopment (openalea.adel.development, its default
+timings the harness'), as cnwgrass' development and senescence would write them.
 
     run = port_run(n_steps=40, leaves="echap")
-    run.scene            the metafspm Scene (GivenShoot plants: GivenDevelopment and ShootArchitecture)
+    run.scene            the metafspm Scene (ScenarioShoot plants: ScenarioDevelopment and ShootArchitecture)
     run.steps[i]         a structure record after step run.recorded_steps[i] (structure())
 
 The tables are the legacy harness' (harness_tables).
@@ -12,11 +12,10 @@ The tables are the legacy harness' (harness_tables).
 from dataclasses import dataclass, field
 
 import numpy as np
-import pandas as pd
 
+from openalea.adel.comparison.legacy_run import PHYLLOCHRON, harness_tables
+from openalea.adel.development import Planting, ScenarioShoot, shoot_scene
 from openalea.adel.leaf_shapes import LeafShapes
-from openalea.adel.comparison.given_development import GivenShoot
-from openalea.adel.comparison.legacy_run import PHYLLOCHRON, Planting, harness_tables
 from openalea.metafspm.scene.scene import Scene
 
 ORGAN_NAMES = {"StemInternode": "internode", "Sheath": "sheath", "Blade": "blade"}
@@ -44,39 +43,22 @@ class PortRun:
     recorded_steps: list = field(default_factory=list)
 
 
-def sown_stand(n_plants, n_rows=4, row_spacing=15., plant_spacing=4., max_delay=60., seed=0):
-    """A sown stand of *n_plants* (Planting: positions in cm) in *n_rows* rows, a little off their sowing spots, their
-    azimuths random, their delays random up to *max_delay* (°Cd)."""
-    random = np.random.default_rng(seed)
-    per_row = int(np.ceil(n_plants / n_rows))
-    return [Planting(x=(k % per_row) * plant_spacing + random.normal(0., 0.5),
-                     y=(k // per_row) * row_spacing + random.normal(0., 0.5), azimuth=random.uniform(0., 360.),
-                     delay=random.uniform(0., max_delay)) for k in range(n_plants)]
-
-
 def leaf_shapes(leaves):
     """The legacy harness' databases (legacy_run.leaf_database): the samples, or echap's with Soissons' midribs."""
     return LeafShapes.echap(xy_model="Soissons_byleafclass") if leaves == "echap" else LeafShapes.samples()
 
 
 def port_scene(leaves="samples", time_step=3600, rotation=0., phyllochron=PHYLLOCHRON, n_sect=1, plants=None,
-               thermal_time_step=10., model=GivenShoot, parameters=None):
+               thermal_time_step=10., model=ScenarioShoot, parameters=None):
     """The scene of the harness' plants (*plants*: [Planting], positions in cm, delays in °Cd; by default one plant at
     the origin, its rotation *rotation*), every plant on the tables' plant 1, the leaf database fitted once for all;
     each scene.run() is *thermal_time_step* °Cd of the scenario (the first one its start). *model*: the plant model,
-    GivenShoot or one extending it; *parameters*: other parameters of the plants (e.g. tiller_inclination=1)."""
+    ScenarioShoot or one extending it; *parameters*: other parameters of the plants (e.g. tiller_inclination=1)."""
     axes, phytomers = harness_tables(leaves)
-    plants = plants or [Planting(azimuth=rotation)]
-    shapes = leaf_shapes(leaves)
-    parameters = dict(axes_table=axes, phytomer_table=phytomers, table_plant=1, leaves=shapes, phyllochron=phyllochron,
-                      tiller_phyllochron=phyllochron, n_sect=n_sect, thermal_time_step=thermal_time_step,
-                      **(parameters or {}))
-    table = pd.DataFrame([dict(plant=f"p{k}", model=model, x=plant.x * 0.01, y=plant.y * 0.01, z=0.,
-                               rotation=float(plant.azimuth),
-                               scenario={"parameters": dict(parameters, delay=float(plant.delay))})
-                          for k, plant in enumerate(plants)])
-    table.attrs.update(xrange=1., yrange=1.)
-    return Scene(table, time_step=time_step)
+    return shoot_scene(plants or [Planting(azimuth=rotation)], model=model, time_step=time_step, axes_table=axes,
+                       phytomer_table=phytomers, table_plant=1, leaves=leaf_shapes(leaves), phyllochron=phyllochron,
+                       tiller_phyllochron=phyllochron, n_sect=n_sect, thermal_time_step=thermal_time_step,
+                       **(parameters or {}))
 
 
 def plant_of(ds, scale):
@@ -93,10 +75,8 @@ def organ_names(ds):
 
 
 def axis_names(scene):
-    """Each Axis' name (MS, T1, ...) from its row in the axes table."""
-    ds = scene.populations[0].data_structure
-    axes = scene.populations[0].instance.architecture.axes_table.reset_index(drop=True)
-    return axes["axe"].to_numpy()[np.asarray(ds.get("axis_row"))]
+    """Each Axis' name (MS, T1, ...) from its row in the population's axes table."""
+    return scene.populations[0].instance.architecture.axis_names()
 
 
 def write_inclinations(scene, inclinations):

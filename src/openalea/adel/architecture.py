@@ -7,7 +7,11 @@ organs' lengths are given by other models (development, senescence), as cnwgrass
                                scenario={"parameters": {"axes_table": axeT, "phytomer_table": phytoT,
                                                         "table_plant": 1}})])
 
-with MyModel.initiators = (ShootArchitecture,).
+with MyModel.initiators = (ShootArchitecture,). Without tables, a plant is generated from a few scalars when any is
+given (its parameters leaf_number, tiller_number, longest_blade_length, longest_blade_width), else it is Adel's sample
+plant (openalea.adel.tables):
+
+    scenario={"parameters": {"leaf_number": 11, "tiller_number": 2, "longest_blade_length": 0.2}}
 
 The plant's structure, in the MPG:
 
@@ -26,8 +30,9 @@ tiller's first internode is branched (+) on its bearer's phytomer at its inserti
 first element), as Adel inserts it (Adel's names: 'T1' on the main stem's phytomer 1, 'T1.2' on T1's phytomer 2). The
 elements are stable: created with their organ, their lengths and areas updated, never rebuilt.
 
-The tables are Adel's (its axeT and phytoT, one row per axis and per axis and rank, every plant of the population in
-them, column 'plant'); `table_plant`, a per-plant parameter, says which of their plants a plant is.
+The tables are Adel's (its axeT and phytoT, one row per axis and per axis and rank, column 'plant'; `table_plant`, a
+per-plant parameter, says which of their plants a plant is). Each plant's tables are kept on the MPG at its initiation;
+the components index the population's (tables.population_tables: every plant's rows at an offset; tables()).
 
 The elements are placed by Adel's turtle (openalea.adel.turtle), from each plant's position and rotation: their base
 x1, y1, z1, their end x2, y2, z2, and the frame they are drawn in (heading_x…, up_x…), at each step after their
@@ -49,10 +54,11 @@ The coupling contract, what other models write and read (lengths in m, on the Da
   (Triangles.per_owner).
 
 The organs a call creates get their lengths at the next call; a development model giving them at once (as cnwgrass
-after add_metamer) writes them after the call and calls ShootArchitecture again (comparison.given_development's
-GivenShoot).
+after add_metamer) writes them after the call and calls ShootArchitecture again (openalea.adel.development's
+ScenarioShoot).
 """
 from dataclasses import dataclass
+from functools import lru_cache
 
 import numpy as np
 import pandas as pd
@@ -64,6 +70,7 @@ from openalea.metafspm.data_structure.configs import PropsConfig, ScalesConfig
 from openalea.metafspm.solve.decorator import postsegmentation, segmentation
 from openalea.adel.blade_mesh import blade_element_triangles
 from openalea.adel.leaf_shapes import LeafShapes
+from openalea.adel.tables import plant_tables, population_tables, record_plant_tables
 from openalea.adel.turtle import base_inclination, interpret, stem_inclinations, traversal_order
 
 BY = "model_shoot_architecture"
@@ -76,6 +83,12 @@ def doc(unit, description, value_comment=""):
     """The documentation entries of a declaration."""
     return dict(unit=unit, unit_comment="", description=description, min_value="", max_value="",
                 value_comment=value_comment, references="", DOI="")
+
+
+@lru_cache(maxsize=1)
+def default_leaves():
+    """Adel's sample leaf shapes (LeafShapes.samples()), fitted once."""
+    return LeafShapes.samples()
 
 
 def outputs(k):
@@ -281,14 +294,26 @@ class ShootArchitecture(StructuralComponent):
     tiller_phyllochron: float = parameter(**doc('°Cd', "The tillers' phyllochron, for their blades' age classes in a "
                                                        "dynamic leaf database (Adel's T1's for every tiller)"), by=BY,
                                           default=91.6)
+    leaf_number: float = parameter(**doc('adim', "Without tables: the main stem's number of leaves of a generated "
+                                                 "plant (tables.wheat_tables)", "NaN: 12 when another scalar is "
+                                                 "given; none given: Adel's sample plant"), by=BY, default=np.nan)
+    tiller_number: float = parameter(**doc('adim', "Without tables: a generated plant's number of tillers", "NaN: 4"),
+                                     by=BY, default=np.nan)
+    longest_blade_length: float = parameter(**doc('m', "Without tables: a generated plant's longest blade's length",
+                                                  "NaN: 0.19"), by=BY, default=np.nan)
+    longest_blade_width: float = parameter(**doc('m', "Without tables: a generated plant's longest blade's width",
+                                                 "NaN: 0.016"), by=BY, default=np.nan)
 
     # --- The plant's structure ---
 
     @classmethod
     def initiate_plant(cls, g, plant, parameters):
-        """The plant's main stem (its Axis, GrowthUnit) and its first phytomer."""
-        axes, phytomers = parameters["axes_table"], parameters["phytomer_table"]
-        number = int(parameters.get("table_plant", cls.table_plant))
+        """The plant's tables (tables.plant_tables, kept on the MPG), its main stem (its Axis, GrowthUnit) and its
+        first phytomer; its axes' rows are its tables' (the population's, once the component is built)."""
+        axes, phytomers, number = plant_tables(parameters, dict(table_plant=cls.table_plant,
+                                                                phyllochron=cls.phyllochron,
+                                                                length_unit=cls.length_unit))
+        record_plant_tables(g, plant, (axes, phytomers, number))
         n_sect = int(parameters.get("n_sect", cls.n_sect))
         unit = float(parameters.get("length_unit", cls.length_unit))
         rows = axes.reset_index(drop=True)
@@ -394,11 +419,46 @@ class ShootArchitecture(StructuralComponent):
             "shape_seed": ([3], [np.where(valid, shape_seed, -1).astype(int)]),
         }
 
+    def __post_init__(self):
+        super().__post_init__()
+        self._to_population_rows()
+
+    def tables(self):
+        """(axes table, phytomer table, per plant its number in them, per plant its rows' offset): the population's
+        tables (tables.population_tables), the ones axis_row indexes."""
+        ds = self.data_structure
+        return population_tables(ds._mtg, ds.entity_ids("Plant"))
+
+    def axis_names(self):
+        """Each Axis' name (MS, T1, ...), from its row in the population's axes table."""
+        return self.tables()[0]["axe"].to_numpy()[np.asarray(self.data_structure.get("axis_row"))]
+
+    def organ_names(self):
+        """Each Organ's kind: "internode", "sheath" or "blade"."""
+        _, organ_kind = self._kinds()
+        ds = self.data_structure
+        kind = np.full(len(ds.entity_ids("Organ")), -1)
+        kind[np.asarray(ds.owner("Organ"))] = organ_kind
+        return np.array(ORGANS + ("",), dtype=object)[kind]
+
+    def _to_population_rows(self):
+        """The initial axes' rows (in their plant's tables) as rows of the population's tables, once."""
+        ds = self.data_structure
+        g = ds._mtg
+        if g.__dict__.get("_shoot_population_rows"):
+            return
+        offsets = self.tables()[3]
+        offset = ds.map_to(offsets.astype(float), "Plant", "Axis", "broadcast").astype(int)
+        for name in ("axis_row", "bearer_row"):
+            rows = np.asarray(ds.get(name), dtype=int)
+            ds.set(name, np.where(rows >= 0, rows + offset, rows))
+        g.__dict__["_shoot_population_rows"] = True
+
     def _dimension_arrays(self):
         cache = self.__dict__.get("_dimensions_cache")
         if cache is None:
-            axes = self.axes_table.reset_index(drop=True)
-            cache = self._dimensions(self.phytomer_table, axes, float(np.asarray(self._parameter("length_unit"))[0]))
+            axes, phytomers = self.tables()[:2]
+            cache = self._dimensions(phytomers, axes, float(np.asarray(self._parameter("length_unit"))[0]))
             self.__dict__["_dimensions_cache"] = cache
         return cache
 
@@ -409,7 +469,7 @@ class ShootArchitecture(StructuralComponent):
         """(rows of each table plant, values of each row) of the axes table (_plant_rows, _axis_values), read once."""
         cache = self.__dict__.get("_axes_cache")
         if cache is None:
-            rows = self.axes_table.reset_index(drop=True)
+            rows = self.tables()[0]
             plant_rows = {int(number): self._plant_rows(rows, int(number)) for number in set(rows["plant"])}
             unit = float(np.asarray(self._parameter("length_unit"))[0])
             cache = (plant_rows, {row: self._axis_values(rows, row, unit) for row in range(len(rows))})
@@ -433,7 +493,7 @@ class ShootArchitecture(StructuralComponent):
         # New axes, with their first phytomer
         plants = np.asarray(ds.entity_ids("Plant"))
         wanted = np.floor(np.asarray(ds.get("axis_number"), dtype=float)).astype(int)
-        table_plant = np.asarray(ds.parameter_view("table_plant", "Plant")).astype(int)
+        table_plant = self.tables()[2]
         for plant, number, table in zip(plants.tolist(), wanted.tolist(), table_plant.tolist()):
             mine = plant_rows[table]
             existing = [row for row in mine if (plant, row) in axis_of]
@@ -478,10 +538,7 @@ class ShootArchitecture(StructuralComponent):
         return cache[1], cache[2]
 
     def _leaf_shapes(self):
-        if self.leaves is None:
-            self.__dict__.setdefault("_default_leaves", LeafShapes.samples())
-            return self.__dict__["_default_leaves"]
-        return self.leaves
+        return default_leaves() if self.leaves is None else self.leaves
 
     @postsegmentation
     def _length(self, length, element_index, organ_length, visible_length, organ_senesced_length, rolled_length,

@@ -10,8 +10,8 @@ its records: the reference ShootArchitecture is compared with.
                          label, scale, complex, topological parent and edge type, its properties (geometry left out),
                          and each element's triangles in the scene's frame (PlantGL's tesselation of its geometry)
 
-The tables (harness_tables): the legacy's samples (data_samples.axeTable(): the main stem and 4 tillers; phytoT(): the
-main stem's ranks), each tiller given the main stem's first nf ranks, its lengths and diameters 0.9 times.
+The tables (harness_tables): Adel's sample plant (tables.sample_tables: the main stem and 4 tillers, each tiller given
+the main stem's first nf ranks, its lengths and diameters 0.9 times).
 
 The scenario (given_lengths), from the main stem's first leaf (its emf1), on every axis: metamer n appears at the axis' first leaf (axeTable's emf1) plus (n - 1)
 phyllochrons (add_metamer; a tiller's axis added with its first metamer, add_axe); its blade grows linearly to its
@@ -25,7 +25,9 @@ from dataclasses import dataclass, field
 import numpy as np
 
 import openalea.plantgl.all as pgl
+from openalea.adel.development import Planting
 from openalea.adel.legacy import data_samples
+from openalea.adel.tables import echap_shape_indices, sample_tables
 from openalea.adel.legacy.adel_dynamic import AdelDyn
 from openalea.adel.legacy.echap_leaf import echap_leaves
 from openalea.adel.legacy.mtg_editions import add_axe, find_metamers
@@ -65,32 +67,11 @@ def leaf_database(name):
     raise ValueError(f"unknown leaf database '{name}'")
 
 
-def shape_indices(phytoT, leaves, nff, top_leaves=4):
-    """phytoT with the leaf shape indices of the database *leaves*: the samples' as they are; echap's by its rule
-    (echap_leaf.geoLeaf): class 2 for the top leaves (nf - n <= top_leaves), else 1, one shape per class (Lseed 1)."""
-    if leaves != "echap":
-        return phytoT
-    adapted = phytoT.copy()
-    adapted["Lindex"] = np.where(nff - adapted["n"] <= top_leaves, 2, 1)
-    adapted["Lseed"] = 1
-    return adapted
-
-
 def harness_tables(leaves="samples", tiller_factor=0.9):
-    """(axes table, phytomer table): the samples', each tiller with the main stem's first nf ranks (lengths and
-    diameters times *tiller_factor*), the shape indices those of the leaf database."""
-    axes, phytomers = data_samples.axeTable(), data_samples.phytoT()
-    main = phytomers.loc[phytomers["axe"] == "MS"]
-    rows = [phytomers]
-    for _, axis in axes.loc[axes["axe"] != "MS"].iterrows():
-        tiller = main.loc[main["n"] <= int(axis["nf"])].copy()
-        tiller["axe"] = axis["axe"]
-        for name in ("Ll", "Lw", "Gl", "Gd", "El", "Ed"):
-            tiller[name] = tiller[name] * tiller_factor
-        rows.append(tiller)
-    phytomers = pd.concat(rows, ignore_index=True)
-    nff = int(axes.loc[axes["axe"] == "MS", "nf"].iloc[0])
-    return axes, shape_indices(phytomers, leaves, nff)
+    """(axes table, phytomer table): Adel's sample plant (tables.sample_tables: each tiller with the main stem's first
+    nf ranks, its lengths and diameters *tiller_factor* times), the shape indices those of the leaf database."""
+    axes, phytomers = sample_tables(tiller_factor)
+    return axes, echap_shape_indices(axes, phytomers) if leaves == "echap" else phytomers
 
 
 def start(axes):
@@ -152,16 +133,6 @@ def record(g) -> Record:
                   complex={v: g.complex(v) for v in vertices}, parent={v: g.parent(v) for v in vertices},
                   edge_type={v: g.edge_type(v) for v in vertices}, props=props,
                   triangles={v: triangles(geometry[v]) for v in vertices if v in geometry})
-
-
-@dataclass
-class Planting:
-    """A plant of the harness' stand: its position (cm), its azimuth (°) and its delay (°Cd: its scenario starts
-    that much later)."""
-    x: float = 0.
-    y: float = 0.
-    azimuth: float = 0.
-    delay: float = 0.
 
 
 def legacy_run(n_steps=40, thermal_time_step=10., leaves="echap", seed=1, record_every=1, record_states=True,

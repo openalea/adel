@@ -4,7 +4,7 @@ on stands of 1 to 16 plants grown on the harness' scenario (the organs' lengths 
 geometry computed (as a light model at each step needs it).
 
 Only the models' calls are timed: on the legacy's side, the harness' writing of the given lengths (Python loops) is
-left out; on the port's, the scene's step includes GivenDevelopment's (vectorised, a small part of it).
+left out; on the port's, the scene's step includes ScenarioDevelopment's (vectorised, a small part of it).
 
     python example/comparison/profile_population.py [n_steps]
 """
@@ -13,8 +13,9 @@ import time
 
 import numpy as np
 
-from openalea.adel.comparison.legacy_run import Planting, given_lengths, harness_tables, leaf_database, start
+from openalea.adel.comparison.legacy_run import given_lengths, harness_tables, leaf_database, start
 from openalea.adel.comparison.port_run import port_scene
+from openalea.adel.development import Planting
 from openalea.adel.legacy.adel_dynamic import AdelDyn
 from openalea.adel.legacy.mtg_editions import add_axe, find_metamers
 import pandas as pd

@@ -11,8 +11,9 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 
-from openalea.adel.comparison.legacy_run import Planting, legacy_canopy, legacy_run
+from openalea.adel.comparison.legacy_run import legacy_canopy, legacy_run
 from openalea.adel.comparison.port_run import port_run
+from openalea.adel.development import Planting
 from openalea.adel.display import draw, state_colors
 from openalea.metafspm.coupling.geometry import Triangles
 

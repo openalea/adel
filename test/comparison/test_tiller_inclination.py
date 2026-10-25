@@ -5,7 +5,7 @@ several steps of a canopy's growth. And their geometry: a straightened tiller's 
 import numpy as np
 import pytest
 
-from openalea.adel.comparison.legacy_run import Planting
+from openalea.adel.development import Planting
 from openalea.adel.comparison.port_run import axis_names, organ_names, port_scene
 
 PLANTS = [Planting(), Planting(x=12., azimuth=70., delay=40.)]

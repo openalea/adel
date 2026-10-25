@@ -16,9 +16,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from openalea.adel.architecture import SCALES, doc
-from openalea.adel.comparison.given_development import GivenShoot
-from openalea.adel.comparison.port_run import port_scene, plant_of, sown_stand
+from openalea.adel.development import ScenarioShoot, shoot_scene, sown_stand
 from openalea.adel.display import draw, value_colors
+from openalea.adel.leaf_shapes import LeafShapes
 from openalea.metafspm.coupling.component import FunctionalComponent, input_variable, parameter, state_variable
 from openalea.metafspm.solve.decorator import rate
 
@@ -72,8 +72,8 @@ class ToyLight(FunctionalComponent):
         return fraction, "absorbed", fraction * green_area
 
 
-class LitShoot(GivenShoot):
-    """GivenShoot, then the toy light on its triangles."""
+class LitShoot(ScenarioShoot):
+    """ScenarioShoot, then the toy light on its triangles."""
 
     def __init__(self, data_structure, time_step):
         super().__init__(data_structure, time_step)
@@ -89,7 +89,8 @@ class LitShoot(GivenShoot):
 if __name__ == "__main__":
     n_steps = int(sys.argv[1]) if len(sys.argv) > 1 else 100
     plants = sown_stand(20)
-    scene = port_scene("echap", plants=plants, n_sect=2, thermal_time_step=THERMAL_TIME_STEP, model=LitShoot)
+    scene = shoot_scene(plants, model=LitShoot, leaves=LeafShapes.echap(xy_model="Soissons_byleafclass"), n_sect=2,
+                        thermal_time_step=THERMAL_TIME_STEP)
     ds = scene.populations[0].data_structure
     for _ in range(n_steps + 1):
         scene.run()
@@ -108,7 +109,8 @@ if __name__ == "__main__":
     axes.set_ylabel("the element's base height (cm)")
     axes.set_title("the light down the canopy (green elements)")
     figure.savefig("light_coupling.png", dpi=120)
-    absorbed = np.bincount(plant_of(ds, "node"), weights=np.asarray(ds.get("absorbed")), minlength=len(plants))
+    plant_of = ds.map_to(np.arange(len(plants), dtype=float), "Plant", "node", "broadcast").astype(int)
+    absorbed = np.bincount(plant_of, weights=np.asarray(ds.get("absorbed")), minlength=len(plants))
     print(f"light_coupling.png: {len(plants)} plants; the canopy's mean light fraction (green area weighted) "
           f"{absorbed.sum() / np.sum(ds.get('green_area')):.2f}; per plant, the most and least absorbed "
           f"{absorbed.max() * 1e4:.1f} and {absorbed.min() * 1e4:.1f} cm²")

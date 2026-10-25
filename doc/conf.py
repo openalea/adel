@@ -25,12 +25,14 @@ extensions = [
     "sphinx.ext.napoleon",  # support for numpy and google style docstrings
     "sphinx_favicon",  # support for favicon
     "nbsphinx",  # for integrating jupyter notebooks
+    "nbsphinx_link",  # for the notebooks outside doc/ (example/notebook)
     "myst_parser",  # for parsing .md files
     "sphinx_copybutton", # copy button in code blocks
 ]
 
 nbsphinx_thumbnails = {
     'example/notebook/QuickStart': '_static/adel.png',
+    'example/notebook/tutorial_shoot_architecture': '_static/adel.png',
 }
 
 

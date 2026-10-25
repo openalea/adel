@@ -17,28 +17,29 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import colormaps
 
-from openalea.adel.comparison.port_run import axis_names, organ_names, port_scene
+from openalea.adel.development import shoot_scene
 from openalea.adel.display import draw
+from openalea.adel.leaf_shapes import LeafShapes
 
 THERMAL_TIME_STEP = 10.
 
 
 def grow(n_steps, shown, tiller_inclination):
     """One plant: its triangles and their axes at the steps *shown*; every step's first internodes' inclinations."""
-    scene = port_scene("echap", n_sect=2, thermal_time_step=THERMAL_TIME_STEP,
-                       parameters=dict(tiller_inclination=tiller_inclination))
+    scene = shoot_scene(leaves=LeafShapes.echap(xy_model="Soissons_byleafclass"), n_sect=2,
+                        thermal_time_step=THERMAL_TIME_STEP, tiller_inclination=tiller_inclination)
     ds = scene.populations[0].data_structure
     architecture = scene.populations[0].instance.architecture
     snapshots, inclinations = {}, []
     for step in range(n_steps + 1):
         scene.run()
-        first_internodes = (organ_names(ds) == "internode") & (np.asarray(ds.get("organ_rank")) == 1)
+        first_internodes = (architecture.organ_names() == "internode") & (np.asarray(ds.get("organ_rank")) == 1)
         axis_of = ds.map_to(np.arange(len(ds.entity_ids("Axis")), dtype=float), "Axis", "Organ", "broadcast")
-        inclination = dict(zip(axis_names(scene)[axis_of[first_internodes].astype(int)],
+        inclination = dict(zip(architecture.axis_names()[axis_of[first_internodes].astype(int)],
                                np.asarray(ds.get("inclination"))[first_internodes]))
         inclinations.append(inclination)
         if step in shown:
-            snapshots[step] = (architecture.triangles(), np.asarray(ds.owner("Axis")).copy(), axis_names(scene))
+            snapshots[step] = (architecture.triangles(), np.asarray(ds.owner("Axis")).copy(), architecture.axis_names())
     return snapshots, inclinations
 
 

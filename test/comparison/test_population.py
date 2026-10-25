@@ -8,7 +8,8 @@ azimuth read in radians); its triangles are compared with that second placement 
 import numpy as np
 import pytest
 
-from openalea.adel.comparison.legacy_run import Planting, legacy_run, turtle_placement
+from openalea.adel.comparison.legacy_run import legacy_run, turtle_placement
+from openalea.adel.development import Planting
 from openalea.adel.comparison.port_run import port_run
 
 from test_geometry import legacy_drawn

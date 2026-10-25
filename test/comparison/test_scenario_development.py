@@ -1,11 +1,12 @@
-"""GivenDevelopment, the harness' scenario as a component, against legacy_run.given_lengths: every axis' phytomer
+"""ScenarioDevelopment (its default timings the harness' scenario) against legacy_run.given_lengths: every axis' phytomer
 number and every organ's lengths and age, at each step, on two plants (one delayed). And the blades' dimensions as
 ShootArchitecture's inputs: a development model's values replace the phytomer table's."""
 import numpy as np
 import pytest
 
-from openalea.adel.comparison.legacy_run import Planting, given_lengths, harness_tables, start
+from openalea.adel.comparison.legacy_run import given_lengths, harness_tables, start
 from openalea.adel.comparison.port_run import axis_names, organ_names, plant_of, port_scene
+from openalea.adel.development import Planting
 
 PLANTS = [Planting(), Planting(x=10., delay=37.)]
 THERMAL_TIME_STEP = 10.

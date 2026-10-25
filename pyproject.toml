@@ -42,6 +42,8 @@ dependencies = [
     "numpy",
     "scipy",
     "pandas",
+    "numba",
+    # openalea.metafspm, for ShootArchitecture: installed by hand (pip install -e ../metafspm) until it is published
 ]
 
 [project.optional-dependencies]
