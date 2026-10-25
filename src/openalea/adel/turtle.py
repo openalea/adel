@@ -10,7 +10,7 @@ context's top), which the visible parts move up:
 - a plant starts at its position, heading up, its up towards -x, rolled by the plant's rotation;
 - a tiller's first element (its axis' first phytomer) starts on the main stem's top when the previous element was
   the main stem's (the main stem's top and the tillers' base saved there); otherwise on the tillers' base; the
-  main stem continues on the main stem's top saved;
+  main stem continues on the main stem's top saved (T1 is visited after the coleoptile: traversal_order);
 - a stem element with an inclination is turned down by it: an axis' first one along its azimuth (an axis' after
   another tiller rolled first by its own azimuth), the others towards the vertical plane first, then rolled back
   into their azimuth plane; a stem element with an azimuth is then rolled by it;
@@ -37,33 +37,52 @@ HIDDEN, STEM, LEAF = 0, 1, 2
 
 
 def traversal_order(g, nodes):
-    """The positions of *nodes* (the elements' vertex ids, in the DataStructure's order) in Adel's traversal: per
+    """(order, frame_source): the positions of *nodes* (the elements' vertex ids, in the DataStructure's order) in
+    Adel's traversal: per
     plant, from its base element (the one without topological parent), depth first, branches before successors (each
-    group in the MPG's children order)."""
+    group in the MPG's children order).
+
+    One change to Adel's: a tiller borne on the main stem's phytomer 1 (T1, in the axil of leaf 1) is visited after
+    that phytomer's sheath and blade, as the last branch of its internode's last element, instead of right after the
+    internode's first element it is branched on. The phytomer's sheath is the coleoptile, whose base is below ground:
+    T1 then starts at its top, where phytomer 2 (and T2) starts, as it appears, oriented as at its branching point:
+    frame_source gives its first element the position of the element it is branched on, whose heading and up it
+    takes (-1 for the others). The MPG keeps T1 on phytomer 1."""
     position = {vid: i for i, vid in enumerate(nodes)}
     edge_type = g.property("edge_type")
     roots = [vid for vid in nodes if g.parent(vid) is None]
+    deferred = {}                                      # an element: the coleoptile tillers visited after its branches
+    for root in roots:
+        tillers = [child for child in g.children(root) if child in position and edge_type.get(child) == "+"]
+        if tillers:
+            deferred[g.components(g.complex(root))[-1]] = tillers
+    moved = {tiller for tillers in deferred.values() for tiller in tillers}
+    frame_source = np.full(len(nodes), -1, dtype=np.int64)
+    for root in roots:
+        for tiller in deferred.get(g.components(g.complex(root))[-1], []):
+            frame_source[position[tiller]] = position[root]
     order = []
     for root in roots:
         stack = [root]
         while stack:
             vid = stack.pop()
             order.append(position[vid])
-            children = [child for child in g.children(vid) if child in position]
-            branches = [child for child in children if edge_type.get(child) != "<"]
+            children = [child for child in g.children(vid) if child in position and child not in moved]
+            branches = [child for child in children if edge_type.get(child) != "<"] + deferred.get(vid, [])
             successors = [child for child in children if edge_type.get(child) == "<"]
             stack.extend(reversed(branches + successors))
-    return np.asarray(order, dtype=np.int64)
+    return np.asarray(order, dtype=np.int64), frame_source
 
 
 @njit(cache=True)
 def interpret(order, kind, plant_base, axis, axis_is_main, tiller_start, plant_position, plant_rotation,
-              axis_azimuth, inclination, azimuth, length, rolled):
+              axis_azimuth, inclination, azimuth, length, rolled, frame_source):
     """Per element: (position, heading, up, end), each (n, 3), by Adel's turtle (above). *order*: traversal_order;
     per element: *kind* (HIDDEN, STEM, LEAF), *plant_base* (its plant's first), *axis* (its axis' index),
     *tiller_start* (on a tiller's first phytomer), its plant's *plant_position* (n, 3) and *plant_rotation* (°), its
     axis' *axis_azimuth* (°), its *inclination* and *azimuth* (°, stem elements), *length*, *rolled* (a blade
-    element's rolled part); per axis: *axis_is_main*."""
+    element's rolled part), *frame_source* (traversal_order's: a deferred tiller's heading and up are that element's);
+    per axis: *axis_is_main*."""
     n = kind.size
     position, heading, up, end = np.zeros((n, 3)), np.zeros((n, 3)), np.zeros((n, 3)), np.zeros((n, 3))
     top = np.zeros((3, 3))                       # rows: position, heading, up
@@ -87,6 +106,8 @@ def interpret(order, kind, plant_base, axis, axis_is_main, tiller_start, plant_p
                 is_axis_first = True
                 if axis_is_main[previous_axis]:
                     main_top[:] = top
+                    if frame_source[i] >= 0:           # at the coleoptile's top, oriented as where it branches
+                        top[1], top[2] = heading[frame_source[i]], up[frame_source[i]]
                     tiller_base[:] = top
                 else:
                     top[:] = tiller_base

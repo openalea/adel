@@ -4,13 +4,14 @@ point and triangles, and the elements' lengths and areas.
 
 The legacy places each plant twice (the turtle, then update_geometry's transform_geom: its position again, its
 azimuth read in radians); its triangles are compared with that second placement undone, and its T1 offset taken off.
+The port starts T1 at the coleoptile's top: the legacy's T1 is moved there (port_run.coleoptile_top).
 """
 import numpy as np
 import pytest
 
 from openalea.adel.comparison.legacy_run import legacy_run, turtle_placement
 from openalea.adel.development import Planting
-from openalea.adel.comparison.port_run import port_run
+from openalea.adel.comparison.port_run import coleoptile_top, port_run
 
 from test_geometry import legacy_drawn
 
@@ -33,9 +34,12 @@ def test_every_plant_as_the_legacy(runs):
             for key, label, element in legacy_drawn(legacy_record, plant=k + 1):
                 values = port_records[k][key]["elements"][label]
                 anchor = np.array(list(legacy_record.props["anchor_point"][element]), dtype=float) * 1e-2
+                top = coleoptile_top(port_records[k])          # the port starts T1 at the coleoptile's top
+                if key[0].startswith("T1"):
+                    anchor += top
                 assert [values["x1"], values["y1"], values["z1"]] == pytest.approx(anchor, abs=1e-12), (k, key, label)
                 assert values["length"] == pytest.approx(legacy_record.props["length"][element] * 1e-2, abs=1e-12)
-                expected = turtle_placement(legacy_record.triangles[element], plant, key[0]) * 1e-2
+                expected = turtle_placement(legacy_record.triangles[element], plant, key[0], top * 1e2) * 1e-2
                 assert values["triangles"].shape == expected.shape, (k, key, label)
                 assert values["triangles"] == pytest.approx(expected, abs=1e-10), (k, key, label)
                 compared[k] += 1

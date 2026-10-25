@@ -654,8 +654,8 @@ class ShootArchitecture(StructuralComponent):
     # --- The placement and the triangles ---
 
     def _traversal(self):
-        """Per node: its position in Adel's traversal (turtle.traversal_order), and whether it is its plant's base;
-        once per topology."""
+        """Per node: its position in Adel's traversal and its frame's source (turtle.traversal_order), and whether it
+        is its plant's base; once per topology."""
         ds = self.data_structure
         key = (ds.topology_version, ds.n_nodes())
         cache = self.__dict__.get("_traversal_cache")
@@ -663,9 +663,9 @@ class ShootArchitecture(StructuralComponent):
             g = ds._mtg
             nodes = ds.entity_ids("node").tolist()
             base = np.array([g.parent(v) is None for v in nodes])
-            cache = (key, traversal_order(g, nodes), base)
+            cache = (key, *traversal_order(g, nodes), base)
             self.__dict__["_traversal_cache"] = cache
-        return cache[1], cache[2]
+        return cache[1], cache[2], cache[3]
 
     @postsegmentation
     def _inclination(self, inclination, organ_azimuth, axis_azimuth, visible_length, organ_rank, haun_stage,
@@ -710,7 +710,7 @@ class ShootArchitecture(StructuralComponent):
         ds = self.data_structure
         g = ds._mtg
         element_kind, organ_kind = self._kinds()
-        order, plant_base = self._traversal()
+        order, frame_source, plant_base = self._traversal()
         organ, axis = np.asarray(ds.owner("Organ")), np.asarray(ds.owner("Axis"))
         plant, phytomer = np.asarray(ds.owner("Plant")), np.asarray(ds.owner("Phytomer"))
         plants = ds.entity_ids("Plant").tolist()
@@ -725,7 +725,7 @@ class ShootArchitecture(StructuralComponent):
             plant_rotation[plant], np.asarray(axis_azimuth, dtype=float)[axis],
             np.where(stem, np.asarray(inclination, dtype=float)[organ], 0.),
             np.where(stem & (organ_kind == 0), np.asarray(organ_azimuth, dtype=float)[organ], 0.),
-            np.asarray(length, dtype=float), np.asarray(rolled_part, dtype=float))
+            np.asarray(length, dtype=float), np.asarray(rolled_part, dtype=float), frame_source)
         return (position[:, 0], "y1", position[:, 1], "z1", position[:, 2], "x2", end[:, 0], "y2", end[:, 1], "z2",
                 end[:, 2], "heading_x", heading[:, 0], "heading_y", heading[:, 1], "heading_z", heading[:, 2],
                 "up_x", up[:, 0], "up_y", up[:, 1], "up_z", up[:, 2])

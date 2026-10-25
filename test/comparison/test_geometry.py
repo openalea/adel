@@ -9,13 +9,14 @@ turtle's rules for an axis' first inclined element and for the others), and the 
 
 Known difference: AdelDyn.update_geometry translates the elements of the axes named T1… by 0.0285 cm up (a fix of
 the first tiller's position) and places the plant a second time (its position and azimuth, the azimuth in radians);
-the port places them once, by the turtle. The triangles are compared with the plant's azimuth 0, the legacy's T1
-offset taken off."""
+the port places them once, by the turtle. The port starts T1 at the coleoptile's top (turtle.traversal_order), where
+the legacy starts it at the plant's base. The triangles are compared with the plant's azimuth 0, the legacy's T1
+offset taken off and its T1 moved to the coleoptile's top (port_run.coleoptile_top)."""
 import numpy as np
 import pytest
 
 from openalea.adel.comparison.legacy_run import T1_OFFSET, legacy_run
-from openalea.adel.comparison.port_run import port_run
+from openalea.adel.comparison.port_run import coleoptile_top, port_run
 
 from test_elements import legacy_elements
 
@@ -60,6 +61,8 @@ def test_the_same_anchor_points(runs):
         for key, label, element in legacy_drawn(legacy_record):
             values = port_record[key]["elements"][label]
             expected = np.array(list(legacy_record.props["anchor_point"][element]), dtype=float) * 1e-2
+            if key[0].startswith("T1"):
+                expected += coleoptile_top(port_record)            # the port starts T1 at the coleoptile's top
             assert [values["x1"], values["y1"], values["z1"]] == pytest.approx(expected, abs=1e-12), (key, label)
             compared += 1
     assert compared > 200
@@ -75,12 +78,12 @@ def test_the_same_triangles(runs, kind):
         for key, label, element in legacy_drawn(legacy_record):
             if not label.startswith(kind):
                 continue
-            expected = legacy_record.triangles[element].copy()
+            expected = legacy_record.triangles[element] * 1e-2
             if key[0].startswith("T1"):
-                expected[..., 2] -= T1_OFFSET
+                expected = expected - T1_OFFSET * 1e-2 * np.array([0., 0., 1.]) + coleoptile_top(port_record)
             triangles = port_record[key]["elements"][label]["triangles"]
             assert triangles.shape == expected.shape, (key, label)
-            assert triangles == pytest.approx(expected * 1e-2, abs=1e-10), (key, label)
+            assert triangles == pytest.approx(expected, abs=1e-10), (key, label)
             compared += 1
     assert compared > 100
 

@@ -35,6 +35,7 @@ import pandas as pd
 
 PHYLLOCHRON = 88.92                                    # °Cd, the legacy's default for the main stem
 T1_OFFSET = 0.0285                                     # cm, AdelDyn.update_geometry's: T1's elements raised by it
+# (the port starts T1 at the coleoptile's top instead: turtle.traversal_order, port_run.coleoptile_top)
 
 
 @dataclass
@@ -183,21 +184,25 @@ def legacy_run(n_steps=40, thermal_time_step=10., leaves="echap", seed=1, record
     return run
 
 
-def turtle_placement(triangles, plant, axis):
+def turtle_placement(triangles, plant, axis, coleoptile_top=None):
     """The legacy's triangles (cm) of a plant's (*plant*: its Planting) element on *axis*, without update_geometry's
     second placement (the plant's position again, its azimuth's degrees read as radians) and T1 offset: as its turtle
-    placed them, ShootArchitecture's placement."""
+    placed them, ShootArchitecture's placement; T1's (and its tillers') moved by *coleoptile_top* (cm, the port's
+    start of T1 at the coleoptile's top, port_run.coleoptile_top)."""
     angle = -plant.azimuth                             # the legacy gives the degrees to an angle in radians
     rotation = np.array([[np.cos(angle), -np.sin(angle), 0.], [np.sin(angle), np.cos(angle), 0.], [0., 0., 1.]])
     out = (triangles - [plant.x, plant.y, 0.]) @ rotation.T
     if axis.startswith("T1"):
         out[..., 2] -= T1_OFFSET
+        if coleoptile_top is not None:
+            out += coleoptile_top
     return out
 
 
-def legacy_canopy(record, plants):
+def legacy_canopy(record, plants, coleoptile_tops=None):
     """(vertices (T, 3, 3) in m, green (T,)) of a Record's elements, placed as the legacy's turtle placed them
-    (turtle_placement; *plants*: the run's [Planting]); green: the element is more green than senesced."""
+    (turtle_placement; *plants*: the run's [Planting]; *coleoptile_tops*: per plant, m, T1 moved there as the port
+    places it); green: the element is more green than senesced."""
     vertices, green = [], []
     is_green = record.props.get("is_green", {})
     for element, triangles in record.triangles.items():
@@ -206,7 +211,8 @@ def legacy_canopy(record, plants):
         axis = record.complex[record.complex[record.complex[element]]]
         plant = record.complex[axis]
         number = int(record.label[plant][len("plant"):])
-        vertices.append(turtle_placement(triangles, plants[number - 1], record.label[axis]) * 1e-2)
+        top = None if coleoptile_tops is None else np.asarray(coleoptile_tops[number - 1]) * 1e2
+        vertices.append(turtle_placement(triangles, plants[number - 1], record.label[axis], top) * 1e-2)
         green.append(np.full(len(triangles), bool(is_green.get(element, True))))
     if not vertices:
         return np.zeros((0, 3, 3)), np.zeros(0, dtype=bool)

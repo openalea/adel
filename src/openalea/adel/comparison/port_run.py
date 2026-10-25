@@ -51,14 +51,15 @@ def leaf_shapes(leaves):
 def port_scene(leaves="samples", time_step=3600, rotation=0., phyllochron=PHYLLOCHRON, n_sect=1, plants=None,
                thermal_time_step=10., model=ScenarioShoot, parameters=None):
     """The scene of the harness' plants (*plants*: [Planting], positions in cm, delays in °Cd; by default one plant at
-    the origin, its rotation *rotation*), every plant on the tables' plant 1, the leaf database fitted once for all;
+    the origin, its rotation *rotation*; sown at z = 0, as the legacy's), every plant on the tables' plant 1, the leaf
+    database fitted once for all;
     each scene.run() is *thermal_time_step* °Cd of the scenario (the first one its start). *model*: the plant model,
     ScenarioShoot or one extending it; *parameters*: other parameters of the plants (e.g. tiller_inclination=1)."""
     axes, phytomers = harness_tables(leaves)
-    return shoot_scene(plants or [Planting(azimuth=rotation)], model=model, time_step=time_step, axes_table=axes,
-                       phytomer_table=phytomers, table_plant=1, leaves=leaf_shapes(leaves), phyllochron=phyllochron,
-                       tiller_phyllochron=phyllochron, n_sect=n_sect, thermal_time_step=thermal_time_step,
-                       **(parameters or {}))
+    return shoot_scene(plants or [Planting(azimuth=rotation)], model=model, time_step=time_step, sowing_depth=0.,
+                       axes_table=axes, phytomer_table=phytomers, table_plant=1, leaves=leaf_shapes(leaves),
+                       phyllochron=phyllochron, tiller_phyllochron=phyllochron, n_sect=n_sect,
+                       thermal_time_step=thermal_time_step, **(parameters or {}))
 
 
 def plant_of(ds, scale):
@@ -150,3 +151,13 @@ def port_run(n_steps=40, thermal_time_step=10., leaves="samples", record_every=1
             run.steps.append(records if plants_given else records[0])
             run.recorded_steps.append(step)
     return run
+
+
+def coleoptile_top(record):
+    """(3,) m: from a plant's base to its coleoptile's top (its main stem's phytomer 2's base), where the port starts
+    T1 and the legacy does not (turtle.traversal_order); zero before phytomer 2. *record*: a structure() record."""
+    base, top = record.get(("MS", 1, "internode")), record.get(("MS", 2, "internode"))
+    if base is None or top is None:
+        return np.zeros(3)
+    point = [[organ["elements"]["HiddenElement"][name] for name in ("x1", "y1", "z1")] for organ in (base, top)]
+    return np.array(point[1]) - np.array(point[0])

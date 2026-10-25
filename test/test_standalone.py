@@ -65,3 +65,19 @@ def test_plants_of_their_own_in_one_population():
     longest = [np.asarray(ds.get("shape_mature_length"))[organ_plant == p].max() for p in range(3)]
     assert longest[1] == pytest.approx(0.25) and longest[2] == pytest.approx(0.25) and longest[0] < 0.2
     assert np.asarray(ds.get("phytomer_number"))[(plant_of_axis == 0)].tolist() == [9]
+
+
+def test_sown_below_the_coleoptile_and_t1_at_its_top():
+    """A plant is sown at 0.9 times its coleoptile's final length (its main stem's rank-1 sheath): its base below
+    ground, the coleoptile's tip above; T1, borne on the main stem's phytomer 1, starts at the coleoptile's top, as
+    T2, and keeps its place in the MPG."""
+    axes, phytomers = sample_tables()
+    coleoptile = phytomers.loc[(phytomers["axe"] == "MS") & (phytomers["n"] == 1), "Gl"].iloc[0] * 0.01
+    ds, architecture = grow(shoot_scene(), 60)
+    assert ds.mtg.property("z")[ds.entity_ids("Plant")[0]] == pytest.approx(-0.9 * coleoptile)
+    names, kind = architecture.axis_names(), architecture._kinds()[0]
+    node_axis, z1 = np.asarray(ds.owner("Axis")), np.asarray(ds.get("z1"))
+    first = {name: z1[np.flatnonzero(node_axis == axis)[0]] for axis, name in enumerate(names)}
+    assert first["MS"] == pytest.approx(-0.9 * coleoptile)
+    assert first["T1"] == pytest.approx(first["T2"]) and first["T1"] > 0.
+    assert np.asarray(ds.get("insertion_rank"))[names == "T1"].tolist() == [1]

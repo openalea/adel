@@ -24,8 +24,10 @@ import numpy as np
 import pandas as pd
 
 from openalea.adel.architecture import SCALES, ShootArchitecture, doc
-from openalea.adel.tables import population_tables
+from openalea.adel.tables import plant_tables, population_tables
 from openalea.metafspm.coupling.component import FunctionalComponent, input_variable, parameter, state_variable
+from openalea.metafspm.coupling.composite_wrapper import CompositeModel
+from openalea.metafspm.coupling.translator import Translator
 from openalea.metafspm.scene.scene import Scene
 from openalea.metafspm.solve.decorator import state
 
@@ -210,15 +212,26 @@ class ScenarioDevelopment(FunctionalComponent):
         return cache[1]
 
 
-class ScenarioShoot:
-    """A plant model: ShootArchitecture grown by ScenarioDevelopment. At each call the development first, then the
-    shoot; when the shoot created phytomers, their lengths given at once and the shoot's elements updated."""
+TRANSLATOR = Translator()
+for _name in ("axis_number", "phytomer_number", "haun_stage", "organ_length", "visible_length",
+              "organ_senesced_length", "age"):
+    TRANSLATOR.link("ShootArchitecture", _name, "ScenarioDevelopment", {_name: 1.})
+for _name in ("axis_row", "organ_rank"):
+    TRANSLATOR.link("ScenarioDevelopment", _name, "ShootArchitecture", {_name: 1.})
+
+
+class ScenarioShoot(CompositeModel):
+    """A plant model: ShootArchitecture grown by ScenarioDevelopment, coupled by TRANSLATOR (the coupling contract:
+    the development's outputs are the shoot's inputs; the shoot's axis rows and organ ranks the development's). At
+    each call the development first, then the shoot; when the shoot created phytomers, their lengths are given at once
+    and the shoot's elements updated."""
     initiators = (ShootArchitecture,)
 
     def __init__(self, data_structure, time_step):
         self.architecture = ShootArchitecture(data_structure=data_structure, time_step=time_step)
         self.development = ScenarioDevelopment(data_structure=data_structure, time_step=time_step)
-        self.components = [self.development, self.architecture]
+        self.declare_data_and_couple_components(translator_path=TRANSLATOR,
+                                                components=(self.development, self.architecture))
 
     def run(self):
         ds = self.architecture.data_structure
@@ -250,17 +263,36 @@ def sown_stand(n_plants, n_rows=4, row_spacing=15., plant_spacing=4., max_delay=
                      delay=random.uniform(0., max_delay)) for k in range(n_plants)]
 
 
-def shoot_scene(plants=None, model=ScenarioShoot, time_step=3600, plant_parameters=None, **parameters):
+def shoot_scene(plants=None, model=ScenarioShoot, time_step=3600, plant_parameters=None, sowing_depth=None,
+                **parameters):
     """A scene of *plants* ([Planting], by default one at the origin), each a *model* (ScenarioShoot or one extending
     it) with *parameters* (its components' parameters, e.g. axes_table, phytomer_table, leaves, n_sect,
     thermal_time_step, tiller_inclination, leaf_number; a plant's delay is its Planting's) and its own
-    *plant_parameters* (one dict per plant, e.g. its leaf_number)."""
+    *plant_parameters* (one dict per plant, e.g. its leaf_number). A plant's z is minus its *sowing_depth* (m,
+    metafspm's planting convention: the shoot starts there, as a root model would); by default, per plant,
+    coleoptile_sowing_depth."""
     plants = plants or [Planting()]
     own = plant_parameters or [{}] * len(plants)
-    table = pd.DataFrame([dict(plant=f"p{k}", model=model, x=plant.x * 0.01, y=plant.y * 0.01, z=0.,
-                               rotation=float(plant.azimuth),
-                               scenario={"parameters": dict(parameters, delay=float(plant.delay), **own[k])})
-                          for k, plant in enumerate(plants)])
+    scenarios = [dict(parameters, delay=float(plant.delay), **own[k]) for k, plant in enumerate(plants)]
+    depths = [coleoptile_sowing_depth(scenario) if sowing_depth is None else float(sowing_depth)
+              for scenario in scenarios]
+    table = pd.DataFrame([dict(plant=f"p{k}", model=model, x=plant.x * 0.01, y=plant.y * 0.01, z=-depth,
+                               rotation=float(plant.azimuth), scenario={"parameters": scenario})
+                          for k, (plant, scenario, depth) in enumerate(zip(plants, scenarios, depths))])
     xs, ys = table["x"].to_numpy(), table["y"].to_numpy()
     table.attrs.update(xrange=max(float(np.ptp(xs)), 0.1), yrange=max(float(np.ptp(ys)), 0.1))
     return Scene(table, time_step=time_step)
+
+
+COLEOPTILE_DEPTH_FRACTION = 0.9
+
+
+def coleoptile_sowing_depth(scenario):
+    """A plant's default sowing depth (m): COLEOPTILE_DEPTH_FRACTION of its coleoptile's final length (its main stem's
+    rank-1 sheath, Gl, in its tables: tables.plant_tables), so that the coleoptile's tip emerges."""
+    defaults = dict(table_plant=ShootArchitecture.table_plant, phyllochron=ShootArchitecture.phyllochron,
+                    length_unit=ShootArchitecture.length_unit)
+    axes, phytomers, number = plant_tables(scenario, defaults)
+    first = phytomers.loc[(phytomers["plant"] == number) & (phytomers["axe"] == "MS") & (phytomers["n"] == 1), "Gl"]
+    unit = float(scenario.get("length_unit", defaults["length_unit"]))
+    return COLEOPTILE_DEPTH_FRACTION * float(first.iloc[0]) * unit if len(first) else 0.
