@@ -29,8 +29,8 @@ The port's lead grows with the number of plants: its steps are vectorised over t
 legacy visits every vertex in Python. For one plant, the port's step (6 ms) is mostly metafspm's cost per step; it
 grows little with the plants.
 
-The tutorial (``example/tutorials/tutorial_shoot_architecture.ipynb``, its section 6) runs the same profile for 1 and
-4 plants. When the tutorial was written, it gave speed-ups of 2.7× (1 plant) and 5.5× (4 plants); its executed
+The developer tutorial (``example/tutorials/developer/01_shoot_architecture_in_metafspm.ipynb``, its section 6)
+runs the same profile for 1 and 4 plants. When the tutorial was written, it gave speed-ups of 2.7× (1 plant) and 5.5× (4 plants); its executed
 version records:
 
 ====== ========= ============================ =========

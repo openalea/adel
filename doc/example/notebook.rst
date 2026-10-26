@@ -1,7 +1,8 @@
-=================
-Notebook Examples
-=================
+============================
+The original Adel's notebook
+============================
+
+The QuickStart notebook runs the original Adel (``openalea.adel.legacy``), with Adel-Wheat's R kinetics.
 
 .. nbgallery::
-    notebook/tutorial_shoot_architecture.nblink
     notebook/QuickStart.ipynb

@@ -74,20 +74,20 @@ class ScenarioDevelopment(FunctionalComponent):
     delay: float = parameter(unit='°Cd', description="The plant's delay: its scenario starts that much later", by=BY,
                              default=0.)
     blade_duration: float = parameter(unit='phyllochron',
-                                      description="The blade's growth, from its metamer's appearance", by=BY,
+                                      description="The blade's growth, from its phytomer's appearance", by=BY,
                                       default=1.6)
     sheath_start: float = parameter(unit='phyllochron',
-                                    description="The sheath's growth start, after its metamer's appearance", by=BY,
+                                    description="The sheath's growth start, after its phytomer's appearance", by=BY,
                                     default=1.)
     sheath_duration: float = parameter(unit='phyllochron', description="The sheath's growth", by=BY, default=1.)
     internode_start: float = parameter(unit='phyllochron',
-                                       description="The internode's growth start, after its metamer's appearance",
+                                       description="The internode's growth start, after its phytomer's appearance",
                                        by=BY, default=2.)
     internode_duration: float = parameter(unit='phyllochron', description="The internode's growth", by=BY, default=1.5)
     internode_visible_fraction: float = parameter(unit='adim', description="The internode's visible fraction", by=BY,
                                                   default=0.5)
     senescence_start: float = parameter(unit='phyllochron',
-                                        description="The blade's senescence start, after its metamer's appearance",
+                                        description="The blade's senescence start, after its phytomer's appearance",
                                         by=BY, default=5.)
     senescence_duration: float = parameter(unit='phyllochron', description="The blade's senescence", by=BY, default=3.)
 

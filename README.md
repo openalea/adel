@@ -25,7 +25,8 @@
 
 OpenAlea.Adel (Architectural model of DEvelopment based on L-systems)
 allows to simulate the 3D architectural development of the shoot of
-gramineaous plant.
+gramineaous plant: where each leaf, sheath and stem piece of a plant is, how long and wide it is, and its shape, as
+the plant grows. Light models then use these 3D plants, for instance to compute the light each leaf intercepts.
 
 ## Content
 
@@ -36,7 +37,66 @@ together with the wheat parameterization model of Abichou et al. (2013)
 and the plastic leaf model of Fournier & Pradal (2012)
 
 
-## ShootArchitecture: Adel's shoots in metafspm
+## Installation
+
+### Users
+
+```bash
+mamba env create -n adel -c openalea3 -c conda-forge openalea.adel 
+``` 
+
+The metafspm port below (`ShootArchitecture`, `openalea.adel.simulation`) and its tutorials need the developers'
+installation until metafspm is published.
+
+### Developers
+
+```bash
+git clone 'https://github.com/openalea/adel.git'
+cd adel
+mamba env create -n adel_dev -f ./conda/environment.yml
+mamba activate adel_dev
+pip install -e ../metafspm                            # ShootArchitecture's framework, until it is published
+```
+
+Tests: `pytest test` (the comparisons with the legacy need PlantGL; plantgen's need R through rpy2).
+
+## Getting started
+
+Grow a wheat plant for 80 days at 15 °C with the default parameters (Adel's sample plant), and look at it:
+
+```python
+from openalea.adel.simulation import simulate
+
+result = simulate(days=80)
+print(result.summary)                         # per day: thermal time, Haun stage, tillers, height, leaf area
+result.draw()                                 # the plant in 3D
+result = simulate({"phyllochron": 100.}, days=80)     # leaves appearing every 100 °Cd
+```
+
+### User tutorials
+
+Step by step, for newcomers to Adel, to plant models or to Python modelling, in `example/tutorials/user/`:
+
+1. [Your first wheat plant](example/tutorials/user/01_first_run.ipynb): run the model, read and plot its results;
+2. [Change a parameter](example/tutorials/user/02_change_a_parameter.ipynb): the parameters, another plant, tillers;
+3. [Combine parameters](example/tutorials/user/03_combine_parameters.ipynb): two parameters together;
+4. [Sensitivity analysis](example/tutorials/user/04_sensitivity_analysis.ipynb): which parameters matter most;
+5. [Experimental data](example/tutorials/user/05_experimental_data.ipynb): measured dimensions and temperature,
+   observations, fitting;
+6. [With other models](example/tutorials/user/06_with_other_models.ipynb): a canopy lit by a light model.
+
+## For developers
+
+### Developer tutorials
+
+In `example/tutorials/developer/`, after the first user tutorial:
+
+0. [Overview](example/tutorials/developer/00_overview.ipynb): the modules, the original Adel, the validation;
+1. [ShootArchitecture in metafspm](example/tutorials/developer/01_shoot_architecture_in_metafspm.ipynb): the
+   component formalism, Adel's tables, a canopy, the tillers, the coupling contract, the comparison and the speed;
+2. [Extend the component](example/tutorials/developer/02_extend_the_component.ipynb): a new variable and process.
+
+### ShootArchitecture: Adel's shoots in metafspm
 
 `openalea.adel.architecture.ShootArchitecture` ports Adel's shoot architecture (its `AdelDyn`, as Wheat-BRIDGES uses
 it) to a [metafspm](https://github.com/openalea/metafspm) `StructuralComponent`. It is R-free and computes its geometry
@@ -80,9 +140,10 @@ triangles = architecture.triangles()                   # every triangle and its 
   colours (`openalea.adel.display.state_colors`).
 
 Examples: `example/canopy.py`, `example/generated_plants.py`, `example/tillers.py`, `example/light_coupling.py` (a
-toy light model coupled through the triangles). The tutorial is `example/tutorials/tutorial_shoot_architecture.ipynb`.
+toy light model coupled through the triangles). The docs' port pages (`doc/port/`) give the declarations, the equations,
+the original's algorithms with every departure from them, and the performance.
 
-### The legacy and the comparisons
+#### The legacy and the comparisons
 
 The code that is not ported (AdelWheat and its R kinetics, the MTG and L-system modules, the visual programming nodes,
 ...) is frozen in `openalea.adel.legacy`; the `wralea` entry point points there. `plantgen` stays at the top level.
@@ -98,23 +159,3 @@ their topology, elements, anchor points and every triangle, on one plant and on 
   places it once, by the turtle;
 - with several elements per blade, the legacy computes their bounds in cm and rounds them; where a bound falls on a
   point of the width profile, the mean widths can differ (in under 20 % of the elements, by under 10 %).
-
-## Installation
-
-### Users
-
-```bash
-mamba env create -n adel -c openalea3 -c conda-forge openalea.adel 
-``` 
-
-### Developers
-
-```bash
-git clone 'https://github.com/openalea/adel.git'
-cd adel
-mamba env create -n adel_dev -f ./conda/environment.yml
-mamba activate adel_dev
-pip install -e ../metafspm                            # ShootArchitecture's framework, until it is published
-```
-
-Tests: `pytest test` (the comparisons with the legacy need PlantGL; plantgen's need R through rpy2).

@@ -33,11 +33,12 @@ extensions = [
 
 nbsphinx_thumbnails = {
     'example/notebook/QuickStart': '_static/adel.png',
-    'example/notebook/tutorial_shoot_architecture': '_static/adel.png',
+    'tutorials/developer/01_shoot_architecture_in_metafspm': '_static/adel.png',
 }
 
 
 # Add any paths that contain templates here, relative to this directory.
+nbsphinx_execute = "never"  # the tutorials are shown with their stored outputs
 templates_path = ["_templates"]
 autosummary_generate = True
 exclude_patterns = ["_build", "_templates"]
