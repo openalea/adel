@@ -119,9 +119,9 @@ The turtle and the meshes
 ``mtg_interpreter`` visits the MTG with openalea.mtg's ``pre_order2_with_filter`` (per plant, depth first, branches
 before successors) and runs ``AdelVisitor`` at each vertex on an ``AdelTurtle``. The visitor keeps a context: the top,
 the main stem's top and the tillers' base. At a plant's base it moves to the plant's position, sets the heading up and
-the up towards −x, rolls by the plant's azimuth. A change of axis to a tiller's first metamer (edge ``+``) saves the
-main stem's top after a main stem element, or returns to the tillers' base after another axis'; any other change
-returns to the main stem's top. A stem element's inclination turns the turtle down (an axis' first one, on a tiller,
+the up towards −x, rolls by the plant's azimuth. A change of axis to a tiller's first metamer (``metamer0``, edge
+``+``) saves the main stem's top after a main stem element, or returns to the tillers' base after another axis'; any
+other change returns to the main stem's top (AD-37). A stem element's inclination turns the turtle down (an axis' first one, on a tiller,
 rolled first by the axis' azimuth), the next ones after ``rollToVert`` and rolled back into their azimuth plane; its
 azimuth rolls it. ``compute_element`` meshes a stem element of length at least ``min_length`` as a slim cylinder, a
 blade element's rolled part as a slim cylinder and its flat part by ``Leaves.mesh`` (``incline_leaf``, x flipped,
@@ -216,6 +216,11 @@ Structure and tables
    * - AD-18
      - cnwgrass' morphogenesis writes the blades' ``shape_mature_length`` and ``shape_max_width``
      - reproduced: both are inputs, the phytomer table's ``Ll`` and ``Lw`` until a model writes them
+   * - AD-53
+     - the harness and cnwgrass add each axis by its name when its first leaf appears (``add_axe``: ``T1.1`` on
+       T1's metamer 1, its bearers added first)
+     - changed: a plant's ``axis_number`` counts its axes emerged, created in its axes table's order: the table must
+       list them in their order of emergence (``emf1``), as Adel's tables do (``test_tiller_of_tiller`` sorts it)
 
 Elements and leaf shapes
 ------------------------
@@ -275,6 +280,11 @@ Elements and leaf shapes
      - the age class of :math:`\text{age}/\varphi - 0.3`, :math:`\varphi` the main stem's phyllochron, and T1's for
        every tiller (``phyllochron.get(axe, phyllochron["T1"])``)
      - reproduced (``phyllochron``, ``tiller_phyllochron``: 88.92 and 91.6 °Cd, the legacy's defaults)
+   * - AD-52
+     - a blade without a shape (``Lindex`` or ``Lseed`` −999: its shape key None) keeps its sectors' lengths and flat
+       parts, with no area, no width and no mesh (``blade_elt_area`` and ``compute_element`` without a key)
+     - reproduced (``shape_class`` or ``shape_seed`` −1; NaN is read as −999 too), compared in
+       ``test_tiller_of_tiller``
 
 Placement
 ---------
@@ -312,11 +322,18 @@ Placement
        rolled parts stack on the stem, which the rule does not count
      - kept: the straightened tillers reach dredT within 10 %, the excess up to 4 %
    * - AD-37
-     - the turtle does not follow the topology: each element starts on the context's top; a tiller after another axis
-       restarts from the tillers' base, which an inclined tiller's first stem element saves after its azimuth roll;
-       any other change of axis returns to the main stem's top saved
-     - reproduced (``turtle.interpret``). For a tiller continued after its own tiller, the main stem's top saved is
-       used, as in the legacy; no compared scenario has tillers of tillers
+     - the turtle does not follow the topology: each element starts on the context's top; a tiller's first metamer
+       (``metamer0``, the only one branched) after another axis restarts from the tillers' base, which an inclined
+       tiller's first stem element saves after its azimuth roll; any other change of axis returns to the main stem's
+       top saved. So a tiller of a tiller (T1.1) starts on the tillers' base, not on its bearer's phytomer, and its
+       bearer continues after it on the main stem's top, not on its own, with its first inclined stem element (when
+       still to come) treated as a next one: it loses its azimuth
+     - reproduced by default (``turtle.interpret``: a tiller start only at the axis' first visit; T1's continuation
+       on the main stem's top saved before its deferred start, AD-33), compared with T1.1 on T1's phytomer 1
+       (``test_tiller_of_tiller``: anchors 1e-12 m, triangles 1e-10 m). Corrected with ``own_axis_top=1``: an axis
+       continues on its own top where the turtle left it (a tiller with its first inclined element still to come),
+       a tiller starts on the top its bearer's element left; T1 is then placed as without T1.1, and a plant without
+       tillers of tillers as by Adel's turtle (tested with the given and static Adel's inclinations)
    * - AD-38
      - ``rollToVert`` with a vertical heading: PlantGL's convention, the left (0, −1, 0)
      - reproduced (metafspm's ``roll_to_vertical``, tested against ``PglTurtle``)
@@ -428,6 +445,10 @@ of organ lengths given at each step on every axis (Adel's sample plant, the main
      - every stem organ's inclination and every axis' azimuths with ``tiller_inclination=1``, against a line by line
        transcription of ``getIncT`` and ``axe_inclination`` (R is not installed in the environment)
      - 1e-9°; dredT reached within 10 % (AD-36)
+   * - ``test_tiller_of_tiller``
+     - a tiller of a tiller (T1.1) and two blades without a shape: the organs, the elements, the anchor points and
+       triangles (vertical, inclined, a plant azimuth of 37°); the correction ``own_axis_top``
+     - as ``test_structure``, ``test_elements`` and ``test_geometry`` (AD-37, AD-52)
    * - ``test_scenario_development``
      - ``ScenarioDevelopment`` against the harness' given lengths, step by step
      - 1e-10

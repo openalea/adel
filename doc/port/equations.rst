@@ -155,7 +155,8 @@ the visible length (Adel's srb and srt; NaN without a flat part):
    \text{flat\_base} = \frac{t_k - f_k - (L - l_v)}{l_v}, \qquad \text{flat\_top} = \frac{t_k - (L - l_v)}{l_v}.
 
 Its ``width`` is the larger of its green and senesced parts' mean widths (``LeafShapes.mean_width``, below), times
-:math:`W`. Sectors are computed only for a blade with a shape class, :math:`L > 0` and :math:`l_v > 10^{-6}`.
+:math:`W`. Sectors are computed for a blade with :math:`L > 0` and :math:`l_v > 10^{-6}`; without a shape class, with no area
+and no width (Adel's, its shape key None), and no mesh.
 
 **The organs' visible areas** (``organ_area``): the sum of the areas of their stem elements (stem organs) or leaf
 elements (blades).
@@ -240,10 +241,15 @@ the tillers' base:
 
 - a plant's base element: the top at the plant's position :math:`(x, y, z)`, :math:`H = (0, 0, 1)`,
   :math:`U = (-1, 0, 0)`, then rollR(rotation); both saved frames set to it;
-- the first element of a tiller's first phytomer: after a main stem element, the main stem's top and the tillers'
-  base are saved as the top (with T1's heading and up from its ``frame_source``); after another axis' element, the
-  top returns to the tillers' base;
-- any other change of axis: the top returns to the main stem's top saved;
+- the first element of a tiller's first phytomer, at the axis' first visit: after a main stem element, the main
+  stem's top and the tillers' base are saved as the top (with T1's heading and up from its ``frame_source``); after
+  another axis' element, the top returns to the tillers' base;
+- any other change of axis: the top returns to the main stem's top saved (a tiller's continuation after its own
+  tiller: the frame saved at the tiller's start, with T1's heading and up from its ``frame_source``, as the legacy
+  saves the main stem's top before the coleoptile);
+- with ``own_axis_top`` 1 (correction AD-37), at a change of axis: an axis visited before returns to its own top
+  where the turtle left it (a tiller with the flag of its first inclined stem element as it left it), a tiller's
+  first element starts on the top its topological parent (its bearer's element) left;
 - a stem element with an inclination :math:`\theta \ne 0`: the axis' first one, on a tiller, is rolled by the axis'
   azimuth (rollR(``axis_azimuth``)), saved as the tillers' base, then turned down(:math:`\theta`); the next ones are
   rolled to the vertical (rollToVert), turned down(:math:`\theta`), then rolled back into their azimuth plane by the

@@ -38,7 +38,9 @@ The elements are placed by Adel's turtle (openalea.adel.turtle), from each plant
 x1, y1, z1, their end x2, y2, z2, and the frame they are drawn in (heading_x…, up_x…), at each step after their
 lengths. triangles() gives their triangles (metafspm's coupling.geometry.Triangles) for light models and display.
 The axes are vertical, as AdelDyn's; with tiller_inclination=1, inclined by static Adel's rules from the axes table
-(incT ramping with the axes' Haun stage, the straightening at dredT, the azimuths azTb and azT: _inclination).
+(incT ramping with the axes' Haun stage, the straightening at dredT, the azimuths azTb and azT: _inclination). The
+turtle is Adel's, which places a tiller of a tiller (T1.1) and its bearer after it from saved frames of other axes
+(AD-37); with own_axis_top=1, each axis continues on its own top and a tiller starts on its bearer's.
 
 The coupling contract, what other models write and read (lengths in m, on the DataStructure):
 
@@ -288,6 +290,12 @@ class ShootArchitecture(StructuralComponent):
                                         description="1: the axes inclined by static Adel's rules (the axes table's "
                                                     "incT, dredT, azTb, azT; Adel.R's getIncT, axe_inclination); 0: "
                                                     "vertical, as AdelDyn", by=BY, default=0)
+    own_axis_top: int = parameter(unit='adim',
+                                  description="1: at a change of axis, the turtle starts on the top the element's "
+                                              "topological parent left: a tiller of a tiller on its bearer's phytomer, "
+                                              "an axis continuing after its own tiller on its own top (correction "
+                                              "AD-37); 0: Adel's turtle, which continues it on the main stem's top",
+                                  by=BY, default=0)
     inclination_start_haun_stage: float = parameter(unit='adim',
                                                     description="The Haun stage from which a tiller's inclination "
                                                                 "ramps (Adel's HSstart_inclination_tiller)", by=BY,
@@ -589,7 +597,7 @@ class ShootArchitecture(StructuralComponent):
         out["area"][shaped] = shapes.relative_area(classes[shaped], (mature[shaped] - l[shaped]) / mature[shaped],
                                                    (mature[shaped] - l_visible[shaped]) / mature[shaped]) * mature[
             shaped] * max_width[shaped]
-        sector = blade & (element_kind == 2) & has_shape & (l_visible > 1e-6)
+        sector = blade & (element_kind == 2) & (mature > 0) & (l_visible > 1e-6)     # without a shape: no area
         if sector.any():
             self._blade_sectors(out, is_green, sector, element_index, l_visible, l_senesced, l_rolled, mature,
                                 max_width, classes, organ, shapes)
@@ -604,7 +612,8 @@ class ShootArchitecture(StructuralComponent):
                        classes, organ, shapes):
         """Each visible blade's sectors (Adel's blade_elements): sector k covers [(k - 1), k] · L / n_sect of the
         mature shape (L its length), its visible part above L - visible length, its senesced part above L -
-        senesced length, its flat part above L - (visible - rolled) length."""
+        senesced length, its flat part above L - (visible - rolled) length. A blade without a shape class has its
+        sectors' lengths and flat parts, no area and no width (Adel's, its shape key None)."""
         k = element_index[sector]
         n_sect = np.bincount(organ[sector], minlength=organ.max() + 1)[organ[sector]]
         L, w = mature[sector], max_width[sector]
@@ -621,9 +630,11 @@ class ShootArchitecture(StructuralComponent):
         base = top - visible_part
         green_top = np.minimum(top, np.maximum(base, limit_senesced))
         green_part, senesced_part = green_top - base, top - green_top
-        c = classes[sector]
-        green_area = np.where(green_part > 0, shapes.relative_area(c, base / L, green_top / L) * L * w, 0.)
-        senesced_area = np.where(senesced_part > 0, shapes.relative_area(c, green_top / L, top / L) * L * w, 0.)
+        shaped = classes[sector] >= 1
+        c = np.where(shaped, classes[sector], 1)
+        green_area = np.where(shaped & (green_part > 0), shapes.relative_area(c, base / L, green_top / L) * L * w, 0.)
+        senesced_area = np.where(shaped & (senesced_part > 0), shapes.relative_area(c, green_top / L, top / L) * L * w,
+                                 0.)
         total = green_area + senesced_area
         flat_part = np.minimum(visible_part, np.maximum(0., top - limit_rolled))
         has_flat = flat_part > 0
@@ -632,8 +643,9 @@ class ShootArchitecture(StructuralComponent):
         with np.errstate(divide="ignore", invalid="ignore"):
             rolled_part = np.where(flat_part < visible_part, visible_part - flat_part, 0.)
             rolled_diameter = np.where(rolled_part > 0, total * rolled_part / visible_part / np.pi / rolled_part, 0.)
-            green_width = np.where(green_part > 0, shapes.mean_width(c, base / L, green_top / L) * w, 0.)
-            senesced_width = np.where(senesced_part > 0, shapes.mean_width(c, green_top / L, top / L) * w, 0.)
+            green_width = np.where(shaped & (green_part > 0), shapes.mean_width(c, base / L, green_top / L) * w, 0.)
+            senesced_width = np.where(shaped & (senesced_part > 0), shapes.mean_width(c, green_top / L, top / L) * w,
+                                      0.)
             mean_width = np.maximum(green_width, senesced_width)
         index = np.flatnonzero(sector)
         visible_any = visible_part > 0
@@ -650,13 +662,16 @@ class ShootArchitecture(StructuralComponent):
     # --- The placement and the triangles ---
 
     def _traversal(self):
-        """Per node: its position in Adel's traversal and its frame's source (turtle.traversal_order), and whether it
-        is its plant's base; once per topology."""
+        """Per node: its position in Adel's traversal and its frame's source (turtle.traversal_order), whether it is
+        its plant's base, and its topological parent's index (-1: none); once per topology."""
         def build():
             ds = self.data_structure
             g = ds.structure
             nodes = ds.entity_ids("node").tolist()
-            return (*traversal_order(g, nodes), np.array([g.parent(v) is None for v in nodes]))
+            index = {vid: i for i, vid in enumerate(nodes)}
+            parents = [g.parent(v) for v in nodes]
+            return (*traversal_order(g, nodes), np.array([parent is None for parent in parents]),
+                    np.array([index.get(parent, -1) for parent in parents], dtype=np.int64))
         return self.cached("traversal", build)
 
     @postsegmentation
@@ -702,7 +717,7 @@ class ShootArchitecture(StructuralComponent):
         ds = self.data_structure
         g = ds.structure
         element_kind, organ_kind = self._kinds()
-        order, frame_source, plant_base = self._traversal()
+        order, frame_source, plant_base, parent = self._traversal()
         organ, axis = np.asarray(ds.owner("Organ")), np.asarray(ds.owner("Axis"))
         plant, phytomer = np.asarray(ds.owner("Plant")), np.asarray(ds.owner("Phytomer"))
         plants = ds.entity_ids("Plant").tolist()
@@ -717,7 +732,8 @@ class ShootArchitecture(StructuralComponent):
             plant_rotation[plant], np.asarray(axis_azimuth, dtype=float)[axis],
             np.where(stem, np.asarray(inclination, dtype=float)[organ], 0.),
             np.where(stem & (organ_kind == 0), np.asarray(organ_azimuth, dtype=float)[organ], 0.),
-            np.asarray(length, dtype=float), np.asarray(rolled_part, dtype=float), frame_source)
+            np.asarray(length, dtype=float), np.asarray(rolled_part, dtype=float), frame_source, parent,
+            (np.asarray(ds.parameter_view("own_axis_top", "Axis")) > 0)[axis])
         return {"x1": position[:, 0], "y1": position[:, 1], "z1": position[:, 2], "x2": end[:, 0], "y2": end[:, 1],
                 "z2": end[:, 2], "heading_x": heading[:, 0], "heading_y": heading[:, 1], "heading_z": heading[:, 2],
                 "up_x": up[:, 0], "up_y": up[:, 1], "up_z": up[:, 2]}
@@ -765,7 +781,8 @@ class ShootArchitecture(StructuralComponent):
         shapes = self._leaf_shapes()
         visible = np.asarray(ds.get("visible_length"))[organ]
         flat_base, flat_top = np.asarray(ds.get("flat_base")), np.asarray(ds.get("flat_top"))
-        meshed = np.flatnonzero(leaf & (visible >= minimum) & np.isfinite(flat_base))
+        shaped = np.asarray(ds.get("shape_class"))[organ] >= 1
+        meshed = np.flatnonzero(leaf & (visible >= minimum) & np.isfinite(flat_base) & shaped)
         if meshed.size == 0 or not shapes.fitted:
             return np.zeros((0, 3, 3)), np.zeros(0, dtype=np.int64)
         blade = organ[meshed]

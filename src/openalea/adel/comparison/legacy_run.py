@@ -146,13 +146,14 @@ def record(g) -> Record:
 
 
 def legacy_run(n_steps=40, thermal_time_step=10., leaves="echap", seed=1, record_every=1, record_states=True,
-               phyllochron=PHYLLOCHRON, plant_azimuth=0., inclinations=None, n_sect=1, plants=None):
+               phyllochron=PHYLLOCHRON, plant_azimuth=0., inclinations=None, n_sect=1, plants=None, tables=None):
     """*n_steps* steps of *thermal_time_step* °Cd of the legacy's dynamic geometry on the given lengths, the plant at
     the origin, its azimuth *plant_azimuth* (°; the legacy draws a random one). *inclinations*: {(axis, rank):
     degrees} of internodes (the legacy's AdelDyn sets none). *n_sect*: the number of elements of a blade. *plants*: a
     stand of several plants ([StandPlant]; then *plant_azimuth* is not used), the same tables for all (AdelDyn's
-    add_metamer reads its phytomer table's first rows whatever the plant)."""
-    axes, phytoT = harness_tables(leaves)
+    add_metamer reads its phytomer table's first rows whatever the plant). *tables*: (axes table, phytomer table)
+    instead of the harness' (harness_tables), e.g. with a tiller of a tiller (T1.1) or a blade without a shape."""
+    axes, phytoT = tables if tables is not None else harness_tables(leaves)
     plants = plants or [StandPlant(azimuth=plant_azimuth)]
     adel = AdelDyn(seed=seed, leaves=leaf_database(leaves), nsect=n_sect, nplants=len(plants))
     adel.positions = [(float(p.x), float(p.y), 0.) for p in plants]

@@ -8,9 +8,13 @@ does not follow the topology itself: each element starts from the frame on top o
 context's top), which the visible parts move up:
 
 - a plant starts at its position, heading up, its up towards -x, rolled by the plant's rotation;
-- a tiller's first element (its axis' first phytomer) starts on the main stem's top when the previous element was
-  the main stem's (the main stem's top and the tillers' base saved there); otherwise on the tillers' base; the
-  main stem continues on the main stem's top saved (T1 is visited after the coleoptile: traversal_order);
+- a tiller's first element (its axis' first phytomer, at the axis' first visit: Adel's metamer0) starts on the main
+  stem's top when the previous element was the main stem's (the main stem's top and the tillers' base saved there);
+  otherwise on the tillers' base; any other change of axis continues on the main stem's top saved: the main stem's
+  (T1 is visited after the coleoptile: traversal_order), and a tiller's after its own tiller, a tiller of a tiller
+  (AD-37); with own_axis_top (the correction), an axis continuing starts on its own top where the turtle left it (a
+  tiller with its first inclined element still to come if it was), and a tiller on the top its topological parent
+  left: a tiller of a tiller on its bearer's phytomer;
 - a stem element with an inclination is turned down by it: an axis' first one along its azimuth (an axis' after
   another tiller rolled first by its own azimuth), the others towards the vertical plane first, then rolled back
   into their azimuth plane; a stem element with an azimuth is then rolled by it;
@@ -76,17 +80,24 @@ def traversal_order(g, nodes):
 
 @njit(cache=True)
 def interpret(order, kind, plant_base, axis, axis_is_main, tiller_start, plant_position, plant_rotation,
-              axis_azimuth, inclination, azimuth, length, rolled, frame_source):
+              axis_azimuth, inclination, azimuth, length, rolled, frame_source, parent, own_axis_top):
     """Per element: (position, heading, up, end), each (n, 3), by Adel's turtle (above). *order*: traversal_order;
     per element: *kind* (HIDDEN, STEM, LEAF), *plant_base* (its plant's first), *axis* (its axis' index),
     *tiller_start* (on a tiller's first phytomer), its plant's *plant_position* (n, 3) and *plant_rotation* (°), its
     axis' *axis_azimuth* (°), its *inclination* and *azimuth* (°, stem elements), *length*, *rolled* (a blade
-    element's rolled part), *frame_source* (traversal_order's: a deferred tiller's heading and up are that element's);
-    per axis: *axis_is_main*."""
+    element's rolled part), *frame_source* (traversal_order's: a deferred tiller's heading and up are that element's),
+    *parent* (its topological parent's position, -1 for none), *own_axis_top* (its plant's correction AD-37: at a
+    change of axis, an axis continuing on its own top, a tiller on the top its parent left); per axis:
+    *axis_is_main*."""
     n = kind.size
     position, heading, up, end = np.zeros((n, 3)), np.zeros((n, 3)), np.zeros((n, 3)), np.zeros((n, 3))
+    left_top = np.zeros((n, 3, 3))               # per element: the top it left
     top = np.zeros((3, 3))                       # rows: position, heading, up
     main_top, tiller_base = np.zeros((3, 3)), np.zeros((3, 3))
+    tiller_continuation = np.zeros((3, 3))       # the legacy's main stem's top saved for a tiller after its tiller
+    entered = np.zeros(axis_is_main.size, dtype=np.bool_)
+    left_axis_top = np.zeros((axis_is_main.size, 3, 3))           # per axis: the top when the turtle left it
+    left_first = np.zeros(axis_is_main.size, dtype=np.bool_)      # and is_axis_first
     is_axis_first = True
     previous_axis = -1
     for i in order:
@@ -100,19 +111,31 @@ def interpret(order, kind, plant_base, axis, axis_is_main, tiller_start, plant_p
             roll_right(top[1], top[2], plant_rotation[i])
             main_top[:] = top
             tiller_base[:] = top
+            tiller_continuation[:] = top
             is_axis_first = True
         if a != previous_axis:
-            if tiller_start[i]:
+            left_axis_top[previous_axis], left_first[previous_axis] = top, is_axis_first
+            if tiller_start[i] and not entered[a]:     # the legacy's metamer0: a tiller's first visit only
                 is_axis_first = True
                 if axis_is_main[previous_axis]:
                     main_top[:] = top
                     if frame_source[i] >= 0:           # at the coleoptile's top, oriented as where it branches
                         top[1], top[2] = heading[frame_source[i]], up[frame_source[i]]
                     tiller_base[:] = top
+                    tiller_continuation[:] = top           # main_top but for a deferred tiller's orientation
                 else:
                     top[:] = tiller_base
-            else:
+            elif axis_is_main[a]:
                 top[:] = main_top
+            else:
+                top[:] = tiller_continuation
+            if own_axis_top[i] and entered[a]:                  # an axis continuing: as the turtle left it
+                top[:] = left_axis_top[a]
+                if not axis_is_main[a]:
+                    is_axis_first = left_first[a]
+            elif own_axis_top[i] and parent[i] >= 0 and frame_source[i] < 0:     # a tiller: on its bearer's top
+                top[:] = left_top[parent[i]]
+        entered[a] = True
         p, h, u = top[0].copy(), top[1].copy(), top[2].copy()
         if kind[i] == STEM:
             if inclination[i] != 0.:
@@ -145,6 +168,7 @@ def interpret(order, kind, plant_base, axis, axis_is_main, tiller_start, plant_p
                 p = p + h * rolled[i]
                 top[0], top[1], top[2] = p, h, u
         end[i] = p
+        left_top[i] = top
         previous_axis = a
     return position, heading, up, end
 

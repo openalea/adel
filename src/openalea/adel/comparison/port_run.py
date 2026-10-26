@@ -38,13 +38,14 @@ def leaf_shapes(leaves):
 
 
 def port_scene(leaves="samples", time_step=3600, rotation=0., phyllochron=PHYLLOCHRON, n_sect=1, plants=None,
-               thermal_time_step=10., model=ScenarioShoot, parameters=None):
+               thermal_time_step=10., model=ScenarioShoot, parameters=None, tables=None):
     """The scene of the harness' plants (*plants*: [StandPlant], positions in cm, delays in °Cd; by default one plant
     at the origin, its rotation *rotation*; sown at z = 0, as the legacy's), every plant on the tables' plant 1, the
     leaf database fitted once for all; each scene.run() is *thermal_time_step* °Cd of the scenario (the first one its
     start). *model*: the plant model,
-    ScenarioShoot or one extending it; *parameters*: other parameters of the plants (e.g. tiller_inclination=1)."""
-    axes, phytomers = harness_tables(leaves)
+    ScenarioShoot or one extending it; *parameters*: other parameters of the plants (e.g. tiller_inclination=1);
+    *tables*: (axes table, phytomer table) instead of the harness' (legacy_run's)."""
+    axes, phytomers = tables if tables is not None else harness_tables(leaves)
     plants = plants or [StandPlant(azimuth=rotation)]
     return shoot_scene([Planting(x=plant.x * 0.01, y=plant.y * 0.01, rotation=plant.azimuth) for plant in plants],
                        delays=[plant.delay for plant in plants], model=model, time_step=time_step, sowing_depth=0.,
@@ -124,13 +125,13 @@ def structure(scene, plant=0):
 
 
 def port_run(n_steps=40, thermal_time_step=10., leaves="samples", record_every=1, phyllochron=PHYLLOCHRON,
-             plant_azimuth=0., inclinations=None, n_sect=1, plants=None):
+             plant_azimuth=0., inclinations=None, n_sect=1, plants=None, tables=None, parameters=None):
     """The legacy harness' run (legacy_run's options) on ShootArchitecture; with *plants*, run.steps[i] is a list of
-    the plants' structure records."""
+    the plants' structure records. *parameters*: port_scene's (the port's options, e.g. its corrections)."""
     plants_given = plants
     plants = plants or [StandPlant(azimuth=plant_azimuth)]
     scene = port_scene(leaves, phyllochron=phyllochron, n_sect=n_sect, plants=plants,
-                       thermal_time_step=thermal_time_step)
+                       thermal_time_step=thermal_time_step, tables=tables, parameters=parameters)
     run = PortRun(scene=scene)
     for step in range(n_steps + 1):
         scene.run()
