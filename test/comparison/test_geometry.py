@@ -94,6 +94,6 @@ def test_the_mesh_cache_changes_nothing():
     run = port_run(n_steps=60, leaves="echap", record_every=1, n_sect=4, inclinations=INCLINATIONS)
     architecture = run.scene.populations[0].instance.architecture
     cached = architecture.triangles()
-    architecture.__dict__.pop("_blade_mesh_cache")
+    architecture.keep("blade_meshes", {}, saved=False)                 # the cache emptied
     fresh = architecture.triangles()
     assert np.array_equal(cached.owner, fresh.owner) and np.array_equal(cached.vertices, fresh.vertices)

@@ -27,6 +27,7 @@ extensions = [
     "nbsphinx",  # for integrating jupyter notebooks
     "nbsphinx_link",  # for the notebooks outside doc/ (example/notebook)
     "myst_parser",  # for parsing .md files
+    "openalea.metafspm.sphinx",  # metafspm components rendered from their declarations
     "sphinx_copybutton", # copy button in code blocks
 ]
 

@@ -200,10 +200,9 @@ class ScenarioDevelopment(FunctionalComponent):
     def _organ_kinds(self):
         """Per Organ: 0 internode, 1 sheath, 2 blade (from the MPG's labels), once per topology."""
         def build():
-            g = self.data_structure.structure
-            kinds = {getattr(g.labels.Organ, name): k for k, name in enumerate(ORGAN_KINDS)}
-            return np.array([kinds.get(g.label(int(v)), -1) for v in self.data_structure.entity_ids("Organ")],
-                            dtype=int)
+            kinds = {name: k for k, name in enumerate(ORGAN_KINDS)}
+            return np.array([kinds.get(label, -1) for label in
+                             self.data_structure.labels(of="Organ", per_node=False).tolist()], dtype=int)
         return self.cached("organ_kinds", build)
 
 

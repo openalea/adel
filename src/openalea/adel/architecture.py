@@ -64,7 +64,7 @@ import numpy as np
 import pandas as pd
 
 from openalea.metafspm.coupling.component import (NewComplexes, NewNodes, StructuralComponent, input_variable,
-                                                   parameter, state_variable)
+                                                   parameter, setting, state_variable)
 from openalea.metafspm.coupling.geometry import Triangles, place, slim_cylinders
 from openalea.metafspm.data_structure.configs import PropsConfig, ScalesConfig
 from openalea.metafspm.solve.decorator import postsegmentation, segmentation
@@ -277,15 +277,13 @@ class ShootArchitecture(StructuralComponent):
                                                    "Ll, Lw, Gl, Gd, El, Ed, Azim, Lindex, Lseed)", by=BY, default=None)
     table_plant: int = parameter(unit='adim', description="The plant's number in the tables (their column 'plant')",
                                  by=BY, default=1)
-    n_sect: int = parameter(unit='adim', description="The number of elements of a blade", by=BY, default=1)
+    n_sect: int = setting(unit='adim', description="The number of elements of a blade", default=1)
     length_unit: float = parameter(unit='m', description="The tables' length unit in m (Adel's cm: 0.01)", by=BY,
                                    default=0.01)
-    leaves: object = parameter(unit='', description="The leaf shape database (LeafShapes; None: Adel's samples)", by=BY,
-                               default=None)
-    min_length: float = parameter(unit='m',
-                                  description="The shortest element drawn (Adel's min_length, 0.01 cm); a blade's "
-                                              "triangles smaller than its square / 100 are left out", by=BY,
-                                  default=1e-4)
+    leaves: object = setting(description="The leaf shape database (LeafShapes; None: Adel's samples)", default=None)
+    min_length: float = setting(unit='m',
+                                description="The shortest element drawn (Adel's min_length, 0.01 cm); a blade's "
+                                            "triangles smaller than its square / 100 are left out", default=1e-4)
     tiller_inclination: int = parameter(unit='adim',
                                         description="1: the axes inclined by static Adel's rules (the axes table's "
                                                     "incT, dredT, azTb, azT; Adel.R's getIncT, axe_inclination); 0: "
@@ -496,7 +494,7 @@ class ShootArchitecture(StructuralComponent):
         target = np.floor(np.asarray(phytomer_number, dtype=float)).astype(int)
         axes = np.asarray(ds.entity_ids("Axis"))
         axis_of = {(g.complex(int(axis)), int(row)): int(axis) for axis, row in zip(axes, axis_row)}
-        batch = _Batch(g.labels, int(self.parameter_value("n_sect")))
+        batch = _Batch(g.labels, int(self.n_sect))
 
         # New axes, with their first phytomer
         plants = np.asarray(ds.entity_ids("Plant"))
@@ -530,17 +528,13 @@ class ShootArchitecture(StructuralComponent):
 
     def _kinds(self):
         """Per node: its element kind (0 hidden, 1 stem, 2 leaf) and its organ's (0 internode, 1 sheath, 2 blade),
-        read from the MPG's labels once per topology."""
+        from the MPG's labels (ds.labels), once per topology."""
         def build():
             ds = self.data_structure
-            g = ds.structure
-            labels = g.labels
-            element = {labels.SubOrgan.HiddenElement: 0, labels.SubOrgan.StemElement: 1,
-                       labels.SubOrgan.LeafElement: 2}
-            organ = {labels.Organ.StemInternode: 0, labels.Organ.Sheath: 1, labels.Organ.Blade: 2}
-            nodes = ds.entity_ids("node").tolist()
-            return (np.array([element.get(g.label(v), -1) for v in nodes]),
-                    np.array([organ.get(g.label(g.complex(v)), -1) for v in nodes]))
+            element = {"HiddenElement": 0, "StemElement": 1, "LeafElement": 2}
+            organ = {"StemInternode": 0, "Sheath": 1, "Blade": 2}
+            return (np.array([element.get(label, -1) for label in ds.labels().tolist()]),
+                    np.array([organ.get(label, -1) for label in ds.labels(of="Organ").tolist()]))
         return self.cached("kinds", build)
 
     def _leaf_shapes(self):
@@ -742,7 +736,7 @@ class ShootArchitecture(StructuralComponent):
         element_kind, _ = self._kinds()
         organ = np.asarray(ds.owner("Organ"))
         length, rolled = np.asarray(ds.get("length")), np.asarray(ds.get("rolled_part"))
-        minimum = self.parameter_value("min_length")
+        minimum = self.min_length
         selected = np.ones(length.size, dtype=bool) if where is None else np.asarray(where, dtype=bool)
         leaf = selected & (element_kind == 2) & (length > 0)
         stem = selected & (element_kind == 1) & (length > 0) & (length >= minimum)
@@ -785,7 +779,7 @@ class ShootArchitecture(StructuralComponent):
         blade_inclination = np.asarray(ds.get("inclination"))
         min_area = minimum ** 2 / 100.
         vertex_ids = ds.entity_ids("node")
-        previous = self.__dict__.get("_blade_mesh_cache", {})
+        previous = self.kept("blade_meshes", {})
         cache = {}
         parts, owners = [], []
         for node, organ_index, shape_index in zip(meshed.tolist(), blade.tolist(), shape.tolist()):
@@ -805,7 +799,7 @@ class ShootArchitecture(StructuralComponent):
             cache[vertex] = (made_from, triangles)
             parts.append(triangles)
             owners.append(np.full(len(triangles), node, dtype=np.int64))
-        self.__dict__["_blade_mesh_cache"] = cache
+        self.keep("blade_meshes", cache, saved=False)       # rebuilt when missing: not checkpointed
         if not parts:
             return np.zeros((0, 3, 3)), np.zeros(0, dtype=np.int64)
         return np.concatenate(parts), np.concatenate(owners)

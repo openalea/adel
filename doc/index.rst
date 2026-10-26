@@ -27,6 +27,7 @@ Documentation
 
     ./installation.rst
     User Guide<user/index.rst>
+    ShootArchitecture, the metafspm port<port/index.rst>
     Notebook example<example/notebook.rst>
     Reference Guide<user/autosum.rst>
     ./references.rst
@@ -47,7 +48,8 @@ Authors
 ChangeLog
 =========
 
-.. include:: ../ChangeLog.txt
+.. include:: ../CHANGELOG.md
+   :parser: myst_parser.sphinx_
 
 License
 =======
