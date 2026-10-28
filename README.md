@@ -51,7 +51,8 @@ installation until metafspm is published.
 ### Developers
 
 ```bash
-git clone 'https://github.com/openalea/adel.git'
+git clone -b data_structure_api https://github.com/openalea/metafspm.git metafspm
+git clone -b to_metafspm https://github.com/openalea/adel.git adel
 cd adel
 mamba env create -n adel_dev -f ./conda/environment.yml
 mamba activate adel_dev
