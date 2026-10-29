@@ -23,6 +23,7 @@ dependencies:
   - scipy
   - pandas
   - pytest
+  - jsonschema                    # openalea.fspm_tf's (metafspm's fspm-TF exchange)
   - pip
   # let pip install the rest using pyproject.toml (if you are okay with conda/pip mix)
   - pip:

@@ -97,3 +97,6 @@ doc/_dvlpt/
 .DS_Store
 
 /dev*.md
+
+# the examples' outputs
+example/**/outputs/
