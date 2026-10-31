@@ -51,7 +51,7 @@ def test_plants_of_their_own_in_one_population():
     plants = [Planting(), Planting(x=0.15), Planting(x=0.3)]
     own = [dict(leaf_number=9, tiller_number=0), dict(leaf_number=12, tiller_number=2, longest_blade_length=0.25),
            dict(leaf_number=12, tiller_number=2, longest_blade_length=0.25)]
-    scene = shoot_scene(plants, plant_parameters=own, phyllochron=100.)
+    scene = shoot_scene(plants, plant_scenarios=own, phyllochron=100.)
     ds, architecture = grow(scene, 150)
     axes, phytomers, numbers, offsets = architecture.tables()
     assert len(set(numbers.tolist())) == 2 and len(axes) == 1 + 3          # the same scalars, the same tables

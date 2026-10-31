@@ -11,6 +11,8 @@ Adel's wheat shoots for users: a plant grown in a few lines, its results as tabl
     parameters()                                  the parameters: their value, unit and description
     simulate({"phyllochron": 100.}, days=80)      leaves appearing every 100 °Cd
     simulate(days=80, temperature=series)         a measured air temperature (°C), by day
+    simulate(days=80, outputs="outputs")          the run's files too: run.json, scenario.json, summary.csv, the
+                                                  plants' summaries (Plant/), a frame of the plants every 10 days
     tables_from_measurements(dimensions)          Adel's tables from a main stem's measured dimensions
 
 The plant grows one step per day; its development follows the thermal time, the sum of the days' temperatures above
@@ -21,6 +23,10 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
+
+from openalea.metafspm.coupling.forcings import as_forcing, forcing_value
+from openalea.metafspm.scene.recorder import SceneRecorder
+from openalea.metafspm.scene.scenarios import parameter_table
 
 from openalea.adel.architecture import ShootArchitecture
 from openalea.adel.development import ScenarioDevelopment, ScenarioShoot, random_delays, shoot_scene, sown_stand
@@ -38,21 +44,10 @@ MAIN_PARAMETERS = ("leaf_number", "tiller_number", "longest_blade_length", "long
 def parameters(values: dict = None, main_only: bool = False) -> pd.DataFrame:
     """The parameters of the plant model (ShootArchitecture's and ScenarioDevelopment's), one row each: its name, its
     value (the default, or the one in *values*), its unit, its description, its component, and whether it is one of
-    the main ones (those first). A name both components declare (phyllochron) takes one value for both."""
-    tables = []
-    for component in (ShootArchitecture, ScenarioDevelopment):
-        declarations = component.declarations()
-        table = declarations[declarations["kind"].isin(("parameter", "setting"))][["name", "default", "unit",
-                                                                                     "description"]]
-        tables.append(table.assign(component=component.__name__))
-    table = pd.concat(tables).drop_duplicates("name", keep="last").rename(columns={"default": "value"})
-    table = table[table["name"] != "thermal_time_step"].reset_index(drop=True)      # simulate gives it each day
-    for name, value in (values or {}).items():
-        table.loc[table["name"] == name, "value"] = value
-    table["main"] = table["name"].isin(MAIN_PARAMETERS)
-    order = {name: rank for rank, name in enumerate(MAIN_PARAMETERS)}
-    table = table.assign(rank=table["name"].map(order).fillna(len(order))).sort_values("rank", kind="stable")
-    table = table.drop(columns="rank").reset_index(drop=True)
+    the main ones (those first), and its bounds (min_value, max_value). A name both components declare (phyllochron)
+    takes one value for both."""
+    table = parameter_table(ShootArchitecture, ScenarioDevelopment, values=values, main=MAIN_PARAMETERS,
+                            exclude=("thermal_time_step",))                  # simulate gives it each day
     return table[table["main"]].reset_index(drop=True) if main_only else table
 
 
@@ -73,17 +68,31 @@ def tables_from_measurements(dimensions: pd.DataFrame, tiller_number: int = 4, p
     return {"axes_table": axes.copy(), "phytomer_table": with_tillers(axes, main)}
 
 
-def _value_at(value, day: float) -> float:
-    """A given input at *day*: a number; a function of the day; a pandas Series indexed by day, or a sequence (one
-    value per day from day 0), linearly interpolated."""
-    if callable(value):
-        return float(value(day))
-    if isinstance(value, pd.Series):
-        return float(np.interp(day, value.index.to_numpy(dtype=float), value.to_numpy(dtype=float)))
-    if np.ndim(value) > 0:
-        values = np.asarray(value, dtype=float)
-        return float(np.interp(day, np.arange(values.size), values))
-    return float(value)
+class _DegreeDays:
+    """The thermal time of the step at the scene time (°Cd): the day before's temperature above the base temperature
+    (none at day 0, whose step sets the thermal time to its start). Picklable."""
+
+    def __init__(self, temperature, base_temperature: float):
+        self.temperature, self.base_temperature = as_forcing(temperature, time_unit=DAY), base_temperature
+
+    def __call__(self, time: float) -> float:
+        if time < DAY:
+            return 0.
+        return max(0., forcing_value(self.temperature, time - DAY) - self.base_temperature)
+
+
+class _Summary:
+    """The summary row of the day just grown (the scene's iteration - 1), every *every* days and on the last day."""
+
+    def __init__(self, every: int, last_day: int):
+        self.every, self.last_day = every, last_day
+
+    def __call__(self, scene):
+        day = scene.iteration - 1
+        if day < 0 or not (day % self.every == 0 or day == self.last_day):
+            return None
+        population = scene.populations[0]
+        return _summary_row(float(day), population.data_structure, population.instance.architecture)
 
 
 @dataclass
@@ -170,7 +179,7 @@ def _summary_row(day: float, ds, architecture) -> dict:
 
 
 def simulate(parameters: dict = None, days: float = 80, temperature=15., base_temperature: float = 0.,
-             plants: int = 1, every: int = 1, seed: int = 0, model=ScenarioShoot) -> Simulation:
+             plants: int = 1, every: int = 1, seed: int = 0, model=ScenarioShoot, outputs: str = None) -> Simulation:
     """Grow *plants* wheat plants (one by default; several: a stand sown in rows, with random development delays of up
     to 60 °Cd) for *days* days, one step per day, from the plant model's default parameters (Adel's sample plant)
     changed by *parameters* ({name: value}; see parameters()). The summary is recorded every *every* days.
@@ -178,22 +187,21 @@ def simulate(parameters: dict = None, days: float = 80, temperature=15., base_te
     *temperature* (°C; 15 by default) is the daily mean temperature: a number, a function of the day, or a pandas
     Series indexed by day. Each day adds its temperature above *base_temperature* (°C) to the thermal time (°Cd),
     which drives the development; the thermal time starts at 0 at day 0 (the sowing). *model*: the plant model,
-    ScenarioShoot or one extending it (with more components, e.g. a light model)."""
+    ScenarioShoot or one extending it (with more components, e.g. a light model).
+
+    *outputs*: a folder for the run's files (metafspm's SceneRecorder): run.json, scenario.json, summary.csv (the
+    summary), Plant/<model>/summaries.csv (every variable per plant, every day) and a frame of the plants every 10
+    days (frames/, for ParaView or another platform)."""
     values = dict(parameters or {})
     values.setdefault("start", 0.)
+    recorder = SceneRecorder(outputs, summaries=outputs is not None,
+                             tables={"summary": _Summary(int(every), int(days))},
+                             frame_period=10 if outputs is not None else None)
+    forcings = {"thermal_time_step": _DegreeDays(temperature, base_temperature)}
     if plants == 1:
-        built = shoot_scene(model=model, time_step=DAY, **values)
+        built = shoot_scene(model=model, time_step=DAY, forcings=forcings, recorder=recorder, **values)
     else:
         built = shoot_scene(sown_stand(plants, seed=seed), model=model, time_step=DAY,
-                            delays=random_delays(plants, seed=seed), **values)
-    ds, architecture = built.populations[0].data_structure, built.populations[0].instance.architecture
-    n_plants = len(ds.entity_ids("Plant"))
-    built.run()                                        # day 0: the thermal time set to its start
-    rows = [_summary_row(0., ds, architecture)]
-    for day in range(1, int(days) + 1):
-        degrees = max(0., _value_at(temperature, day - 1) - base_temperature)
-        ds.set("thermal_time_step", np.full(n_plants, degrees))
-        built.run()
-        if day % every == 0 or day == int(days):
-            rows.append(_summary_row(float(day), ds, architecture))
-    return Simulation(scene=built, summary=pd.DataFrame(rows), parameters=dict(parameters or {}))
+                            delays=random_delays(plants, seed=seed), forcings=forcings, recorder=recorder, **values)
+    built.simulate(int(days) + 1)                      # day 0's step sets the thermal time to its start
+    return Simulation(scene=built, summary=recorder.table("summary"), parameters=dict(parameters or {}))

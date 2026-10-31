@@ -18,10 +18,8 @@ play the days; import_frames.py reads the files back.
 import argparse
 import os
 
-import numpy as np
-
 from openalea.fspm_tf.validate import validate_sequence
-from openalea.metafspm.scene.scene import SceneRecorder
+from openalea.metafspm.scene.recorder import SceneRecorder
 
 from openalea.adel.development import ScenarioShoot, random_delays, shoot_scene, sown_stand
 from openalea.adel.simulation import DAY
@@ -37,16 +35,12 @@ def export(days: int = 80, plants: int = 3, temperature: float = 15., outputs: s
            frame_options: dict = None) -> str:
     """Grow a stand of *plants* plants for *days* days at *temperature* °C, a frame every FRAME_PERIOD days (filtered
     by *frame_options*, e.g. LOG); the sequence's index path."""
+    recorder = SceneRecorder(outputs, summaries=False, frame_period=FRAME_PERIOD,   # the scene's frames only
+                             frame_options=frame_options)
     built = shoot_scene(sown_stand(plants, seed=0), model=ScenarioShoot, time_step=DAY,
-                        delays=random_delays(plants, seed=0), start=0.)
-    built.recorder = SceneRecorder(outputs, frame_period=FRAME_PERIOD,  # the scene's outputs, with its frames
-                                   frame_options=frame_options)
-    ds = built.populations[0].data_structure
-    n_plants = len(ds.entity_ids("Plant"))
-    built.run()                                                         # day 0: the thermal time set to its start
-    for _ in range(days):
-        ds.set("thermal_time_step", np.full(n_plants, temperature))     # °Cd per day, above a base of 0 °C
-        built.run()
+                        delays=random_delays(plants, seed=0), start=0., recorder=recorder,
+                        forcings={"thermal_time_step": temperature})      # °Cd per day, above a base of 0 °C
+    built.simulate(days + 1)                                             # day 0: the thermal time set to its start
     return os.path.join(outputs, "frames", "scene.fspm.json")
 
 

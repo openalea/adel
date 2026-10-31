@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from openalea.adel.development import shoot_scene
-from openalea.adel.simulation import MAIN_PARAMETERS, _value_at, parameters, simulate
+from openalea.adel.simulation import MAIN_PARAMETERS, parameters, simulate
 
 DAYS = 40
 
@@ -68,8 +68,3 @@ def test_draw(default):
     default.draw(color_by="area")
 
 
-def test_values_at_a_day():
-    assert _value_at(3., 1.5) == 3.
-    assert _value_at([0., 10., 20.], 1.5) == 15.
-    assert _value_at(pd.Series([0., 4.], index=[0., 2.]), 0.5) == 1.
-    assert _value_at(lambda day: 2 * day, 1.5) == 3.

@@ -23,7 +23,7 @@ OWN = [dict(leaf_number=9, tiller_number=1, longest_blade_length=0.12, longest_b
 
 if __name__ == "__main__":
     n_steps = int(sys.argv[1]) if len(sys.argv) > 1 else 90
-    scene = shoot_scene(PLANTS, plant_parameters=OWN, phyllochron=100., n_sect=2, tiller_inclination=1)
+    scene = shoot_scene(PLANTS, plant_scenarios=OWN, phyllochron=100., n_sect=2, tiller_inclination=1)
     for _ in range(n_steps + 1):
         scene.run()
     ds = scene.populations[0].data_structure

@@ -3,15 +3,13 @@ Adel's shoot architecture as a metafspm StructuralComponent: the plants' topolog
 elements), the organs' dimensions and shapes, their elements, and their geometry for light models and display. The
 organs' lengths are given by other models (development, senescence), as cnwgrass gives them to Adel's AdelDyn.
 
-    table = pd.DataFrame([dict(plant="p0", model=MyModel, x=0., y=0., z=0., rotation=0.,
-                               scenario={"parameters": {"axes_table": axeT, "phytomer_table": phytoT,
-                                                        "table_plant": 1}})])
+    table = planting([Planting()], MyModel, {"axes_table": axeT, "phytomer_table": phytoT, "table_plant": 1})
 
 with MyModel.initiators = (ShootArchitecture,). Without tables, a plant is generated from a few scalars when any is
 given (its parameters leaf_number, tiller_number, longest_blade_length, longest_blade_width), else it is Adel's sample
 plant (openalea.adel.tables):
 
-    scenario={"parameters": {"leaf_number": 11, "tiller_number": 2, "longest_blade_length": 0.2}}
+    scenario={"leaf_number": 11, "tiller_number": 2, "longest_blade_length": 0.2}
 
 The plant's structure, in the MPG:
 
