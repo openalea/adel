@@ -41,29 +41,29 @@ class ScenarioDevelopment(FunctionalComponent):
 
     # --- Read from ShootArchitecture ---
     axis_row: int = input_variable(unit='adim', description="The axis' row in the population's axes table",
-                                   by='model_shoot_architecture', initialize=-1, scale=SCALES.Axis, dtype='int')
+                                   by='model_shoot_architecture', default=-1, scale=SCALES.Axis, dtype='int')
     organ_rank: int = input_variable(unit='adim', description="The organ's phytomer rank",
-                                     by='model_shoot_architecture', initialize=0, scale=SCALES.Organ, dtype='int')
+                                     by='model_shoot_architecture', default=0, scale=SCALES.Organ, dtype='int')
 
     # --- Written to ShootArchitecture ---
     thermal_time: float = state_variable(unit='°Cd', description="The plant's thermal time in the scenario",
-                                         value_comment="NaN: not started", state_variable_type="intensive",
-                                         initialize=np.nan, scale=SCALES.Plant)
+                                         value_comment="NaN: not started", kind="intensive",
+                                         default=np.nan, scale=SCALES.Plant)
     axis_number: float = state_variable(unit='adim', description="The number of the plant's axes emerged",
-                                        state_variable_type="descriptor", initialize=1., scale=SCALES.Plant)
+                                        kind="descriptor", default=1., scale=SCALES.Plant)
     phytomer_number: float = state_variable(unit='adim', description="The number of phytomers the axis has",
-                                            state_variable_type="descriptor", initialize=0., scale=SCALES.Axis)
+                                            kind="descriptor", default=0., scale=SCALES.Axis)
     haun_stage: float = state_variable(unit='adim',
                                        description="The axis' Haun stage: the phyllochrons since its first leaf",
-                                       state_variable_type="descriptor", initialize=0., scale=SCALES.Axis)
-    organ_length: float = state_variable(unit='m', description="The organ's length", state_variable_type="descriptor",
-                                         initialize=0., scale=SCALES.Organ)
+                                       kind="descriptor", default=0., scale=SCALES.Axis)
+    organ_length: float = state_variable(unit='m', description="The organ's length", kind="descriptor",
+                                         default=0., scale=SCALES.Organ)
     visible_length: float = state_variable(unit='m', description="The organ's length out of the sheaths' tube",
-                                           state_variable_type="descriptor", initialize=0., scale=SCALES.Organ)
+                                           kind="descriptor", default=0., scale=SCALES.Organ)
     organ_senesced_length: float = state_variable(unit='m', description="The organ's senesced length",
-                                                  state_variable_type="descriptor", initialize=0., scale=SCALES.Organ)
-    age: float = state_variable(unit='°Cd', description="The blade's age", state_variable_type="descriptor",
-                                initialize=0., scale=SCALES.Organ)
+                                                  kind="descriptor", default=0., scale=SCALES.Organ)
+    age: float = state_variable(unit='°Cd', description="The blade's age", kind="descriptor",
+                                default=0., scale=SCALES.Organ)
 
     # --- Parameters ---
     length_unit: float = parameter(unit='m', description="The tables' length unit in m", by=BY, default=0.01)
@@ -202,7 +202,7 @@ class ScenarioDevelopment(FunctionalComponent):
         def build():
             kinds = {name: k for k, name in enumerate(ORGAN_KINDS)}
             return np.array([kinds.get(label, -1) for label in
-                             self.data_structure.labels(of="Organ", per_node=False).tolist()], dtype=int)
+                             self.data_structure.labels(location="Organ", per_node=False).tolist()], dtype=int)
         return self.cached("organ_kinds", build)
 
 
@@ -224,8 +224,7 @@ class ScenarioShoot(CompositeModel):
     def __init__(self, data_structure, time_step):
         self.architecture = ShootArchitecture(data_structure=data_structure, time_step=time_step)
         self.development = ScenarioDevelopment(data_structure=data_structure, time_step=time_step)
-        self.declare_data_and_couple_components(translator_path=TRANSLATOR,
-                                                components=(self.development, self.architecture))
+        self.couple(self.development, self.architecture, translator=TRANSLATOR)
 
     def run(self):
         ds = self.architecture.data_structure

@@ -121,152 +121,152 @@ class ShootArchitecture(StructuralComponent):
     # --- Inputs: what development and senescence models write ---
     axis_number: float = input_variable(unit='adim',
                                         description="The number of the plant's axes emerged, in its axes table's order "
-                                                    "(the main stem first)", by='model_development', initialize=1.,
+                                                    "(the main stem first)", by='model_development', default=1.,
                                         scale=SCALES.Plant)
     phytomer_number: float = input_variable(unit='adim',
                                             description="The number of phytomers the axis has (its development)",
-                                            by='model_development', initialize=0., scale=SCALES.Axis)
+                                            by='model_development', default=0., scale=SCALES.Axis)
     organ_length: float = input_variable(unit='m', description="The organ's length", by='model_development',
-                                         initialize=0., scale=SCALES.Organ)
+                                         default=0., scale=SCALES.Organ)
     visible_length: float = input_variable(unit='m', description="The organ's length out of the sheaths' tube",
-                                           by='model_development', initialize=0., scale=SCALES.Organ)
+                                           by='model_development', default=0., scale=SCALES.Organ)
     rolled_length: float = input_variable(unit='m', description="The blade's rolled length in the sheaths' tube",
-                                          by='model_development', initialize=0., scale=SCALES.Organ)
+                                          by='model_development', default=0., scale=SCALES.Organ)
     organ_senesced_length: float = input_variable(unit='m', description="The organ's senesced length",
-                                                  by='model_senescence', initialize=0., scale=SCALES.Organ)
+                                                  by='model_senescence', default=0., scale=SCALES.Organ)
     age: float = input_variable(unit='°Cd', description="The blade's age (its shape class when the database has ages)",
-                                by='model_development', initialize=0., scale=SCALES.Organ)
+                                by='model_development', default=0., scale=SCALES.Organ)
     haun_stage: float = input_variable(unit='adim',
                                        description="The axis' Haun stage (its tillers' inclination ramps with it)",
-                                       by='model_development', initialize=0., scale=SCALES.Axis)
+                                       by='model_development', default=0., scale=SCALES.Axis)
     shape_mature_length: float = input_variable(unit='m', description="The blade's final length, its shape's length",
                                                 value_comment="at its creation, the phytomer table's Ll",
-                                                by='model_development', initialize=0., scale=SCALES.Organ)
+                                                by='model_development', default=0., scale=SCALES.Organ)
     shape_max_width: float = input_variable(unit='m', description="The blade's maximal width, its shape's width",
                                             value_comment="at its creation, the phytomer table's Lw",
-                                            by='model_development', initialize=0., scale=SCALES.Organ)
+                                            by='model_development', default=0., scale=SCALES.Organ)
 
     # --- The axes (from the axes table) ---
     axis_row: int = state_variable(unit='adim', description="The axis' row in the axes table",
-                                   state_variable_type=DESCRIPTOR, initialize=-1, scale=SCALES.Axis, dtype='int')
+                                   kind=DESCRIPTOR, default=-1, scale=SCALES.Axis, dtype='int')
     bearer_row: int = state_variable(unit='adim', description="The bearer axis' row in the axes table",
-                                     value_comment="-1: the main stem", state_variable_type=DESCRIPTOR, initialize=-1,
+                                     value_comment="-1: the main stem", kind=DESCRIPTOR, default=-1,
                                      scale=SCALES.Axis, dtype='int')
     insertion_rank: int = state_variable(unit='adim', description="The rank of the bearer's phytomer the axis is on",
-                                         state_variable_type=DESCRIPTOR, initialize=0, scale=SCALES.Axis, dtype='int')
+                                         kind=DESCRIPTOR, default=0, scale=SCALES.Axis, dtype='int')
     axis_phytomers: int = state_variable(unit='adim', description="The number of phytomers the axis has in the MPG",
-                                         state_variable_type=DESCRIPTOR, initialize=0, scale=SCALES.Axis, dtype='int')
+                                         kind=DESCRIPTOR, default=0, scale=SCALES.Axis, dtype='int')
     final_leaf_number: int = state_variable(unit='adim', description="The axis' final number of leaves (Adel's nf)",
-                                            state_variable_type=DESCRIPTOR, initialize=0, scale=SCALES.Axis,
+                                            kind=DESCRIPTOR, default=0, scale=SCALES.Axis,
                                             dtype='int')
     final_haun_stage: float = state_variable(unit='adim', description="The axis' final Haun stage (Adel's HS_final)",
-                                             state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Axis)
+                                             kind=DESCRIPTOR, default=0., scale=SCALES.Axis)
     has_ear: int = state_variable(unit='adim', description="1 when the axis bears an ear",
-                                  state_variable_type=DESCRIPTOR, initialize=0, scale=SCALES.Axis, dtype='int')
+                                  kind=DESCRIPTOR, default=0, scale=SCALES.Axis, dtype='int')
     axis_azimuth: float = state_variable(unit='°',
                                          description="The axis' azimuth at its insertion (Adel's az_insertion), used "
                                                      "when its first stem element is inclined",
-                                         state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Axis)
+                                         kind=DESCRIPTOR, default=0., scale=SCALES.Axis)
     table_inclination: float = state_variable(unit='°',
                                               description="The axis' first internode's inclination (Adel's incT)",
                                               value_comment="used with tiller_inclination",
-                                              state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Axis)
+                                              kind=DESCRIPTOR, default=0., scale=SCALES.Axis)
     straightening_distance: float = state_variable(unit='m',
                                                    description="The horizontal distance from its insertion at which "
                                                                "the axis straightens (Adel's dredT)",
                                                    value_comment="0: none; used with tiller_inclination",
-                                                   state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Axis)
+                                                   kind=DESCRIPTOR, default=0., scale=SCALES.Axis)
     insertion_azimuth: float = state_variable(unit='°', description="The axis' insertion azimuth (Adel's azTb)",
                                               value_comment="used with tiller_inclination",
-                                              state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Axis)
+                                              kind=DESCRIPTOR, default=0., scale=SCALES.Axis)
     first_azimuth: float = state_variable(unit='°', description="The azimuth of the axis' first phytomer (Adel's azT)",
-                                          value_comment="used with tiller_inclination", state_variable_type=DESCRIPTOR,
-                                          initialize=0., scale=SCALES.Axis)
+                                          value_comment="used with tiller_inclination", kind=DESCRIPTOR,
+                                          default=0., scale=SCALES.Axis)
 
     # --- The phytomers and organs (from the phytomer table, at their creation) ---
     phytomer_rank: int = state_variable(unit='adim', description="The phytomer's rank on its axis, from 1",
-                                        state_variable_type=DESCRIPTOR, initialize=0, scale=SCALES.Phytomer,
+                                        kind=DESCRIPTOR, default=0, scale=SCALES.Phytomer,
                                         dtype='int')
     organ_rank: int = state_variable(unit='adim', description="The organ's phytomer rank",
-                                     state_variable_type=DESCRIPTOR, initialize=0, scale=SCALES.Organ, dtype='int')
+                                     kind=DESCRIPTOR, default=0, scale=SCALES.Organ, dtype='int')
     ntop: int = state_variable(unit='adim', description="The organ's rank from the axis' top leaf (1: the flag leaf)",
-                               state_variable_type=DESCRIPTOR, initialize=0, scale=SCALES.Organ, dtype='int')
+                               kind=DESCRIPTOR, default=0, scale=SCALES.Organ, dtype='int')
     diameter: float = state_variable(unit='m', description="The stem organ's diameter (phytomer table: Ed, Gd)",
-                                     state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Organ)
+                                     kind=DESCRIPTOR, default=0., scale=SCALES.Organ)
     organ_azimuth: float = state_variable(unit='°',
                                           description="The organ's azimuth (the internode's: phytomer table's Azim)",
-                                          state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Organ)
+                                          kind=DESCRIPTOR, default=0., scale=SCALES.Organ)
     inclination: float = state_variable(unit='°', description="The organ's inclination",
-                                        state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Organ)
+                                        kind=DESCRIPTOR, default=0., scale=SCALES.Organ)
     shape_class: int = state_variable(unit='adim', description="The blade's shape class in the leaf database (Lindex)",
-                                      value_comment="-1: none", state_variable_type=DESCRIPTOR, initialize=-1,
+                                      value_comment="-1: none", kind=DESCRIPTOR, default=-1,
                                       scale=SCALES.Organ, dtype='int')
     shape_seed: int = state_variable(unit='adim', description="The blade's shape in its class (Lseed)",
-                                     value_comment="-1: none", state_variable_type=DESCRIPTOR, initialize=-1,
+                                     value_comment="-1: none", kind=DESCRIPTOR, default=-1,
                                      scale=SCALES.Organ, dtype='int')
 
     organ_area: float = state_variable(unit='m2', description="The organ's visible area (its visible elements')",
-                                       state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.Organ)
+                                       kind=DESCRIPTOR, default=0., scale=SCALES.Organ)
 
     # --- The elements ---
     element_index: int = state_variable(unit='adim', description="The element's position in its organ, from 0",
-                                        state_variable_type=DESCRIPTOR, initialize=0, scale=SCALES.SubOrgan,
+                                        kind=DESCRIPTOR, default=0, scale=SCALES.SubOrgan,
                                         dtype='int')
-    length: float = state_variable(unit='m', description="The element's length", state_variable_type=DESCRIPTOR,
-                                   initialize=0., scale=SCALES.SubOrgan)
-    area: float = state_variable(unit='m2', description="The element's area", state_variable_type=DESCRIPTOR,
-                                 initialize=0., scale=SCALES.SubOrgan)
+    length: float = state_variable(unit='m', description="The element's length", kind=DESCRIPTOR,
+                                   default=0., scale=SCALES.SubOrgan)
+    area: float = state_variable(unit='m2', description="The element's area", kind=DESCRIPTOR,
+                                 default=0., scale=SCALES.SubOrgan)
     green_length: float = state_variable(unit='m', description="The element's green length",
-                                         state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.SubOrgan)
+                                         kind=DESCRIPTOR, default=0., scale=SCALES.SubOrgan)
     green_area: float = state_variable(unit='m2', description="The element's green area",
-                                       state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.SubOrgan)
+                                       kind=DESCRIPTOR, default=0., scale=SCALES.SubOrgan)
     senesced_length: float = state_variable(unit='m', description="The element's senesced length",
-                                            state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.SubOrgan)
+                                            kind=DESCRIPTOR, default=0., scale=SCALES.SubOrgan)
     senesced_area: float = state_variable(unit='m2', description="The element's senesced area",
-                                          state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.SubOrgan)
+                                          kind=DESCRIPTOR, default=0., scale=SCALES.SubOrgan)
     is_green: int = state_variable(unit='adim', description="1 when the element is more green than senesced",
-                                   state_variable_type=DESCRIPTOR, initialize=1, scale=SCALES.SubOrgan, dtype='int')
+                                   kind=DESCRIPTOR, default=1, scale=SCALES.SubOrgan, dtype='int')
     rolled_part: float = state_variable(unit='m', description="The blade element's rolled length",
-                                        state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.SubOrgan)
+                                        kind=DESCRIPTOR, default=0., scale=SCALES.SubOrgan)
     rolled_diameter: float = state_variable(unit='m', description="The blade element's rolled part's diameter",
-                                            state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.SubOrgan)
+                                            kind=DESCRIPTOR, default=0., scale=SCALES.SubOrgan)
     width: float = state_variable(unit='m', description="The blade element's mean width",
-                                  state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.SubOrgan)
+                                  kind=DESCRIPTOR, default=0., scale=SCALES.SubOrgan)
     flat_base: float = state_variable(unit='adim',
                                       description="The blade element's flat part's base, relative to the blade's "
                                                   "visible length (Adel's srb)", value_comment="NaN: no flat part",
-                                      state_variable_type=DESCRIPTOR, initialize=np.nan, scale=SCALES.SubOrgan)
+                                      kind=DESCRIPTOR, default=np.nan, scale=SCALES.SubOrgan)
     flat_top: float = state_variable(unit='adim',
                                      description="The blade element's flat part's top, relative to the blade's visible "
                                                  "length (Adel's srt)", value_comment="NaN: no flat part",
-                                     state_variable_type=DESCRIPTOR, initialize=np.nan, scale=SCALES.SubOrgan)
+                                     kind=DESCRIPTOR, default=np.nan, scale=SCALES.SubOrgan)
 
     # --- The elements' placement (the turtle's frame where each is drawn, and its end) ---
-    x1: float = state_variable(unit='m', description="The element's base, x", state_variable_type=DESCRIPTOR,
-                               initialize=0., scale=SCALES.SubOrgan)
-    y1: float = state_variable(unit='m', description="The element's base, y", state_variable_type=DESCRIPTOR,
-                               initialize=0., scale=SCALES.SubOrgan)
-    z1: float = state_variable(unit='m', description="The element's base, z", state_variable_type=DESCRIPTOR,
-                               initialize=0., scale=SCALES.SubOrgan)
+    x1: float = state_variable(unit='m', description="The element's base, x", kind=DESCRIPTOR,
+                               default=0., scale=SCALES.SubOrgan)
+    y1: float = state_variable(unit='m', description="The element's base, y", kind=DESCRIPTOR,
+                               default=0., scale=SCALES.SubOrgan)
+    z1: float = state_variable(unit='m', description="The element's base, z", kind=DESCRIPTOR,
+                               default=0., scale=SCALES.SubOrgan)
     x2: float = state_variable(unit='m', description="The element's end (a blade element's: its rolled part's), x",
-                               state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.SubOrgan)
+                               kind=DESCRIPTOR, default=0., scale=SCALES.SubOrgan)
     y2: float = state_variable(unit='m', description="The element's end (a blade element's: its rolled part's), y",
-                               state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.SubOrgan)
+                               kind=DESCRIPTOR, default=0., scale=SCALES.SubOrgan)
     z2: float = state_variable(unit='m', description="The element's end (a blade element's: its rolled part's), z",
-                               state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.SubOrgan)
+                               kind=DESCRIPTOR, default=0., scale=SCALES.SubOrgan)
     heading_x: float = state_variable(unit='adim', description="The element's heading, x",
-                                      state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.SubOrgan)
+                                      kind=DESCRIPTOR, default=0., scale=SCALES.SubOrgan)
     heading_y: float = state_variable(unit='adim', description="The element's heading, y",
-                                      state_variable_type=DESCRIPTOR, initialize=0., scale=SCALES.SubOrgan)
+                                      kind=DESCRIPTOR, default=0., scale=SCALES.SubOrgan)
     heading_z: float = state_variable(unit='adim', description="The element's heading, z",
-                                      state_variable_type=DESCRIPTOR, initialize=1., scale=SCALES.SubOrgan)
+                                      kind=DESCRIPTOR, default=1., scale=SCALES.SubOrgan)
     up_x: float = state_variable(unit='adim',
                                  description="The element's up, x (its blade's side: the shape's x is along it)",
-                                 state_variable_type=DESCRIPTOR, initialize=-1., scale=SCALES.SubOrgan)
-    up_y: float = state_variable(unit='adim', description="The element's up, y", state_variable_type=DESCRIPTOR,
-                                 initialize=0., scale=SCALES.SubOrgan)
-    up_z: float = state_variable(unit='adim', description="The element's up, z", state_variable_type=DESCRIPTOR,
-                                 initialize=0., scale=SCALES.SubOrgan)
+                                 kind=DESCRIPTOR, default=-1., scale=SCALES.SubOrgan)
+    up_y: float = state_variable(unit='adim', description="The element's up, y", kind=DESCRIPTOR,
+                                 default=0., scale=SCALES.SubOrgan)
+    up_z: float = state_variable(unit='adim', description="The element's up, z", kind=DESCRIPTOR,
+                                 default=0., scale=SCALES.SubOrgan)
 
     # --- Parameters ---
     axes_table: object = parameter(unit='',
@@ -540,7 +540,7 @@ class ShootArchitecture(StructuralComponent):
             element = {"HiddenElement": 0, "StemElement": 1, "LeafElement": 2}
             organ = {"StemInternode": 0, "Sheath": 1, "Blade": 2}
             return (np.array([element.get(label, -1) for label in ds.labels().tolist()]),
-                    np.array([organ.get(label, -1) for label in ds.labels(of="Organ").tolist()]))
+                    np.array([organ.get(label, -1) for label in ds.labels(location="Organ").tolist()]))
         return self.cached("kinds", build)
 
     def _leaf_shapes(self):

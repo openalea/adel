@@ -55,11 +55,11 @@ class ToyLight(FunctionalComponent):
     """The light fraction each element receives, from the shoot's triangles; the light it absorbs, by its green
     area."""
     green_area: float = input_variable(unit='m2', description="The element's green area", by='model_shoot_architecture',
-                                       initialize=0., scale=SCALES.SubOrgan)
+                                       default=0., scale=SCALES.SubOrgan)
     light_fraction: float = state_variable(unit='adim', description="The light fraction the element receives",
-                                           state_variable_type="intensive", initialize=0., scale=SCALES.SubOrgan)
+                                           kind="intensive", default=0., scale=SCALES.SubOrgan)
     absorbed: float = state_variable(unit='m2', description="The element's green area times its light fraction",
-                                     state_variable_type="extensive", initialize=0., scale=SCALES.SubOrgan)
+                                     kind="extensive", default=0., scale=SCALES.SubOrgan)
     extinction: float = parameter(unit='adim', description="The extinction coefficient", by="ToyLight", default=0.5)
     column_width: float = parameter(unit='m', description="The width of the columns", by="ToyLight", default=0.05)
 
