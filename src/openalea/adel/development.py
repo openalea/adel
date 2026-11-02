@@ -220,11 +220,12 @@ class ScenarioShoot(CompositeModel):
     each call the development first, then the shoot; when the shoot created phytomers, their lengths are given at once
     and the shoot's elements updated."""
     initiators = (ShootArchitecture,)
+    translator = TRANSLATOR
 
     def __init__(self, data_structure, time_step):
         self.architecture = ShootArchitecture(data_structure=data_structure, time_step=time_step)
         self.development = ScenarioDevelopment(data_structure=data_structure, time_step=time_step)
-        self.couple(self.development, self.architecture, translator=TRANSLATOR)
+        self.couple(self.development, self.architecture)
 
     def run(self):
         ds = self.architecture.data_structure
