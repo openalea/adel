@@ -64,7 +64,7 @@ import numpy as np
 import pandas as pd
 
 from openalea.metafspm.coupling.component import (NewComplexes, NewNodes, StructuralComponent, input_variable,
-                                                   parameter, setting, state_variable)
+                                                   parameter, planting_variable, setting, state_variable)
 from openalea.metafspm.coupling.geometry import Triangles, place, slim_cylinders
 from openalea.metafspm.data_structure.configs import PropsConfig, ScalesConfig
 from openalea.metafspm.solve.decorator import postsegmentation, segmentation
@@ -242,6 +242,10 @@ class ShootArchitecture(StructuralComponent):
                                      kind=DESCRIPTOR, default=np.nan, scale=SCALES.SubOrgan)
 
     # --- The elements' placement (the turtle's frame where each is drawn, and its end) ---
+    x: float = planting_variable("x")
+    y: float = planting_variable("y")
+    z: float = planting_variable("z")
+    rotation: float = planting_variable("rotation")
     x1: float = state_variable(unit='m', description="The element's base, x", kind=DESCRIPTOR,
                                default=0., scale=SCALES.SubOrgan)
     y1: float = state_variable(unit='m', description="The element's base, y", kind=DESCRIPTOR,
@@ -709,19 +713,17 @@ class ShootArchitecture(StructuralComponent):
 
     @postsegmentation
     def _placement(self, length, rolled_part, inclination, organ_azimuth, axis_azimuth, bearer_row,
-                   phytomer_rank) -> dict:
+                   phytomer_rank, x, y, z, rotation) -> dict:
         """The elements' placement, their frames by Adel's turtle (turtle.interpret): each one's base, heading and up
         where it is drawn, and its end; from its plant's position and rotation, on the elements' lengths."""
         ds = self.data_structure
-        g = ds.structure
         element_kind, organ_kind = self._kinds()
         order, frame_source, plant_base, parent = self._traversal()
         organ, axis = np.asarray(ds.owner("Organ")), np.asarray(ds.owner("Axis"))
         plant, phytomer = np.asarray(ds.owner("Plant")), np.asarray(ds.owner("Phytomer"))
-        plants = ds.entity_ids("Plant").tolist()
-        plant_position = np.array([[g.property(name).get(v, 0.) for name in ("x", "y", "z")] for v in plants],
-                                  dtype=float).reshape(-1, 3)
-        plant_rotation = np.array([g.property("rotation").get(v, 0.) for v in plants], dtype=float)
+        plant_position = np.column_stack([np.asarray(x, dtype=float), np.asarray(y, dtype=float),
+                                          np.asarray(z, dtype=float)]).reshape(-1, 3)    # the planting's
+        plant_rotation = np.asarray(rotation, dtype=float)
         axis_is_main = np.asarray(bearer_row) < 0
         stem = element_kind == 1
         position, heading, up, end = interpret(
