@@ -23,7 +23,7 @@ from dataclasses import dataclass, replace
 import numpy as np
 
 from openalea.adel.architecture import SCALES, ShootArchitecture
-from openalea.adel.tables import plant_tables, population_tables
+from openalea.adel.tables import phytomer_dimensions, plant_rows, plant_tables, population_tables
 from openalea.metafspm.coupling.component import FunctionalComponent, input_variable, parameter, state_variable
 from openalea.metafspm.coupling.composite_wrapper import CompositeModel
 from openalea.metafspm.coupling.translator import Translator
@@ -40,6 +40,8 @@ class ScenarioDevelopment(FunctionalComponent):
     """The organs' lengths of a linear scenario, given at each call from the plants' thermal time."""
 
     # --- Read from ShootArchitecture ---
+    shoot_tables: object = input_variable(unit='', description="The plants' tables (ShootArchitecture's)",
+                                          by="ShootArchitecture", default=None, scale=SCALES.Plant, dtype='object')
     axis_row: int = input_variable(unit='adim', description="The axis' row in the population's axes table",
                                    by='model_shoot_architecture', default=-1, scale=SCALES.Axis, dtype='int')
     organ_rank: int = input_variable(unit='adim', description="The organ's phytomer rank",
@@ -92,25 +94,25 @@ class ScenarioDevelopment(FunctionalComponent):
     senescence_duration: float = parameter(unit='phyllochron', description="The blade's senescence", by=BY, default=3.)
 
     @potential
-    def _development(self, thermal_time) -> dict:
+    def _development(self, thermal_time, shoot_tables) -> dict:
         """The plants' thermal time advanced by a step (set at start - delay at the first call), and what is given
         at it: before the shoot's segmentation, which creates the phytomers it asks for."""
         thermal_time = np.asarray(thermal_time, dtype=float)
-        first = self._start() - self._plant_values("delay")
+        tables = self._tables(shoot_tables)
+        first = self._start(tables) - self._plant_values("delay")
         thermal_time = np.where(np.isnan(thermal_time), first, thermal_time + self._plant_values("thermal_time_step"))
-        return dict(self.given(thermal_time), thermal_time=thermal_time)
+        return dict(self.given(thermal_time, tables), thermal_time=thermal_time)
 
     @postsegmentation
-    def _new_organs(self, thermal_time) -> dict:
+    def _new_organs(self, thermal_time, shoot_tables) -> dict:
         """What is given at the plants' thermal time again, after the shoot's segmentation: the organs it created are
         given their lengths at once (as cnwgrass writes a new metamer's), before the shoot's postsegmentation."""
-        return self.given(np.asarray(thermal_time, dtype=float))
+        return self.given(np.asarray(thermal_time, dtype=float), self._tables(shoot_tables))
 
-    def given(self, thermal_time):
+    def given(self, thermal_time, tables):
         """{variable: values} at the plants' *thermal_time*: their axis numbers, their axes' phytomer numbers and Haun
         stages, their organs' lengths (m) and blades' ages."""
         ds = self.data_structure
-        tables = self._tables()
         emf1, nf = tables["emf1"], tables["nf"]
 
         # Plants: their axes emerged (in their tables' rows)
@@ -174,24 +176,22 @@ class ScenarioDevelopment(FunctionalComponent):
     def _plant_values(self, name):
         return np.asarray(self.data_structure.parameter_view(name, "Plant"), dtype=float)
 
-    def _tables(self):
-        """From the population's tables (ShootArchitecture's): emf1 and nf per row, each plant's number in them and
-        their plants' rows, Ll, Gl, El per (row, rank) in their unit; read once per plant set."""
-        ds = self.data_structure
-        plants = tuple(ds.entity_ids("Plant").tolist())
+    def _tables(self, shoot_tables):
+        """From the population's tables (the plants' shoot_tables, ShootArchitecture's): emf1 and nf per row, each
+        plant's number in them and their plants' rows, Ll, Gl, El per (row, rank) in their unit; read once per set of
+        plants' tables."""
+        records = tuple(shoot_tables)
 
         def build():
-            axes, phytomers, numbers, _ = population_tables(ds.structure, plants)
-            dimensions = ShootArchitecture._dimensions(phytomers, axes, 1.)
+            axes, phytomers, numbers, _ = population_tables(records)
+            dimensions = phytomer_dimensions(phytomers, axes, 1.)
             return dict(emf1=axes["emf1"].to_numpy(dtype=float), nf=axes["nf"].to_numpy(dtype=int), numbers=numbers,
-                        plant_rows={int(number): ShootArchitecture._plant_rows(axes, int(number))
-                                    for number in set(numbers.tolist())},
+                        plant_rows={int(number): plant_rows(axes, int(number)) for number in set(numbers.tolist())},
                         Ll=dimensions["Ll"], Gl=dimensions["Gl"], El=dimensions["El"])
-        return self.cached("tables", build, key=plants)
+        return self.cached("tables", build, key=tuple(id(record) for record in records))
 
-    def _start(self):
+    def _start(self, tables):
         """Each plant's start: its parameter, by default its main stem's first leaf (emf1)."""
-        tables = self._tables()
         main_stem = np.array([tables["emf1"][tables["plant_rows"][number][0]] for number in tables["numbers"]])
         start = self._plant_values("start")
         return np.where(np.isnan(start), main_stem, start)

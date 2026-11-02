@@ -12,7 +12,7 @@ precedence:
     axes, phytomers = wheat_tables(leaf_number=11, tiller_number=2, longest_blade_length=0.2,
                                    longest_blade_width=0.015, phyllochron=100.)
 
-Each plant's tables are kept on the MPG at its initiation (record_plant_tables); population_tables gathers them into
+Each plant's tables are its ShootArchitecture's shoot_tables (record_plant_tables, at its initiation); population_tables gathers them into
 one pair of tables for the population, every plant's rows at an offset: the rows the components index (axis_row).
 """
 import os
@@ -148,23 +148,26 @@ def _sample_tables_once(dynamic_shapes):
 
 
 def record_plant_tables(g, plant, tables):
-    """Keep a plant's (axes table, phytomer table, table plant) on the MPG *g*."""
-    g.__dict__.setdefault("_shoot_tables", {})[plant] = tables
+    """Keep a plant's (axes table, phytomer table, table plant): its value of ShootArchitecture's shoot_tables (a Plant
+    state, dtype object), written by its initiator."""
+    g.property("shoot_tables")[plant] = tables
 
 
-def population_tables(g, plants):
-    """The population's tables from its plants' (record_plant_tables): (axes table, phytomer table, per plant its
-    number in them, per plant its rows' offset). The tables of several plants are gathered once (the same objects);
-    each source's plants are renumbered source index * 1000 + their number. Cached on *g* for the same plants."""
-    plants = tuple(int(plant) for plant in plants)
-    cache = g.__dict__.get("_shoot_population_tables")
-    if cache is not None and cache[0] == plants:
-        return cache[1]
-    recorded = g.__dict__.get("_shoot_tables", {})
+_POPULATION = []                                  # [(records, tables)]: the last population gathered
+
+
+def population_tables(records):
+    """The population's tables from its plants' records (shoot_tables, in the plants' order): (axes table, phytomer
+    table, per plant its number in them, per plant its rows' offset). The tables of several plants are gathered once
+    (the same objects); each source's plants are renumbered source index * 1000 + their number. The last population is
+    kept (the same records give the same tables)."""
+    records = tuple(records)
+    if _POPULATION and len(_POPULATION[0][0]) == len(records) and all(
+            a is b for a, b in zip(_POPULATION[0][0], records)):
+        return _POPULATION[0][1]
     sources, numbers, offsets, axes_parts, phytomer_parts = {}, [], [], [], []
     row = 0
-    for plant in plants:
-        axes, phytomers, number = recorded[plant]
+    for axes, phytomers, number in records:
         key = (id(axes), id(phytomers))
         if key not in sources:
             index = len(sources)
@@ -177,5 +180,31 @@ def population_tables(g, plants):
         offsets.append(offset)
     tables = (pd.concat(axes_parts, ignore_index=True), pd.concat(phytomer_parts, ignore_index=True),
               np.array(numbers), np.array(offsets))
-    g.__dict__["_shoot_population_tables"] = (plants, tables)
+    _POPULATION[:] = [(records, tables)]
     return tables
+
+
+def plant_rows(axes, number):
+    """The rows of plant *number* in the axes table: its main stem first, then its tillers in table order."""
+    mine = axes.index[axes["plant"] == number].tolist()
+    main = [row for row in mine if axes.loc[row, "axe"] == "MS"]
+    if not main:
+        raise ValueError(f"no main stem of plant {number} in the axes table")
+    return main + [row for row in mine if row not in main]
+
+
+def phytomer_dimensions(phytomers, axes, unit):
+    """{column: array (axis row, rank)} of the phytomer table, lengths in m (*unit*: the table's); NaN where an axis
+    has no rank."""
+    columns = {"Ll": unit, "Lw": unit, "Gl": unit, "Gd": unit, "El": unit, "Ed": unit, "Azim": 1., "Lindex": 1.,
+               "Lseed": 1.}
+    ranks = int(phytomers["n"].max())
+    out = {name: np.full((len(axes), ranks + 1), np.nan) for name in columns}
+    keyed = phytomers.set_index(["plant", "axe", "n"])
+    for row, (plant, axe) in enumerate(zip(axes["plant"], axes["axe"])):
+        if (plant, axe) not in {k[:2] for k in keyed.index}:
+            continue
+        these = keyed.loc[(plant, axe)]
+        for name, factor in columns.items():
+            out[name][row, these.index.to_numpy(dtype=int)] = these[name].to_numpy(dtype=float) * factor
+    return out

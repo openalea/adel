@@ -62,7 +62,7 @@ def plant_of(ds, scale):
 
 def organ_names(ds):
     """Each Organ's name (internode, sheath, blade) from its MPG label."""
-    g = ds._mtg
+    g = ds.structure
     by_value = {getattr(g.labels.Organ, name): organ for name, organ in ORGAN_NAMES.items()}
     return np.array([by_value.get(g.label(int(v))) for v in ds.entity_ids("Organ")], dtype=object)
 
@@ -91,7 +91,7 @@ def structure(scene, plant=0):
     (LeafElement1, ...)."""
     ds = scene.populations[0].data_structure
     triangles = scene.populations[0].instance.architecture.triangles()
-    g = ds._mtg
+    g = ds.structure
     label_name = {}
     for name in ("HiddenElement", "StemElement", "LeafElement"):
         label_name[getattr(g.labels.SubOrgan, name)] = name

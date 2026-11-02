@@ -36,7 +36,8 @@ The legacy's chain and the port
        ``NewNodes``)
    * - the organs' dimensions
      - ``add_metamer`` reads ``phytoT``
-     - ``ShootArchitecture._dimensions``, ``_phytomer_values``; ``tables`` (given, generated, sample tables)
+     - ``tables.phytomer_dimensions``, ``ShootArchitecture._phytomer_values``; ``tables`` (given, generated, sample
+       tables)
    * - the elements from the organs' lengths
      - ``mtg_editions.update_organ_elements``: ``newmtg.internode_elements``, ``sheath_elements``,
        ``blade_elements``, rebuilt at each step

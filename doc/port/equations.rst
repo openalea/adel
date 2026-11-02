@@ -23,11 +23,12 @@ the phytomer table (phytoT: one row per plant, axis and rank ``n``). A plant's t
 (``tables.plant_tables``): the tables given (``axes_table``, ``phytomer_table``, the plant's rows by its
 ``table_plant``); tables generated when any of the per-plant numbers ``leaf_number``, ``tiller_number``,
 ``longest_blade_length``, ``longest_blade_width`` is given (``tables.wheat_tables``); Adel's sample plant
-(``tables.sample_tables``). Each plant's tables are kept on the MPG at its initiation; ``tables.population_tables``
-gathers them into one pair of tables for the population, each distinct pair of tables (a source) once, its plants
-renumbered :math:`1000\,k + \text{plant}` for the :math:`k`-th source, each plant's axis rows at an offset.
+(``tables.sample_tables``). Each plant's tables are its ``shoot_tables`` (a Plant state, written at its initiation,
+which the development reads as an input); ``tables.population_tables`` gathers them into one pair of tables for the
+population, each distinct pair of tables (a source) once, its plants renumbered :math:`1000\,k + \text{plant}` for the
+:math:`k`-th source, each plant's axis rows at an offset (written at its initiation, from the plants built before it).
 
-**A phytomer** (``ShootArchitecture._dimensions``, ``_phytomer_values``), at its creation, from its axis' row and its
+**A phytomer** (``tables.phytomer_dimensions``, ``ShootArchitecture._phytomer_values``), at its creation, from its axis' row and its
 rank, with :math:`u` the tables' length unit (``length_unit``, Adel's cm: 0.01):
 
 ==================================== =========================== ========================================

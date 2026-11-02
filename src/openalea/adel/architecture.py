@@ -70,7 +70,8 @@ from openalea.metafspm.data_structure.configs import PropsConfig, ScalesConfig
 from openalea.metafspm.solve.decorator import postsegmentation, segmentation
 from openalea.adel.blade_mesh import blade_element_triangles
 from openalea.adel.leaf_shapes import LeafShapes
-from openalea.adel.tables import plant_tables, population_tables, record_plant_tables
+from openalea.adel.tables import (phytomer_dimensions, plant_rows, plant_tables, population_tables,
+                                  record_plant_tables)
 from openalea.adel.turtle import base_inclination, interpret, stem_inclinations, traversal_order
 
 BY = "model_shoot_architecture"
@@ -147,6 +148,9 @@ class ShootArchitecture(StructuralComponent):
                                             by='model_development', default=0., scale=SCALES.Organ)
 
     # --- The axes (from the axes table) ---
+    shoot_tables: object = state_variable(unit='', description="The plant's tables: (axes table, phytomer table, its "
+                                          "number in them), from its scenario (tables.plant_tables)",
+                                          kind=DESCRIPTOR, default=None, scale=SCALES.Plant, dtype='object')
     axis_row: int = state_variable(unit='adim', description="The axis' row in the axes table",
                                    kind=DESCRIPTOR, default=-1, scale=SCALES.Axis, dtype='int')
     bearer_row: int = state_variable(unit='adim', description="The bearer axis' row in the axes table",
@@ -330,26 +334,31 @@ class ShootArchitecture(StructuralComponent):
 
     @classmethod
     def initiate_plant(cls, g, plant, parameters):
-        """The plant's tables (tables.plant_tables, kept on the MPG), its main stem (its Axis, GrowthUnit) and its
-        first phytomer; its axes' rows are its tables' (the population's, once the component is built)."""
+        """The plant's tables (tables.plant_tables: its shoot_tables), its main stem (its Axis, GrowthUnit) and its
+        first phytomer; its axes' rows are the population's tables' (its tables at their offset among the plants built
+        before it)."""
         axes, phytomers, number = plant_tables(parameters, dict(table_plant=cls.table_plant,
                                                                 phyllochron=cls.phyllochron,
                                                                 length_unit=cls.length_unit))
         record_plant_tables(g, plant, (axes, phytomers, number))
+        built = g.properties()["shoot_tables"]
+        offset = int(population_tables([built[p] for p in sorted(built) if p <= plant])[3][-1])
         n_sect = int(parameters.get("n_sect", cls.n_sect))
         unit = float(parameters.get("length_unit", cls.length_unit))
         rows = axes.reset_index(drop=True)
-        mine = cls._plant_rows(rows, number)
+        mine = plant_rows(rows, number)
         main_stem = mine[0]
         scales, labels = g.scales, g.labels
         axis = g.add_component(plant, **PropsConfig(scale=scales.Axis, edge_type='/', label=labels.Axis.Shoot))
         unit_vid = g.add_component(axis, **PropsConfig(scale=scales.GrowthUnit, edge_type='/',
                                                        label=labels.GrowthUnit.Shoot))
-        for name, value in dict(cls._axis_values(rows, main_stem, unit), phytomer_number=1.,
-                                axis_phytomers=1).items():
+        values = cls._axis_values(rows, main_stem, unit)
+        values["axis_row"] += offset                              # the population's rows
+        values["bearer_row"] = values["bearer_row"] + offset if values["bearer_row"] >= 0 else -1
+        for name, value in dict(values, phytomer_number=1., axis_phytomers=1).items():
             g.property(name)[axis] = value
         g.property("axis_number")[plant] = 1.
-        dimensions = cls._dimensions(phytomers, rows, unit)
+        dimensions = phytomer_dimensions(phytomers, rows, unit)
         complexes, elements = phytomer_layout(labels, n_sect)
         created = []
         for anchor, scale, label in complexes:
@@ -366,15 +375,6 @@ class ShootArchitecture(StructuralComponent):
                     scale=scales.SubOrgan, edge_type=edge, label=label))
             g.property("element_index")[vid] = index
             vids.append(vid)
-
-    @staticmethod
-    def _plant_rows(rows, number):
-        """The rows of plant *number* in the axes table: its main stem first, then its tillers in table order."""
-        mine = rows.index[rows["plant"] == number].tolist()
-        main = [row for row in mine if rows.loc[row, "axe"] == "MS"]
-        if not main:
-            raise ValueError(f"no main stem of plant {number} in the axes table")
-        return main + [row for row in mine if row not in main]
 
     @staticmethod
     def _axis_values(rows, row, unit):
@@ -394,22 +394,6 @@ class ShootArchitecture(StructuralComponent):
                     final_haun_stage=float(haun_stage) if pd.notna(haun_stage) else float(rows.loc[row, "nf"]),
                     table_inclination=angle("incT"), straightening_distance=angle("dredT") * unit,
                     insertion_azimuth=angle("azTb"), first_azimuth=angle("azT"))
-
-    @staticmethod
-    def _dimensions(phytomers, axes, unit):
-        """{column: array (axis row, rank)} of the phytomer table, lengths in m; NaN where an axis has no rank."""
-        columns = {"Ll": unit, "Lw": unit, "Gl": unit, "Gd": unit, "El": unit, "Ed": unit, "Azim": 1., "Lindex": 1.,
-                   "Lseed": 1.}
-        ranks = int(phytomers["n"].max())
-        out = {name: np.full((len(axes), ranks + 1), np.nan) for name in columns}
-        keyed = phytomers.set_index(["plant", "axe", "n"])
-        for row, (plant, axe) in enumerate(zip(axes["plant"], axes["axe"])):
-            if (plant, axe) not in {k[:2] for k in keyed.index}:
-                continue
-            these = keyed.loc[(plant, axe)]
-            for name, factor in columns.items():
-                out[name][row, these.index.to_numpy(dtype=int)] = these[name].to_numpy(dtype=float) * factor
-        return out
 
     @classmethod
     def _set_phytomer(cls, g, created, dimensions, row, rank, nff):
@@ -441,15 +425,10 @@ class ShootArchitecture(StructuralComponent):
             "shape_seed": ([3], [np.where(valid, shape_seed, -1).astype(int)]),
         }
 
-    def __post_init__(self):
-        super().__post_init__()
-        self._to_population_rows()
-
     def tables(self):
         """(axes table, phytomer table, per plant its number in them, per plant its rows' offset): the population's
         tables (tables.population_tables), the ones axis_row indexes."""
-        ds = self.data_structure
-        return population_tables(ds.structure, ds.entity_ids("Plant"))
+        return population_tables(self.data_structure.get("shoot_tables"))
 
     def axis_names(self):
         """Each Axis' name (MS, T1, ...), from its row in the population's axes table."""
@@ -463,33 +442,21 @@ class ShootArchitecture(StructuralComponent):
         kind[np.asarray(ds.owner("Organ"))] = organ_kind
         return np.array(ORGANS + ("",), dtype=object)[kind]
 
-    def _to_population_rows(self):
-        """The initial axes' rows (in their plant's tables) as rows of the population's tables, once."""
-        ds = self.data_structure
-        g = ds.structure
-        if g.__dict__.get("_shoot_population_rows"):
-            return
-        offsets = self.tables()[3]
-        offset = ds.map_to(offsets.astype(float), "Plant", "Axis", "broadcast").astype(int)
-        for name in ("axis_row", "bearer_row"):
-            rows = np.asarray(ds.get(name), dtype=int)
-            ds.set(name, np.where(rows >= 0, rows + offset, rows))
-        g.__dict__["_shoot_population_rows"] = True
-
     def _dimension_arrays(self):
         """The population's phytomer table as arrays (_dimensions), read once."""
         def build():
             axes, phytomers = self.tables()[:2]
-            return self._dimensions(phytomers, axes, self.parameter_value("length_unit"))
+            return phytomer_dimensions(phytomers, axes, self.parameter_value("length_unit"))
         return self.cached("dimensions", build, key=id(self.tables()[0]))
 
     def _axes_lookup(self):
-        """(rows of each table plant, values of each row) of the axes table (_plant_rows, _axis_values), read once."""
+        """(rows of each table plant, values of each row) of the axes table (tables.plant_rows, _axis_values), read
+        once."""
         def build():
             rows = self.tables()[0]
-            plant_rows = {int(number): self._plant_rows(rows, int(number)) for number in set(rows["plant"])}
+            rows_of = {int(number): plant_rows(rows, int(number)) for number in set(rows["plant"])}
             unit = self.parameter_value("length_unit")
-            return plant_rows, {row: self._axis_values(rows, row, unit) for row in range(len(rows))}
+            return rows_of, {row: self._axis_values(rows, row, unit) for row in range(len(rows))}
         return self.cached("axes", build, key=id(self.tables()[0]))
 
     @segmentation
@@ -532,7 +499,7 @@ class ShootArchitecture(StructuralComponent):
                                values["final_leaf_number"], branched=False)
                 count[a] = rank
         return {"axis_phytomers": count,
-                "new_phytomers": batch.new_nodes(self._dimension_arrays(), self._variable_specs)}
+                "new_phytomers": batch.new_nodes(self._dimension_arrays(), self.variable_specs)}
 
     # --- The elements ---
 
