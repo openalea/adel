@@ -375,6 +375,7 @@ are :math:`\max(0, l_\text{blade} - l'_\text{sheath})`, :math:`\max(0, l_\text{s
    l_s = \min\big(\text{Ll}_n\,\operatorname{ramp}(a_n + 5\varphi,\ 3\varphi)\,[l_\text{blade} > 0],\ l_\text{blade}\big)
 
 (``senescence_start``, ``senescence_duration``), and its age :math:`t - a_n` once it has appeared. The lengths are
-multiplied by the tables' unit. The scenario writes no rolled length. ``ScenarioShoot`` runs the development, then
-the shoot; when the shoot created phytomers, the development writes their lengths and the shoot runs again
-(``ScenarioDevelopment.write``).
+multiplied by the tables' unit. The scenario writes no rolled length. ``ScenarioShoot`` runs the development and the
+shoot together, in one schedule (metafspm's ``CompositeModel.run_together``): the development's potential step, the
+shoot's segmentation (the phytomers asked for), the development's postsegmentation step (the new organs' lengths,
+``ScenarioDevelopment._new_organs``), then the shoot's postsegmentation.

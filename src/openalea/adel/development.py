@@ -29,7 +29,7 @@ from openalea.metafspm.coupling.composite_wrapper import CompositeModel
 from openalea.metafspm.coupling.translator import Translator
 from openalea.metafspm.scene.population import Planting, planting
 from openalea.metafspm.scene.scene import Scene
-from openalea.metafspm.solve.decorator import state
+from openalea.metafspm.solve.decorator import postsegmentation, potential
 
 BY = "model_scenario_development"
 ORGAN_KINDS = ("StemInternode", "Sheath", "Blade")
@@ -91,21 +91,20 @@ class ScenarioDevelopment(FunctionalComponent):
                                         by=BY, default=5.)
     senescence_duration: float = parameter(unit='phyllochron', description="The blade's senescence", by=BY, default=3.)
 
-    @state
+    @potential
     def _development(self, thermal_time) -> dict:
         """The plants' thermal time advanced by a step (set at start - delay at the first call), and what is given
-        at it."""
+        at it: before the shoot's segmentation, which creates the phytomers it asks for."""
         thermal_time = np.asarray(thermal_time, dtype=float)
         first = self._start() - self._plant_values("delay")
         thermal_time = np.where(np.isnan(thermal_time), first, thermal_time + self._plant_values("thermal_time_step"))
         return dict(self.given(thermal_time), thermal_time=thermal_time)
 
-    def write(self):
-        """Write what is given at the plants' current thermal time again: the organs created since are given their
-        lengths (as cnwgrass writes a new metamer's at once)."""
-        ds = self.data_structure
-        for name, values in self.given(np.asarray(ds.get("thermal_time"), dtype=float)).items():
-            ds.set(name, values)
+    @postsegmentation
+    def _new_organs(self, thermal_time) -> dict:
+        """What is given at the plants' thermal time again, after the shoot's segmentation: the organs it created are
+        given their lengths at once (as cnwgrass writes a new metamer's), before the shoot's postsegmentation."""
+        return self.given(np.asarray(thermal_time, dtype=float))
 
     def given(self, thermal_time):
         """{variable: values} at the plants' *thermal_time*: their axis numbers, their axes' phytomer numbers and Haun
@@ -216,9 +215,10 @@ for _name in ("axis_row", "organ_rank"):
 
 class ScenarioShoot(CompositeModel):
     """A plant model: ShootArchitecture grown by ScenarioDevelopment, coupled by TRANSLATOR (the coupling contract:
-    the development's outputs are the shoot's inputs; the shoot's axis rows and organ ranks the development's). At
-    each call the development first, then the shoot; when the shoot created phytomers, their lengths are given at once
-    and the shoot's elements updated."""
+    the development's outputs are the shoot's inputs; the shoot's axis rows and organ ranks the development's). Both
+    run together, in one schedule: the development's potential (its thermal time and what it gives), the shoot's
+    segmentation (the phytomers asked for), the development's postsegmentation (the new organs' lengths), then the
+    shoot's postsegmentation (its elements)."""
     initiators = (ShootArchitecture,)
     translator = TRANSLATOR
 
@@ -228,13 +228,7 @@ class ScenarioShoot(CompositeModel):
         self.couple(self.development, self.architecture)
 
     def run(self):
-        ds = self.architecture.data_structure
-        self.development()
-        before = (ds.topology_version, ds.n_nodes())
-        self.architecture()
-        if (ds.topology_version, ds.n_nodes()) != before:
-            self.development.write()
-            self.architecture()
+        self.run_together(self.development, self.architecture)
 
 
 def sown_stand(n_plants, n_rows=4, row_spacing=0.15, plant_spacing=0.04, seed=0):
