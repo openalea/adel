@@ -59,14 +59,18 @@ def test_the_blades_dimensions_from_development():
     blade = organ_names(ds) == "blade"
     area_before = np.asarray(ds.get("organ_area"), dtype=float).copy()
     assert area_before[blade].max() > 0
-    for name in ("shape_mature_length", "shape_max_width"):
-        values = np.asarray(ds.get(name), dtype=float).copy()
-        values[blade] *= 1.25
+    given = {}
+    for name, shape in (("final_blade_length", "shape_mature_length"), ("final_blade_width", "shape_max_width")):
+        values = np.full(len(blade), np.nan)                           # what a development model gives
+        values[blade] = np.asarray(ds.get(shape), dtype=float)[blade] * 1.25
         ds.set(name, values)
+        given[shape] = values
     architecture()
-    written = np.asarray(ds.get("shape_max_width"), dtype=float).copy()
     area_after = np.asarray(ds.get("organ_area"), dtype=float)
     grown = blade & (area_before > 0)
     assert np.all(area_after[grown] != area_before[grown])
+    for shape, values in given.items():                                # the blades' shapes: the given dimensions
+        np.testing.assert_array_equal(np.asarray(ds.get(shape), dtype=float)[blade], values[blade])
     architecture()
-    np.testing.assert_array_equal(np.asarray(ds.get("shape_max_width"), dtype=float), written)   # kept
+    np.testing.assert_array_equal(np.asarray(ds.get("shape_max_width"), dtype=float)[blade],
+                                  given["shape_max_width"][blade])      # kept

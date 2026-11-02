@@ -53,6 +53,6 @@ values in brackets. A plant can also be given by Adel's two tables (``axes_table
 from a main stem's measured dimensions (``openalea.adel.simulation.tables_from_measurements``).
 
 The development follows the thermal time: ``simulate`` adds each day's mean temperature above a base temperature
-(0 °C by default) to it, in degree-days (°Cd).
+(``base_temperature``, 0 °C by default) to it, in degree-days (°Cd).
 
 To change a parameter: ``simulate({"phyllochron": 100.}, days=80)``.

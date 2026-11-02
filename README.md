@@ -134,8 +134,10 @@ triangles = architecture.triangles()                   # every triangle and its 
   few per-plant numbers (`leaf_number`, `tiller_number`, `longest_blade_length`, `longest_blade_width`: Adel's
   reference dimension profiles, scaled), or by default Adel's sample plant.
 - **Development** (`openalea.adel.development`): `ScenarioDevelopment` is a simple deterministic scenario, linear in
-  thermal time, with parameters for its timings. Adel-Wheat's R kinetics are not ported. `ScenarioShoot` is the plant
-  model of both components, and `shoot_scene` builds a scene of such plants.
+  thermal time, with parameters for its timings; its thermal time sums the degree-days of the scene's air temperature
+  (the forcing `air_temperature`, above `base_temperature`), or `thermal_time_step` a step without it. Adel-Wheat's R
+  kinetics are not ported. `ScenarioShoot` is the plant model of both components (coupled by their variables' names,
+  without a translator), and `shoot_scene` builds a scene of such plants.
 - **Tillers:** vertical by default, as AdelDyn's. With `tiller_inclination=1` they are inclined by static Adel's rules
   (Adel.R's getIncT and axe_inclination: incT ramping with the Haun stage, straightening at dredT).
 - **Plants and the soil:** each plant is sown at minus its sowing depth (metafspm's `Planting`, m), by default 0.9

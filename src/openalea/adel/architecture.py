@@ -43,9 +43,11 @@ turtle is Adel's, which places a tiller of a tiller (T1.1) and its bearer after 
 The coupling contract, what other models write and read (lengths in m, on the DataStructure):
 
 - a development model writes, per Plant, `axis_number` (its axes emerged, in its axes table's order); per Axis,
-  `phytomer_number` (its phytomers initiated); per Organ, `organ_length`, `visible_length` (out of the sheaths' tube),
-  a blade's `rolled_length` and `age`, and optionally a blade's `shape_mature_length` and `shape_max_width` (its
-  final dimensions, the phytomer table's at its creation, as elongwheat's lamina_Lmax and leaf_Wmax);
+  `phytomer_number` (its phytomers initiated, 1 when it appears); per Organ, `organ_length`, `visible_length` (out of
+  the sheaths' tube), a blade's `rolled_length` and `age`, and optionally a blade's `final_blade_length` and
+  `final_blade_width` (its final dimensions, as elongwheat's lamina_Lmax and leaf_Wmax; NaN: not given);
+- ShootArchitecture's blades' shapes are `shape_mature_length` and `shape_max_width`: the phytomer table's Ll and Lw
+  at their creation, the development's final dimensions once it gives them;
 - a senescence model writes, per Organ, `organ_senesced_length`;
 - ShootArchitecture derives the elements from them at each call (their lengths, areas, green and senesced parts,
   placement): the elements are its own, the others read them, they do not write them;
@@ -54,8 +56,8 @@ The coupling contract, what other models write and read (lengths in m, on the Da
   (Triangles.per_owner).
 
 The organs a call creates get their lengths at the next call; a development model giving them at once (as cnwgrass
-after add_metamer) writes them after the call and calls ShootArchitecture again (openalea.adel.development's
-ScenarioShoot).
+after add_metamer) gives them in its postsegmentation step, run together with ShootArchitecture's
+(CompositeModel.run_together: openalea.adel.development's ScenarioShoot).
 """
 from dataclasses import dataclass
 from functools import lru_cache
@@ -126,7 +128,8 @@ class ShootArchitecture(StructuralComponent):
                                         scale=SCALES.Plant)
     phytomer_number: float = input_variable(unit='adim',
                                             description="The number of phytomers the axis has (its development)",
-                                            by='model_development', default=0., scale=SCALES.Axis)
+                                            value_comment="1 at its creation: an axis appears with its first phytomer",
+                                            by='model_development', default=1., scale=SCALES.Axis)
     organ_length: float = input_variable(unit='m', description="The organ's length", by='model_development',
                                          default=0., scale=SCALES.Organ)
     visible_length: float = input_variable(unit='m', description="The organ's length out of the sheaths' tube",
@@ -140,12 +143,13 @@ class ShootArchitecture(StructuralComponent):
     haun_stage: float = input_variable(unit='adim',
                                        description="The axis' Haun stage (its tillers' inclination ramps with it)",
                                        by='model_development', default=0., scale=SCALES.Axis)
-    shape_mature_length: float = input_variable(unit='m', description="The blade's final length, its shape's length",
-                                                value_comment="at its creation, the phytomer table's Ll",
-                                                by='model_development', default=0., scale=SCALES.Organ)
-    shape_max_width: float = input_variable(unit='m', description="The blade's maximal width, its shape's width",
-                                            value_comment="at its creation, the phytomer table's Lw",
-                                            by='model_development', default=0., scale=SCALES.Organ)
+    final_blade_length: float = input_variable(unit='m', description="The blade's final length, given by development",
+                                               value_comment="NaN: not given (the phytomer table's Ll)",
+                                               by='model_development', default=np.nan, scale=SCALES.Organ)
+    final_blade_width: float = input_variable(unit='m',
+                                              description="The blade's maximal width, given by development",
+                                              value_comment="NaN: not given (the phytomer table's Lw)",
+                                              by='model_development', default=np.nan, scale=SCALES.Organ)
 
     # --- The axes (from the axes table) ---
     shoot_tables: object = state_variable(unit='', description="The plant's tables: (axes table, phytomer table, its "
@@ -208,6 +212,14 @@ class ShootArchitecture(StructuralComponent):
     shape_seed: int = state_variable(unit='adim', description="The blade's shape in its class (Lseed)",
                                      value_comment="-1: none", kind=DESCRIPTOR, default=-1,
                                      scale=SCALES.Organ, dtype='int')
+    shape_mature_length: float = state_variable(unit='m', description="The blade's final length, its shape's length",
+                                                value_comment="the phytomer table's Ll at its creation, then "
+                                                              "final_blade_length once given",
+                                                kind=DESCRIPTOR, default=0., scale=SCALES.Organ)
+    shape_max_width: float = state_variable(unit='m', description="The blade's maximal width, its shape's width",
+                                            value_comment="the phytomer table's Lw at its creation, then "
+                                                          "final_blade_width once given",
+                                            kind=DESCRIPTOR, default=0., scale=SCALES.Organ)
 
     organ_area: float = state_variable(unit='m2', description="The organ's visible area (its visible elements')",
                                        kind=DESCRIPTOR, default=0., scale=SCALES.Organ)
@@ -278,11 +290,14 @@ class ShootArchitecture(StructuralComponent):
 
     # --- Parameters ---
     axes_table: object = parameter(unit='',
-                                   description="Adel's axeT: one row per axis of the population's plants (plant, axe, "
-                                               "nf, HS_final, hasEar, ...)", by=BY, default=None)
+                                   description="Adel's axeT: one row per axis of its plants (plant, axe, nf, HS_final, "
+                                               "hasEar, ...)", value_comment="each plant's (its scenario's)", by=BY,
+                                   default=None, scale=SCALES.Plant, dtype='object')
     phytomer_table: object = parameter(unit='',
                                        description="Adel's phytoT: one row per plant, axis and rank (plant, axe, n, "
-                                                   "Ll, Lw, Gl, Gd, El, Ed, Azim, Lindex, Lseed)", by=BY, default=None)
+                                                   "Ll, Lw, Gl, Gd, El, Ed, Azim, Lindex, Lseed)",
+                                       value_comment="each plant's (its scenario's)", by=BY, default=None,
+                                       scale=SCALES.Plant, dtype='object')
     table_plant: int = parameter(unit='adim', description="The plant's number in the tables (their column 'plant')",
                                  by=BY, default=1)
     n_sect: int = setting(unit='adim', description="The number of elements of a blade", default=1)
@@ -344,7 +359,7 @@ class ShootArchitecture(StructuralComponent):
         built = g.properties()["shoot_tables"]
         offset = int(population_tables([built[p] for p in sorted(built) if p <= plant])[3][-1])
         n_sect = int(parameters.get("n_sect", cls.n_sect))
-        unit = float(parameters.get("length_unit", cls.length_unit))
+        unit = float(parameters.get("length_unit", cls.length_unit))          # the plant's
         rows = axes.reset_index(drop=True)
         mine = plant_rows(rows, number)
         main_stem = mine[0]
@@ -355,16 +370,15 @@ class ShootArchitecture(StructuralComponent):
         values = cls._axis_values(rows, main_stem, unit)
         values["axis_row"] += offset                              # the population's rows
         values["bearer_row"] = values["bearer_row"] + offset if values["bearer_row"] >= 0 else -1
-        for name, value in dict(values, phytomer_number=1., axis_phytomers=1).items():
+        for name, value in dict(values, axis_phytomers=1).items():
             g.property(name)[axis] = value
-        g.property("axis_number")[plant] = 1.
-        dimensions = phytomer_dimensions(phytomers, rows, unit)
+        dimensions = phytomer_dimensions(phytomers, rows, 1.)                  # in the table's unit
         complexes, elements = phytomer_layout(labels, n_sect)
         created = []
         for anchor, scale, label in complexes:
             parent = unit_vid if anchor == "unit" else created[anchor]
             created.append(g.add_component(parent, **PropsConfig(scale=scale, edge_type='/', label=label)))
-        cls._set_phytomer(g, created, dimensions, main_stem, 1, int(rows.loc[main_stem, "nf"]))
+        cls._set_phytomer(g, created, dimensions, main_stem, 1, int(rows.loc[main_stem, "nf"]), unit)
         vids = []
         for complex_index, parent, edge, label, _, index in elements:
             if parent == "previous":
@@ -396,20 +410,24 @@ class ShootArchitecture(StructuralComponent):
                     insertion_azimuth=angle("azTb"), first_azimuth=angle("azT"))
 
     @classmethod
-    def _set_phytomer(cls, g, created, dimensions, row, rank, nff):
+    def _set_phytomer(cls, g, created, dimensions, row, rank, nff, unit):
         """A phytomer's and its organs' values on the MPG (initiate_plant's)."""
-        for name, value in cls._phytomer_values(dimensions, np.array([row]), np.array([rank]),
-                                                np.array([nff])).items():
+        for name, value in cls._phytomer_values(dimensions, np.array([row]), np.array([rank]), np.array([nff]),
+                                                np.array([unit])).items():
             level, values = value
             for vid, v in zip([created[i] for i in level], values):
                 g.property(name)[vid] = np.asarray(v).reshape(-1)[0].item()     # this one phytomer's
 
     @staticmethod
-    def _phytomer_values(dimensions, rows, ranks, nff):
+    def _phytomer_values(dimensions, rows, ranks, nff, units):
         """{variable: (complex positions in a phytomer's layout, values per phytomer per position)}: for phytomers
-        of axis rows *rows* at ranks *ranks*; layout positions 0 phytomer, 1 internode, 2 sheath, 3 blade."""
+        of axis rows *rows* at ranks *ranks*, from *dimensions* in the tables' units (*units*: each phytomer's plant's
+        length_unit, m); layout positions 0 phytomer, 1 internode, 2 sheath, 3 blade."""
         def at(name):
             return dimensions[name][rows, ranks]
+
+        def length(name):
+            return at(name) * units
         shape_class, shape_seed = at("Lindex"), at("Lseed")
         valid = (shape_class != -999) & (shape_seed != -999) & np.isfinite(shape_class) & np.isfinite(shape_seed)
         ntop = nff - ranks + 1
@@ -417,10 +435,10 @@ class ShootArchitecture(StructuralComponent):
             "phytomer_rank": ([0], [ranks]),
             "organ_rank": ([1, 2, 3], [ranks, ranks, ranks]),
             "ntop": ([1, 2, 3], [ntop, ntop, ntop]),
-            "diameter": ([1, 2], [at("Ed"), at("Gd")]),
+            "diameter": ([1, 2], [length("Ed"), length("Gd")]),
             "organ_azimuth": ([1], [at("Azim")]),
-            "shape_mature_length": ([3], [at("Ll")]),
-            "shape_max_width": ([3], [at("Lw")]),
+            "shape_mature_length": ([3], [length("Ll")]),
+            "shape_max_width": ([3], [length("Lw")]),
             "shape_class": ([3], [np.where(valid, shape_class, -1).astype(int)]),
             "shape_seed": ([3], [np.where(valid, shape_seed, -1).astype(int)]),
         }
@@ -443,21 +461,25 @@ class ShootArchitecture(StructuralComponent):
         return np.array(ORGANS + ("",), dtype=object)[kind]
 
     def _dimension_arrays(self):
-        """The population's phytomer table as arrays (_dimensions), read once."""
+        """The population's phytomer table as arrays (tables.phytomer_dimensions), in the tables' units, read once."""
         def build():
             axes, phytomers = self.tables()[:2]
-            return phytomer_dimensions(phytomers, axes, self.parameter_value("length_unit"))
+            return phytomer_dimensions(phytomers, axes, 1.)
         return self.cached("dimensions", build, key=id(self.tables()[0]))
 
     def _axes_lookup(self):
-        """(rows of each table plant, values of each row) of the axes table (tables.plant_rows, _axis_values), read
-        once."""
+        """(rows of each table plant, the values of a row in a plant's length unit) of the axes table
+        (tables.plant_rows, _axis_values), each read once."""
         def build():
             rows = self.tables()[0]
-            rows_of = {int(number): plant_rows(rows, int(number)) for number in set(rows["plant"])}
-            unit = self.parameter_value("length_unit")
-            return rows_of, {row: self._axis_values(rows, row, unit) for row in range(len(rows))}
-        return self.cached("axes", build, key=id(self.tables()[0]))
+            return rows, {int(number): plant_rows(rows, int(number)) for number in set(rows["plant"])}, {}
+        rows, rows_of, values = self.cached("axes", build, key=id(self.tables()[0]))
+
+        def values_of(row, unit):
+            if (row, unit) not in values:
+                values[(row, unit)] = self._axis_values(rows, row, unit)
+            return values[(row, unit)]
+        return rows_of, values_of
 
     @segmentation
     def _axis_phytomers(self, axis_phytomers, phytomer_number, axis_row) -> dict:
@@ -467,6 +489,7 @@ class ShootArchitecture(StructuralComponent):
         ds = self.data_structure
         g = ds.structure
         plant_rows, axis_values = self._axes_lookup()
+        plant_unit = np.asarray(ds.parameter_view("length_unit", "Plant"), dtype=float)        # each plant's
         count = np.array(axis_phytomers, dtype=int)
         target = np.floor(np.asarray(phytomer_number, dtype=float)).astype(int)
         axes = np.asarray(ds.entity_ids("Axis"))
@@ -477,26 +500,29 @@ class ShootArchitecture(StructuralComponent):
         plants = np.asarray(ds.entity_ids("Plant"))
         wanted = np.floor(np.asarray(ds.get("axis_number"), dtype=float)).astype(int)
         table_plant = self.tables()[2]
-        for plant, number, table in zip(plants.tolist(), wanted.tolist(), table_plant.tolist()):
+        for plant, number, table, unit in zip(plants.tolist(), wanted.tolist(), table_plant.tolist(),
+                                              plant_unit.tolist()):
             mine = plant_rows[table]
             existing = [row for row in mine if (plant, row) in axis_of]
             for row in mine[len(existing):number]:
-                values = axis_values[row]
+                values = axis_values(row, unit)
                 predecessor = self._predecessor(g, None, 1, axis_of, plant, values["bearer_row"],
                                                 values["insertion_rank"])
                 if predecessor is None:
                     break                                   # its bearer's phytomer is not there yet
                 batch.axis(plant, dict(values, axis_phytomers=1))
-                batch.phytomer(None, predecessor, row, 1, values["final_leaf_number"], branched=True)
+                batch.phytomer(None, predecessor, row, 1, values["final_leaf_number"], unit, branched=True)
 
         # New phytomers on the axes
+        axis_plant = ds.index_of(np.array([g.complex(axis) for axis in axes.tolist()], dtype=np.int64), "Plant")
         for a, axis in enumerate(axes.tolist()):
-            values = axis_values[int(axis_row[a])]
+            unit = float(plant_unit[axis_plant[a]])
+            values = axis_values(int(axis_row[a]), unit)
             for rank in range(count[a] + 1, target[a] + 1):
                 predecessor = self._predecessor(g, axis, rank, axis_of, g.complex(axis), values["bearer_row"],
                                                 values["insertion_rank"])
                 batch.phytomer(g.components(axis)[0], predecessor, int(axis_row[a]), rank,
-                               values["final_leaf_number"], branched=False)
+                               values["final_leaf_number"], unit, branched=False)
                 count[a] = rank
         return {"axis_phytomers": count,
                 "new_phytomers": batch.new_nodes(self._dimension_arrays(), self.variable_specs)}
@@ -519,12 +545,14 @@ class ShootArchitecture(StructuralComponent):
 
     @postsegmentation
     def _elements(self, element_index, organ_length, visible_length, organ_senesced_length, rolled_length, diameter,
-                  shape_mature_length, shape_max_width, shape_class) -> dict:
+                  shape_mature_length, shape_max_width, final_blade_length, final_blade_width, shape_class) -> dict:
         """The elements from their organs' lengths (Adel's internode_elements, sheath_elements, blade_elements):
         a stem organ's hidden element (its length out of sight) and visible one, its green and senesced parts; a
-        blade's hidden part, and its sectors along its mature shape (its visible part the shape's top), each one's
-        green and senesced parts, rolled part, flat part and width; areas from the diameters and the shapes' width
-        profiles; the organs' visible areas."""
+        blade's hidden part, and its sectors along its mature shape (its visible part the shape's top; its final
+        dimensions the development's once given), each one's green and senesced parts, rolled part, flat part and
+        width; areas from the diameters and the shapes' width profiles; the organs' visible areas."""
+        shape_mature_length = np.where(np.isfinite(final_blade_length), final_blade_length, shape_mature_length)
+        shape_max_width = np.where(np.isfinite(final_blade_width), final_blade_width, shape_max_width)
         ds = self.data_structure
         element_kind, organ_kind = self._kinds()
         organ = np.asarray(ds.owner("Organ"))
@@ -574,7 +602,8 @@ class ShootArchitecture(StructuralComponent):
         # The organs' visible areas
         visible = ((element_kind == 1) & stem) | ((element_kind == 2) & blade)
         areas = np.bincount(organ[visible], weights=out["area"][visible], minlength=len(ds.entity_ids("Organ")))
-        return dict(out, is_green=is_green, organ_area=areas)
+        return dict(out, is_green=is_green, organ_area=areas, shape_mature_length=shape_mature_length,
+                    shape_max_width=shape_max_width)
 
     @staticmethod
     def _blade_sectors(out, is_green, sector, element_index, l_visible, l_senesced, l_rolled, mature, max_width,
@@ -660,8 +689,8 @@ class ShootArchitecture(StructuralComponent):
         kind = np.full(n_organs, -1)
         kind[np.asarray(ds.owner("Organ"))] = organ_kind
         axis = ds.map_to(np.arange(len(axis_azimuth), dtype=float), "Axis", "Organ", "broadcast").astype(np.int64)
-        start = float(np.asarray(ds.parameter_view("inclination_start_haun_stage", "Axis"))[0])
-        rate = float(np.asarray(ds.parameter_view("inclination_rate", "Axis"))[0])
+        start = np.asarray(ds.parameter_view("inclination_start_haun_stage", "Axis"), dtype=float)     # each axis'
+        rate = np.asarray(ds.parameter_view("inclination_rate", "Axis"), dtype=float)
         first = base_inclination(np.asarray(table_inclination, dtype=float), np.asarray(bearer_row) < 0,
                                  np.asarray(haun_stage, dtype=float), start, rate)
         stem = np.flatnonzero((kind == 0) | (kind == 1))
@@ -700,7 +729,7 @@ class ShootArchitecture(StructuralComponent):
             np.where(stem, np.asarray(inclination, dtype=float)[organ], 0.),
             np.where(stem & (organ_kind == 0), np.asarray(organ_azimuth, dtype=float)[organ], 0.),
             np.asarray(length, dtype=float), np.asarray(rolled_part, dtype=float), frame_source, parent,
-            (np.asarray(ds.parameter_view("own_axis_top", "Axis")) > 0)[axis])
+            np.asarray(ds.parameter_view("own_axis_top", "node")) > 0)
         return {"x1": position[:, 0], "y1": position[:, 1], "z1": position[:, 2], "x2": end[:, 0], "y2": end[:, 1],
                 "z2": end[:, 2], "heading_x": heading[:, 0], "heading_y": heading[:, 1], "heading_z": heading[:, 2],
                 "up_x": up[:, 0], "up_y": up[:, 1], "up_z": up[:, 2]}
@@ -754,7 +783,9 @@ class ShootArchitecture(StructuralComponent):
             return np.zeros((0, 3, 3)), np.zeros(0, dtype=np.int64)
         blade = organ[meshed]
         main = ds.map_to(np.asarray(ds.get("bearer_row"), dtype=float), "Axis", "Organ", "broadcast")[blade] < 0
-        phyllochron = np.where(main, self.parameter_value("phyllochron"), self.parameter_value("tiller_phyllochron"))
+        plant = np.asarray(ds.owner("Plant"))[meshed]
+        phyllochron = np.where(main, np.asarray(ds.parameter_view("phyllochron", "Plant"))[plant],     # its plant's
+                               np.asarray(ds.parameter_view("tiller_phyllochron", "Plant"))[plant])
         age_class = shapes.age_class(np.asarray(ds.get("age"))[blade] / phyllochron - 0.3)
         shape = shapes.shape_index(np.asarray(ds.get("shape_class"))[blade], np.asarray(ds.get("shape_seed"))[blade],
                                    age_class)
@@ -817,7 +848,7 @@ class _Batch:
         self.complexes_layout, self.elements_layout = phytomer_layout(labels, n_sect)
         self.anchor, self.scale, self.label, self.complex_values = [], [], [], []
         self.parent, self.edge, self.element_label, self.complex_of, self.element_index = [], [], [], [], []
-        self.phytomers = []                                 # (layout's first complex, axis row, rank, nff)
+        self.phytomers = []                                 # (layout's first complex, axis row, rank, nff, unit)
         self.last_unit = None
 
     def _complex(self, anchor, scale, label, values=None):
@@ -832,9 +863,9 @@ class _Batch:
         axis = self._complex(plant, SCALES.Axis, self.labels.Axis.Shoot, values)
         self.last_unit = self._complex(-1 - axis, SCALES.GrowthUnit, self.labels.GrowthUnit.Shoot)
 
-    def phytomer(self, unit, predecessor, row, rank, nff, branched):
+    def phytomer(self, unit, predecessor, row, rank, nff, length_unit, branched):
         """A phytomer under the GrowthUnit *unit* (None: the new axis' just added), its internode after
-        *predecessor* (an element's id, or NO_PARENT)."""
+        *predecessor* (an element's id, or NO_PARENT); *length_unit*: its plant's (m)."""
         unit = -1 - self.last_unit if unit is None else unit
         base = len(self.anchor)
         for where, scale, label in self.complexes_layout:
@@ -850,7 +881,7 @@ class _Batch:
             self.element_label.append(label)
             self.complex_of.append(-1 - (base + complex_index))
             self.element_index.append(index)
-        self.phytomers.append((base, row, rank, nff))
+        self.phytomers.append((base, row, rank, nff, length_unit))
 
     def new_nodes(self, dimensions, specs) -> NewNodes:
         if not self.parent:
@@ -864,9 +895,9 @@ class _Batch:
                 if name in complex_values:
                     column[k] = complex_values[name]
             values[name] = column
-        bases, rows, ranks, nff = (np.array(column) for column in zip(*self.phytomers))
-        for name, (positions, per_position) in ShootArchitecture._phytomer_values(dimensions, rows, ranks,
-                                                                                  nff).items():
+        bases, rows, ranks, nff, units = (np.array(column) for column in zip(*self.phytomers))
+        for name, (positions, per_position) in ShootArchitecture._phytomer_values(dimensions, rows, ranks, nff,
+                                                                                  units).items():
             column = values.setdefault(name, np.full(n, float(specs[name].default)))
             for position, array in zip(positions, per_position):
                 column[bases + position] = array

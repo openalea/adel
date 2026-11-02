@@ -29,7 +29,7 @@ population, each distinct pair of tables (a source) once, its plants renumbered 
 :math:`k`-th source, each plant's axis rows at an offset (written at its initiation, from the plants built before it).
 
 **A phytomer** (``tables.phytomer_dimensions``, ``ShootArchitecture._phytomer_values``), at its creation, from its axis' row and its
-rank, with :math:`u` the tables' length unit (``length_unit``, Adel's cm: 0.01):
+rank, with :math:`u` its plant's tables' length unit (``length_unit``, Adel's cm: 0.01):
 
 ==================================== =========================== ========================================
 variable                             organ                       value
@@ -43,8 +43,9 @@ variable                             organ                       value
 ==================================== =========================== ========================================
 
 The sheath's and internode's lengths ``Gl`` and ``El`` are read by a development model, not by ShootArchitecture.
-``shape_mature_length`` and ``shape_max_width`` are inputs: a development model may write them over the table's
-values.
+``shape_mature_length`` and ``shape_max_width`` are ShootArchitecture's: a development model giving a blade's final
+dimensions writes its inputs ``final_blade_length`` and ``final_blade_width`` (NaN: not given), which they take from
+then on (``ShootArchitecture._elements``).
 
 **An axis** (``ShootArchitecture._axis_values``), from its row: ``final_leaf_number`` :math:`= n_f`;
 ``final_haun_stage`` = ``HS_final`` (:math:`n_f` when missing); ``has_ear`` = ``hasEar``; ``table_inclination`` =
@@ -348,8 +349,11 @@ The scenario development (``development.ScenarioDevelopment``)
 ==============================================================
 
 A deterministic scenario, linear in thermal time, not Adel-Wheat's kinetics. A plant's thermal time :math:`t` starts
-at ``start`` (by default its main stem's ``emf1``) minus its ``delay``, and advances by ``thermal_time_step`` at each
-call. With the phyllochron :math:`\varphi` (``phyllochron``, every axis), an axis' first leaf at :math:`e`
+at ``start`` (by default its main stem's ``emf1``) minus its ``delay``, and is the plant's at the start of each call
+(``ScenarioDevelopment._degree_days``): with the scene's forcing ``air_temperature`` :math:`T` (°C), a call adds the
+degree-days of the step before it, :math:`\max(0, T - T_b)\,\Delta t / 1\,\text{d}`, :math:`T` read at that step's
+start, :math:`T_b` ``base_temperature`` (0 °C), :math:`\Delta t` the time step; without it, a call adds
+``thermal_time_step``. With the phyllochron :math:`\varphi` (``phyllochron``, every axis), an axis' first leaf at :math:`e`
 (``emf1``), rank :math:`n` appearing at :math:`a_n = e + (n - 1)\varphi`, and
 :math:`\operatorname{ramp}(b, D) = \operatorname{clip}((t - b)/D, 0, 1)`:
 

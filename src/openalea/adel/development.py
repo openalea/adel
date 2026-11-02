@@ -12,11 +12,15 @@ advanced at each call. It is a scenario, linear in thermal time, not Adel-Wheat'
   previous sheath, the internode for `internode_visible_fraction` of its length; the blade senesces from
   `senescence_start` for `senescence_duration`; its age is the thermal time since it appeared.
 
-A plant's thermal time starts at `start` (by default its main stem's first leaf) minus its `delay`. ScenarioShoot is
-the plant model of ShootArchitecture grown by it; shoot_scene builds a scene of such plants:
+A plant's thermal time starts at `start` (by default its main stem's first leaf) minus its `delay`. It is the
+plant's at the start of each call: a call adds the degree-days of the step before it, the air temperature (the
+forcing `air_temperature`, °C, read at that step's start) above `base_temperature`; without that forcing, each call
+adds `thermal_time_step`. ScenarioShoot is the plant model of ShootArchitecture grown by it; shoot_scene builds a scene
+of such plants:
 
     scene = shoot_scene(sown_stand(20), delays=random_delays(20), leaves=LeafShapes.echap(), thermal_time_step=10.)
     scene.run()                                        # 10 °Cd of development, then the shoot
+    scene = shoot_scene(time_step=86400., forcings={"air_temperature": 15.}, start=0.)    # 15 °Cd a day
 """
 from dataclasses import dataclass, replace
 
@@ -24,15 +28,16 @@ import numpy as np
 
 from openalea.adel.architecture import SCALES, ShootArchitecture
 from openalea.adel.tables import phytomer_dimensions, plant_rows, plant_tables, population_tables
-from openalea.metafspm.coupling.component import FunctionalComponent, input_variable, parameter, state_variable
+from openalea.metafspm.coupling.component import (FunctionalComponent, forcing_variable, input_variable, parameter,
+                                                   state_variable)
 from openalea.metafspm.coupling.composite_wrapper import CompositeModel
-from openalea.metafspm.coupling.translator import Translator
 from openalea.metafspm.scene.population import Planting, planting
 from openalea.metafspm.scene.scene import Scene
 from openalea.metafspm.solve.decorator import postsegmentation, potential
 
 BY = "model_scenario_development"
 ORGAN_KINDS = ("StemInternode", "Sheath", "Blade")
+DAY = 86400.
 
 
 @dataclass
@@ -54,7 +59,8 @@ class ScenarioDevelopment(FunctionalComponent):
     axis_number: float = state_variable(unit='adim', description="The number of the plant's axes emerged",
                                         kind="descriptor", default=1., scale=SCALES.Plant)
     phytomer_number: float = state_variable(unit='adim', description="The number of phytomers the axis has",
-                                            kind="descriptor", default=0., scale=SCALES.Axis)
+                                            value_comment="1 at its creation: an axis appears with its first phytomer",
+                                            kind="descriptor", default=1., scale=SCALES.Axis)
     haun_stage: float = state_variable(unit='adim',
                                        description="The axis' Haun stage: the phyllochrons since its first leaf",
                                        kind="descriptor", default=0., scale=SCALES.Axis)
@@ -67,10 +73,17 @@ class ScenarioDevelopment(FunctionalComponent):
     age: float = state_variable(unit='°Cd', description="The blade's age", kind="descriptor",
                                 default=0., scale=SCALES.Organ)
 
+    # --- Forcing ---
+    air_temperature: float = forcing_variable(unit='°C', description="The air temperature", at="start",
+                                              required=False)
+
     # --- Parameters ---
     length_unit: float = parameter(unit='m', description="The tables' length unit in m", by=BY, default=0.01)
     phyllochron: float = parameter(unit='°Cd', description="The phyllochron of every axis", by=BY, default=88.92)
-    thermal_time_step: float = parameter(unit='°Cd', description="The thermal time of a call", by=BY, default=10.)
+    thermal_time_step: float = parameter(unit='°Cd', description="The thermal time of a call",
+                                         value_comment="used without the forcing air_temperature", by=BY, default=10.)
+    base_temperature: float = parameter(unit='°C', description="The temperature above which the degree-days count",
+                                        value_comment="with the forcing air_temperature", by=BY, default=0.)
     start: float = parameter(unit='°Cd', description="The scenario's start",
                              value_comment="NaN: the main stem's first leaf (emf1)", by=BY, default=np.nan)
     delay: float = parameter(unit='°Cd', description="The plant's delay: its scenario starts that much later", by=BY,
@@ -95,13 +108,25 @@ class ScenarioDevelopment(FunctionalComponent):
 
     @potential
     def _development(self, thermal_time, shoot_tables) -> dict:
-        """The plants' thermal time advanced by a step (set at start - delay at the first call), and what is given
-        at it: before the shoot's segmentation, which creates the phytomers it asks for."""
+        """The plants' thermal time advanced by the step before (set at start - delay at the first call), and what is
+        given at it: before the shoot's segmentation, which creates the phytomers it asks for."""
         thermal_time = np.asarray(thermal_time, dtype=float)
         tables = self._tables(shoot_tables)
         first = self._start(tables) - self._plant_values("delay")
-        thermal_time = np.where(np.isnan(thermal_time), first, thermal_time + self._plant_values("thermal_time_step"))
+        thermal_time = np.where(np.isnan(thermal_time), first, thermal_time + self._degree_days())
         return dict(self.given(thermal_time, tables), thermal_time=thermal_time)
+
+    def _degree_days(self):
+        """Per plant, the thermal time a call adds: with the forcing air_temperature, the degree-days of the step
+        before (its temperature, read at its start, above base_temperature, over its duration), kept from that
+        step's call; without it, thermal_time_step."""
+        try:
+            temperature = self.forcing("air_temperature")
+        except KeyError:                                  # no air temperature given
+            return self._plant_values("thermal_time_step")
+        step_before = self.kept("degree_days")
+        self.keep("degree_days", np.maximum(0., temperature - self._plant_values("base_temperature")) * self.dt / DAY)
+        return 0. if step_before is None else step_before
 
     @postsegmentation
     def _new_organs(self, thermal_time, shoot_tables) -> dict:
@@ -130,8 +155,7 @@ class ScenarioDevelopment(FunctionalComponent):
         haun_stage = np.clip((axis_time - emf1[axis_row]) / axis_phyllochron, 0., nf[axis_row])
 
         # Organs: their lengths
-        n_axes = len(ds.entity_ids("Axis"))
-        row = axis_row[ds.map_to(np.arange(n_axes, dtype=float), "Axis", "Organ", "broadcast").astype(int)]
+        row = ds.map_to(axis_row.astype(float), "Axis", "Organ", "broadcast").astype(int)
         rank = np.asarray(ds.get("organ_rank"), dtype=int)
 
         def per_organ(values):
@@ -205,22 +229,14 @@ class ScenarioDevelopment(FunctionalComponent):
         return self.cached("organ_kinds", build)
 
 
-TRANSLATOR = Translator()
-for _name in ("axis_number", "phytomer_number", "haun_stage", "organ_length", "visible_length",
-              "organ_senesced_length", "age"):
-    TRANSLATOR.link("ShootArchitecture", _name, "ScenarioDevelopment", {_name: 1.})
-for _name in ("axis_row", "organ_rank"):
-    TRANSLATOR.link("ScenarioDevelopment", _name, "ShootArchitecture", {_name: 1.})
-
-
 class ScenarioShoot(CompositeModel):
-    """A plant model: ShootArchitecture grown by ScenarioDevelopment, coupled by TRANSLATOR (the coupling contract:
-    the development's outputs are the shoot's inputs; the shoot's axis rows and organ ranks the development's). Both
-    run together, in one schedule: the development's potential (its thermal time and what it gives), the shoot's
-    segmentation (the phytomers asked for), the development's postsegmentation (the new organs' lengths), then the
-    shoot's postsegmentation (its elements)."""
+    """A plant model: ShootArchitecture grown by ScenarioDevelopment. They need no translator: each input is the
+    other's variable of the same name, shared on the DataStructure (the development's outputs are the shoot's inputs;
+    the shoot's tables, axis rows and organ ranks the development's), as couplings() lists. Both run together, in one
+    schedule: the development's potential (its thermal time and what it gives), the shoot's segmentation (the
+    phytomers asked for), the development's postsegmentation (the new organs' lengths), then the shoot's
+    postsegmentation (its elements)."""
     initiators = (ShootArchitecture,)
-    translator = TRANSLATOR
 
     def __init__(self, data_structure, time_step):
         self.architecture = ShootArchitecture(data_structure=data_structure, time_step=time_step)
@@ -254,7 +270,7 @@ def shoot_scene(plants=None, model=ScenarioShoot, time_step=3600, delays=None, p
     leaf_number) and *delays* (°Cd, ScenarioDevelopment's delay of each plant). A plant's z is minus its sowing
     depth (metafspm's planting convention: the shoot starts there, as a root model would): *sowing_depth* (m) for
     every plant, "coleoptile" for each its coleoptile_sowing_depth, None for the Plantings' z. *forcings*,
-    *recorder*: the Scene's (e.g. forcings={"thermal_time_step": ...}, the degree-days of each step)."""
+    *recorder*: the Scene's (e.g. forcings={"air_temperature": ...}, °C, for ScenarioDevelopment's degree-days)."""
     plants = plants or [Planting()]
     own = [dict(values) for values in (plant_scenarios or [{}] * len(plants))]
     for values, delay in zip(own, delays or [0.] * len(plants)):

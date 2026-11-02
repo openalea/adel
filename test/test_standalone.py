@@ -5,7 +5,7 @@ import pytest
 
 from openalea.adel.development import shoot_scene
 from openalea.adel.leaf_shapes import LeafShapes
-from openalea.adel.tables import sample_tables, wheat_tables
+from openalea.adel.tables import echap_shape_indices, sample_tables, wheat_tables
 from openalea.metafspm import Planting
 
 VARIABLES = ("organ_length", "visible_length", "organ_area", "inclination", "shape_class", "shape_mature_length")
@@ -82,3 +82,43 @@ def test_sown_below_the_coleoptile_and_t1_at_its_top():
     assert first["MS"] == pytest.approx(-0.9 * coleoptile)
     assert first["T1"] == pytest.approx(first["T2"]) and first["T1"] > 0.
     assert np.asarray(ds.get("insertion_rank"))[names == "T1"].tolist() == [1]
+
+
+
+def _grown_as_alone(own, shared, n_steps=80):
+    """Plants of one population with their own scenarios *own* (and *shared*) grow as each alone."""
+    ds, _ = grow(shoot_scene([Planting(x=0.15 * k) for k in range(len(own))], plant_scenarios=own, **shared), n_steps)
+    organ_plant = ds.map_to(np.arange(len(own), dtype=float), "Plant", "Organ", "broadcast").astype(int)
+    node_plant = np.asarray(ds.owner("Plant"))
+    triangles = ds.triangles()
+    plant_areas = ds.map_to(triangles.per_owner(triangles.areas(), ds.n_nodes()), "node", "Plant", "sum")
+    for plant, scenario in enumerate(own):
+        alone, _ = grow(shoot_scene(**dict(shared, **scenario)), n_steps)
+        for name in ("inclination", "organ_area", "shape_mature_length", "diameter", "organ_length"):
+            np.testing.assert_allclose(np.sort(np.asarray(ds.get(name))[organ_plant == plant]),
+                                       np.sort(np.asarray(alone.get(name))), rtol=1e-12, err_msg=f"{plant} {name}")
+        np.testing.assert_allclose(np.sort(np.asarray(ds.get("area"))[node_plant == plant]),
+                                   np.sort(np.asarray(alone.get("area"))), rtol=1e-12)
+        assert plant_areas[plant] == pytest.approx(np.sum(alone.triangles().areas()), rel=1e-9)
+
+
+def test_each_plant_its_own_phyllochrons_and_length_unit():
+    """Each plant's phyllochrons (its blades' age classes in a dynamic database) and its tables' length unit (here a
+    plant's tables in mm), in one population."""
+    axes, phytomers = sample_tables()
+    in_mm = echap_shape_indices(axes, phytomers)                       # the shapes of echap's database
+    in_mm = in_mm.copy()
+    in_mm[["Ll", "Lw", "Gl", "Gd", "El", "Ed"]] *= 10.
+    axes_in_mm = axes.copy()
+    axes_in_mm["dredT"] *= 10.
+    _grown_as_alone([dict(), dict(phyllochron=100., tiller_phyllochron=110.),
+                     dict(axes_table=axes_in_mm, phytomer_table=in_mm, length_unit=0.001)],
+                    dict(leaves=LeafShapes.echap(xy_model="Soissons_byleafclass")))
+
+
+@pytest.mark.xfail(strict=True, raises=ValueError,
+                   reason="metafspm: MPGDataStructure.parameter_view(name, 'Axis') gives the nodes' values when the "
+                          "plants' values differ (_broadcast_to_entities ignores a coarse target)")
+def test_each_plant_its_own_inclination_rule():
+    _grown_as_alone([dict(), dict(inclination_rate=10., inclination_start_haun_stage=2.)],
+                    dict(tiller_inclination=1))

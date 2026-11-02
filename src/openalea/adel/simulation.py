@@ -16,23 +16,22 @@ Adel's wheat shoots for users: a plant grown in a few lines, its results as tabl
     tables_from_measurements(dimensions)          Adel's tables from a main stem's measured dimensions
 
 The plant grows one step per day; its development follows the thermal time, the sum of the days' temperatures above
-*base_temperature*. The organs' lengths come from ScenarioDevelopment (openalea.adel.development), a simple linear
-scenario, and ShootArchitecture (openalea.adel.architecture) builds the plant from them. Lengths in m, areas in m2.
+*base_temperature* (ScenarioDevelopment's, from the scene's forcing air_temperature). The organs' lengths come from
+ScenarioDevelopment (openalea.adel.development), a simple linear scenario, and ShootArchitecture
+(openalea.adel.architecture) builds the plant from them. Lengths in m, areas in m2.
 """
 from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
 
-from openalea.metafspm.coupling.forcings import as_forcing, forcing_value
+from openalea.metafspm.coupling.forcings import as_forcing
 from openalea.metafspm.scene.recorder import SceneRecorder
 from openalea.metafspm.scene.scenarios import parameter_table
 
 from openalea.adel.architecture import ShootArchitecture
-from openalea.adel.development import ScenarioDevelopment, ScenarioShoot, random_delays, shoot_scene, sown_stand
+from openalea.adel.development import DAY, ScenarioDevelopment, ScenarioShoot, random_delays, shoot_scene, sown_stand
 from openalea.adel.tables import wheat_tables, with_tillers
-
-DAY = 86400.
 
 # The parameters a user changes first: the plant described by four numbers (without tables, instead of Adel's sample
 # plant), its development and its senescence
@@ -47,7 +46,7 @@ def parameters(values: dict = None, main_only: bool = False) -> pd.DataFrame:
     the main ones (those first), and its bounds (min_value, max_value). A name both components declare (phyllochron)
     takes one value for both."""
     table = parameter_table(ShootArchitecture, ScenarioDevelopment, values=values, main=MAIN_PARAMETERS,
-                            exclude=("thermal_time_step",))                  # simulate gives it each day
+                            exclude=("thermal_time_step",))      # unused: the temperature gives the degree-days
     return table[table["main"]].reset_index(drop=True) if main_only else table
 
 
@@ -66,19 +65,6 @@ def tables_from_measurements(dimensions: pd.DataFrame, tiller_number: int = 4, p
     for column, name in MEASURED_COLUMNS.items():
         main[name] = ordered[column].to_numpy(dtype=float)
     return {"axes_table": axes.copy(), "phytomer_table": with_tillers(axes, main)}
-
-
-class _DegreeDays:
-    """The thermal time of the step at the scene time (°Cd): the day before's temperature above the base temperature
-    (none at day 0, whose step sets the thermal time to its start). Picklable."""
-
-    def __init__(self, temperature, base_temperature: float):
-        self.temperature, self.base_temperature = as_forcing(temperature, time_unit=DAY), base_temperature
-
-    def __call__(self, time: float) -> float:
-        if time < DAY:
-            return 0.
-        return max(0., forcing_value(self.temperature, time - DAY) - self.base_temperature)
 
 
 class _Summary:
@@ -160,14 +146,10 @@ def _summary_row(day: float, ds, architecture) -> dict:
     main_stem = np.asarray(ds.get("bearer_row")) < 0
     blade = architecture.organ_names() == "blade"
     on_main = ds.map_to(main_stem.astype(float), "Axis", "Organ", "broadcast") > 0
-    plant_of_organ = ds.map_to(np.arange(n_plants, dtype=float), "Plant", "Organ", "broadcast").astype(int)
-    visible_leaves = np.bincount(plant_of_organ, weights=(blade & on_main
-                                                           & (np.asarray(ds.get("visible_length")) > 0)),
-                                 minlength=n_plants)
-    stem = np.isin(np.asarray(ds.labels()), ("StemElement",))
-    plant_of_node = ds.map_to(np.arange(n_plants, dtype=float), "Plant", "node", "broadcast").astype(int)
-    top = np.where(stem, np.asarray(ds.get("z2")), -np.inf)
-    height = np.array([max(0., top[plant_of_node == p].max(initial=0.)) for p in range(n_plants)])
+    visible_leaf = blade & on_main & (np.asarray(ds.get("visible_length")) > 0)
+    visible_leaves = ds.map_to(visible_leaf.astype(float), "Organ", "Plant", "sum")
+    stem = np.asarray(ds.labels()) == "StemElement"
+    height = ds.map_to(np.where(stem, np.asarray(ds.get("z2")), 0.), "node", "Plant", "max")    # its stems' top
     leaf = np.asarray(ds.labels()) == "LeafElement"
     return dict(day=day, thermal_time=float(np.mean(ds.get("thermal_time"))),
                 haun_stage=float(np.mean(np.asarray(ds.get("haun_stage"))[main_stem])),
@@ -185,8 +167,9 @@ def simulate(parameters: dict = None, days: float = 80, temperature=15., base_te
     changed by *parameters* ({name: value}; see parameters()). The summary is recorded every *every* days.
 
     *temperature* (°C; 15 by default) is the daily mean temperature: a number, a function of the day, or a pandas
-    Series indexed by day. Each day adds its temperature above *base_temperature* (°C) to the thermal time (°Cd),
-    which drives the development; the thermal time starts at 0 at day 0 (the sowing). *model*: the plant model,
+    Series indexed by day (the scene's forcing air_temperature). Each day adds its temperature above
+    *base_temperature* (°C) to the thermal time (°Cd), which drives the development; the thermal time starts at 0 at
+    day 0 (the sowing). *model*: the plant model,
     ScenarioShoot or one extending it (with more components, e.g. a light model).
 
     *outputs*: a folder for the run's files (metafspm's SceneRecorder): run.json, scenario.json, summary.csv (the
@@ -194,10 +177,11 @@ def simulate(parameters: dict = None, days: float = 80, temperature=15., base_te
     days (frames/, for ParaView or another platform)."""
     values = dict(parameters or {})
     values.setdefault("start", 0.)
+    values.setdefault("base_temperature", base_temperature)
     recorder = SceneRecorder(outputs, summaries=outputs is not None,
                              tables={"summary": _Summary(int(every), int(days))},
                              frame_period=10 if outputs is not None else None)
-    forcings = {"thermal_time_step": _DegreeDays(temperature, base_temperature)}
+    forcings = {"air_temperature": as_forcing(temperature, time_unit=DAY)}
     if plants == 1:
         built = shoot_scene(model=model, time_step=DAY, forcings=forcings, recorder=recorder, **values)
     else:

@@ -208,15 +208,17 @@ Structure and tables
      - dropped (the port is R-free)
    * - AD-16
      - the development model calls ``add_metamer`` and writes the new metamer's lengths at once
-     - changed: the organs a call creates get their lengths at the next call; ``ScenarioShoot`` writes them and
-       calls ShootArchitecture again
+     - changed: the organs a call creates get their lengths at the next call; ``ScenarioShoot`` runs its development
+       and its shoot together (``CompositeModel.run_together``): the development's postsegmentation gives them after
+       the shoot's segmentation
    * - AD-17
      - cnwgrass writes its own element values (the lengths of ``HiddenElement``, ``StemElement``, ``LeafElement1``)
        over Adel's after ``update_geometry``
      - changed: the elements are ShootArchitecture's; development models write the organs' lengths only
    * - AD-18
      - cnwgrass' morphogenesis writes the blades' ``shape_mature_length`` and ``shape_max_width``
-     - reproduced: both are inputs, the phytomer table's ``Ll`` and ``Lw`` until a model writes them
+     - reproduced: both are ShootArchitecture's, the phytomer table's ``Ll`` and ``Lw`` until a model gives a
+       blade's ``final_blade_length`` and ``final_blade_width`` (its inputs)
    * - AD-53
      - the harness and cnwgrass add each axis by its name when its first leaf appears (``add_axe``: ``T1.1`` on
        T1's metamer 1, its bearers added first)

@@ -39,7 +39,7 @@ def export(days: int = 80, plants: int = 3, temperature: float = 15., outputs: s
                              frame_options=frame_options)
     built = shoot_scene(sown_stand(plants, seed=0), model=ScenarioShoot, time_step=DAY,
                         delays=random_delays(plants, seed=0), start=0., recorder=recorder,
-                        forcings={"thermal_time_step": temperature})      # °Cd per day, above a base of 0 °C
+                        forcings={"air_temperature": temperature})        # °C: its degree-days above 0 °C
     built.simulate(days + 1)                                             # day 0: the thermal time set to its start
     return os.path.join(outputs, "frames", "scene.fspm.json")
 

@@ -1,11 +1,15 @@
 """
-ShootArchitecture coupled with a light model through its triangles (ShootArchitecture.triangles(), metafspm's
-coupling.geometry.Triangles): the contract a port of Caribu will implement. The light model reads every triangle and
-its element's node index, computes a light per triangle and gives it back per element (Triangles.per_owner).
+ShootArchitecture coupled with a light model through its triangles (the DataStructure's triangles(), ShootArchitecture's:
+metafspm's coupling.geometry.Triangles), the contract Caribu's port implements. The light model reads every triangle
+and its element's node index, computes a light per triangle and gives it back per element
+(Triangles.mean_per_owner, the area-weighted mean).
 
 Here a toy one, ToyLight: Beer's law in vertical columns, each triangle receiving exp(-k · the area of the triangles
-above it in its column, per unit ground area). It is a component of the plant model, after the shoot: the canopy's
-20 plants are one population, one MPG, so it sees all of them.
+above it in its column, per unit ground area). It declares the geometry it reads (geometry_input) and the green area
+(an input, ShootArchitecture's variable of the same name: no translator), and is coupled by couple() in the plant
+model, after the shoot: the canopy's 20 plants are one population, one MPG, so it sees all of them. A light model
+over several populations is an environment model on the plants' union instead (metafspm's EnvironmentModel, as
+Caribu's CaribuLightModel).
 
     python example/light_coupling.py [n_steps]       (light_coupling.png in the working directory)
 """
@@ -18,7 +22,8 @@ import numpy as np
 from openalea.adel.architecture import SCALES
 from openalea.adel.development import ScenarioShoot, random_delays, shoot_scene, sown_stand
 from openalea.adel.leaf_shapes import LeafShapes
-from openalea.metafspm.coupling.component import FunctionalComponent, input_variable, parameter, state_variable
+from openalea.metafspm.coupling.component import (FunctionalComponent, geometry_input, input_variable, setting,
+                                                   state_variable)
 from openalea.metafspm.display import draw, value_colors
 from openalea.metafspm.solve.decorator import rate
 
@@ -44,32 +49,27 @@ def beer_law(triangles, n_elements, extinction, column_width):
     above = np.empty_like(projected)
     above[order] = cumulative - projected[order] - before_column
     fraction = np.exp(-extinction * above / column_width ** 2)
-    areas = triangles.areas()
-    total = triangles.per_owner(areas, n_elements)
-    with np.errstate(invalid="ignore", divide="ignore"):
-        return np.where(total > 0, triangles.per_owner(fraction, n_elements, weights=areas) / total, 0.)
+    return triangles.mean_per_owner(fraction, n_elements)
 
 
 @dataclass
 class ToyLight(FunctionalComponent):
-    """The light fraction each element receives, from the shoot's triangles; the light it absorbs, by its green
+    """The light fraction each element receives, from the plants' triangles; the light it absorbs, by its green
     area."""
+    geometry: object = geometry_input(description="The plants' elements' triangles (ds.triangles())")
     green_area: float = input_variable(unit='m2', description="The element's green area", by='model_shoot_architecture',
                                        default=0., scale=SCALES.SubOrgan)
     light_fraction: float = state_variable(unit='adim', description="The light fraction the element receives",
                                            kind="intensive", default=0., scale=SCALES.SubOrgan)
     absorbed: float = state_variable(unit='m2', description="The element's green area times its light fraction",
                                      kind="extensive", default=0., scale=SCALES.SubOrgan)
-    extinction: float = parameter(unit='adim', description="The extinction coefficient", by="ToyLight", default=0.5)
-    column_width: float = parameter(unit='m', description="The width of the columns", by="ToyLight", default=0.05)
-
-    shoot = None                                       # the StructuralComponent giving the triangles
+    extinction: float = setting(unit='adim', description="The canopy's extinction coefficient", default=0.5)
+    column_width: float = setting(unit='m', description="The width of the columns", default=0.05)
 
     @rate
-    def _light_fraction(self, green_area, extinction, column_width) -> tuple[np.ndarray, str, np.ndarray]:
-        fraction = beer_law(self.shoot.triangles(), green_area.size, float(np.asarray(extinction).flat[0]),
-                            float(np.asarray(column_width).flat[0]))
-        return fraction, "absorbed", fraction * green_area
+    def _light(self, green_area, extinction, column_width) -> dict:
+        fraction = beer_law(self.data_structure.triangles(), green_area.size, extinction, column_width)
+        return {"light_fraction": fraction, "absorbed": fraction * green_area}
 
 
 class LitShoot(ScenarioShoot):
@@ -78,8 +78,7 @@ class LitShoot(ScenarioShoot):
     def __init__(self, data_structure, time_step):
         super().__init__(data_structure, time_step)
         self.light = ToyLight(data_structure=data_structure, time_step=time_step)
-        self.light.shoot = self.architecture
-        self.components.append(self.light)
+        self.couple(self.development, self.architecture, self.light)
 
     def run(self):
         super().run()
@@ -110,8 +109,7 @@ if __name__ == "__main__":
     axes.set_ylabel("the element's base height (cm)")
     axes.set_title("the light down the canopy (green elements)")
     figure.savefig("light_coupling.png", dpi=120)
-    plant_of = ds.map_to(np.arange(len(plants), dtype=float), "Plant", "node", "broadcast").astype(int)
-    absorbed = np.bincount(plant_of, weights=np.asarray(ds.get("absorbed")), minlength=len(plants))
+    absorbed = ds.map_to(np.asarray(ds.get("absorbed")), "node", "Plant", "sum")            # per plant
     print(f"light_coupling.png: {len(plants)} plants; the canopy's mean light fraction (green area weighted) "
           f"{absorbed.sum() / np.sum(ds.get('green_area')):.2f}; per plant, the most and least absorbed "
           f"{absorbed.max() * 1e4:.1f} and {absorbed.min() * 1e4:.1f} cm²")
