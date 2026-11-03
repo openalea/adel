@@ -61,7 +61,7 @@ its elements (shoot_elements: metafspm's EntityView), and the plant's scenario e
 metafspm's MPG.find_anchor) hangs the main stem's first element '<' on another initiator's vertex, its base on that
 vertex's top (shoot_base_height):
 
-    scenario={"shoot_anchor": {"label": "StemElement", "where": {"crown_top": 1}}}  # initiators (Crown, ShootArchitecture)
+    scenario={"shoot_anchor": {"label": "StemElement", "last": True}}  # initiators (Crown, ShootArchitecture): its top
 
 Its steps per axis and organ leave another model's axes (without a row in the axes table, axis_row -1) and organs as
 they are.
@@ -100,7 +100,7 @@ def shoot_elements(ds):
     plant whose main stem is anchored on another model's structure (its scenario's shoot_anchor: a crown's subcrown
     internode, whose elements are StemElements too), only those its main stem's first element bears, itself included
     (its main stem and its tillers): the MPG's property shoot_base, {plant: that element}, its initiator's. Selected
-    from the labels and the topology, which a new element has when it is created (its axis' values come after)."""
+    from the labels and the topology."""
     element = np.isin(np.asarray(ds.labels(), dtype=object), ELEMENTS)
     bases = ds.structure.properties().get("shoot_base")
     if not bases:
@@ -399,11 +399,11 @@ class ShootArchitecture(StructuralComponent):
         before it).
 
         With a scenario's `shoot_anchor` (a selector of the vertex another initiator built, given to metafspm's
-        MPG.find_anchor: {"label": ..., "scale": ..., "where": {...}, "first": ...}, e.g. a crown's top StemElement),
-        the main stem's first element follows that vertex ('<') instead of starting the plant's topology; it is
-        recorded as the plant's shoot_base (shoot_elements: the elements it bears are the architecture's), and the
-        anchor's z2, when its model gave it, as the plant's shoot_base_height (the main stem's base: the anchor's
-        top)."""
+        MPG.find_anchor: {"label": ..., "scale": ..., "where": {...}, "first" or "last": ...}, e.g. a crown's top
+        StemElement, {"label": "StemElement", "last": True}), the main stem's first element follows that vertex ('<')
+        instead of starting the plant's topology; it is recorded as the plant's shoot_base (shoot_elements: the
+        elements it bears are the architecture's), and the anchor's z2, when its model gave it, as the plant's
+        shoot_base_height (the main stem's base: the anchor's top)."""
         axes, phytomers, number = plant_tables(parameters, dict(table_plant=cls.table_plant,
                                                                 phyllochron=cls.phyllochron,
                                                                 length_unit=cls.length_unit))

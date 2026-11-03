@@ -17,7 +17,7 @@ from openalea.metafspm.data_structure.mpg import AnchorError
 from openalea.metafspm.solve.decorator import state
 
 SOWING_DEPTH, CROWN_DEPTH, SUBCROWN_ELEMENTS = 0.04, 0.02, 2
-CROWN_TOP = {"label": "StemElement", "where": {"crown_top": 1}}
+CROWN_TOP = {"label": "StemElement", "last": True}                  # the crown's top: the last of its StemElements
 ELEMENT_VARIABLES = ("length", "area", "green_length", "green_area", "senesced_area", "rolled_part", "width",
                      "is_green")
 PLACEMENT_VARIABLES = ("x1", "y1", "z1", "x2", "y2", "z2", "heading_x", "heading_y", "heading_z", "up_x", "up_y",
@@ -30,7 +30,7 @@ CROWN_VALUES = {"length": (SOWING_DEPTH - CROWN_DEPTH) / SUBCROWN_ELEMENTS, "are
 class StandInCrown(StructuralComponent):
     """A crown initiator: under its Axis, GrowthUnit, Phytomer and Organ (a StemInternode, the subcrown internode),
     a seed at the plant's position, then StemElements up to the crown (scenario's crown_depth), placed (x1 ... z2)
-    with their lengths and areas; its top element marked crown_top."""
+    with their lengths and areas."""
 
     @classmethod
     def initiate_plant(cls, g, plant, scenario):
@@ -51,7 +51,6 @@ class StandInCrown(StructuralComponent):
             cls._place(g, element, x, y, z + k * rise, z + (k + 1) * rise)
             g.property("length")[element] = rise
             g.property("area")[element] = CROWN_VALUES["area"]
-        g.property("crown_top")[element] = 1
 
     @staticmethod
     def _place(g, element, x, y, bottom, top):
@@ -141,12 +140,14 @@ def test_its_elements_only_its_main_stem_on_the_crown(grown):
     subcrown, seed, crown_axis, _ = _crown(ds)
     assert len(subcrown) == 2 * SUBCROWN_ELEMENTS and len(seed) == 2 and len(crown_axis) == 2
     own = np.asarray(view.entity_ids("node"))
+    subcrown_ids = np.asarray(ds.entity_ids("node"))[subcrown]
     assert not np.isin(np.asarray(ds.entity_ids("node"))[np.r_[subcrown, seed]], own).any()
     assert view.n_nodes() == ds.n_nodes() - 3 * 2
     g = ds.structure
     for plant, base in g.property("shoot_base").items():
-        top = g.parent(base)
-        assert g.property("crown_top").get(top) == 1 and g.edge_type(base) == '<' and base in own
+        top = g.parent(base)                                           # the crown's top: no StemElement of it above
+        assert top in subcrown_ids and not np.isin(g.children(top), subcrown_ids).any()
+        assert g.edge_type(base) == '<' and base in own
         assert g.complex(g.complex(g.complex(g.complex(base)))) != g.complex(g.complex(g.complex(g.complex(top))))
     assert (view.parents() == -1).sum() == 2                           # each main stem's base: on its crown
     assert set(architecture.axis_names()[crown_axis].tolist()) == {""}
@@ -181,7 +182,8 @@ def test_the_crown_and_the_seed_keep_their_own(grown):
     subcrown, seed, crown_axis, crown_organ = _crown(ds)
     for name, value in CROWN_VALUES.items():
         np.testing.assert_allclose(np.asarray(ds.get(name))[subcrown], value, err_msg=name)
-    tops = ds.index_of(np.array([vid for vid, top in ds.structure.property("crown_top").items() if top == 1]))
+    g = ds.structure
+    tops = ds.index_of(np.array([g.parent(base) for base in g.property("shoot_base").values()]))
     np.testing.assert_allclose(np.asarray(ds.get("z2"))[tops], -CROWN_DEPTH)
     np.testing.assert_array_equal(np.asarray(ds.get("phytomer_number"))[crown_axis], 1.)
     np.testing.assert_array_equal(np.asarray(ds.get("haun_stage"))[crown_axis], 0.)

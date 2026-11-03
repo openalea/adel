@@ -150,7 +150,7 @@ triangles = architecture.triangles()                   # every triangle and its 
   on an anchored plant, the elements its main stem's first element bears (the subcrown's elements are StemElements
   too). Its steps per axis and organ, and ScenarioDevelopment's, leave the axes without a row in the axes table
   (`axis_row` -1) and their organs as they are. The plant's scenario entry `shoot_anchor` (a selector for metafspm's
-  `MPG.find_anchor`, e.g. `{"label": "StemElement", "where": {"crown_top": 1}}`) hangs the main stem's first element
+  `MPG.find_anchor`, e.g. the crown's top `{"label": "StemElement", "last": True}`) hangs the main stem's first element
   `'<'` on that vertex, built by an initiator before ShootArchitecture; the main stem's base is then at the plant's x,
   y and at the anchor's `z2` (`shoot_base_height`), else the plant's z. Without an anchor, nothing changes
   (`test/test_anchored.py`).
