@@ -224,6 +224,11 @@ Structure and tables
        T1's metamer 1, its bearers added first)
      - changed: a plant's ``axis_number`` counts its axes emerged, created in its axes table's order: the table must
        list them in their order of emergence (``emf1``), as Adel's tables do (``test_tiller_of_tiller`` sorts it)
+   * - AD-54
+     - a development adds a metamer per ``add_metamer`` call, one at a time
+     - changed: a call creates every phytomer and axis its development asks for, each after the previous one
+       (``ScenarioShoot.run_shoot`` segments again for the axes it created): one large step reaches the structure
+       and the values of the small steps reaching the same thermal time, its elements created in another order
 
 Elements and leaf shapes
 ------------------------
@@ -382,6 +387,12 @@ Meshes
    * - AD-47
      - a blade element's rolled cylinder first, its flat part's mesh lifted by the rolled length
      - reproduced
+   * - AD-55
+     - a blade element's ``anchor_point`` is the turtle's frame, its blade's collar moved up by the rolled parts
+       below it, for every element of the blade
+     - kept as the frame's origin (``frame_x``, ``frame_y``, ``frame_z``, where it is drawn); its base and end
+       (``x1`` … ``z2``, which other models read) along its blade: its rolled part's base or its flat part's midrib's
+       first point, its flat part's midrib's last point
    * - AD-48
      - the scene as a PlantGL scene, triangulated by its user (Caribu's ``scene_to_cscene``), plants renumbered,
        translated and rotated point by point in the light model

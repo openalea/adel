@@ -22,7 +22,7 @@ from openalea.metafspm.scene.scene import Scene
 ORGAN_NAMES = {"StemInternode": "internode", "Sheath": "sheath", "Blade": "blade"}
 ELEMENT_VARIABLES = ("length", "area", "green_length", "green_area", "senesced_length", "senesced_area", "is_green",
                      "rolled_part", "rolled_diameter", "width", "flat_base", "flat_top", "x1", "y1", "z1", "x2", "y2",
-                     "z2")
+                     "z2", "frame_x", "frame_y", "frame_z")
 
 
 @dataclass

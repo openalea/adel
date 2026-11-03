@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Fixed some scipy function call as well as pandas functions.
+- `ShootArchitecture`: a call creates every phytomer and axis its development asks for (it crashed when a call asked
+  for more than one phytomer per axis); `ScenarioShoot.run_shoot` segments again for the axes a call created, one
+  large step reaching the structure of small steps.
+- `ShootArchitecture`: a blade element's `x1`...`z2` are its base and end along its blade (they were its blade's
+  collar for all its elements); its frame's origin is `frame_x`, `frame_y`, `frame_z`.
 - Some documentation warnings.
 
 ### Changed

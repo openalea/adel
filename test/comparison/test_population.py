@@ -36,7 +36,8 @@ def test_every_plant_as_the_legacy(runs):
                 top = coleoptile_top(port_records[k])          # the port starts T1 at the coleoptile's top
                 if key[0].startswith("T1"):
                     anchor += top
-                assert [values["x1"], values["y1"], values["z1"]] == pytest.approx(anchor, abs=1e-12), (k, key, label)
+                assert [values["frame_x"], values["frame_y"], values["frame_z"]] == pytest.approx(anchor, abs=1e-12), (
+                    k, key, label)
                 assert values["length"] == pytest.approx(legacy_record.props["length"][element] * 1e-2, abs=1e-12)
                 expected = turtle_placement(legacy_record.triangles[element], plant, key[0], top * 1e2) * 1e-2
                 assert values["triangles"].shape == expected.shape, (k, key, label)

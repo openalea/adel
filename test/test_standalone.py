@@ -1,11 +1,14 @@
 """ShootArchitecture without given tables: Adel's sample plant by default, plants generated from a few scalars
 (tables.wheat_tables), each plant its own in one population; grown by ScenarioDevelopment (shoot_scene)."""
+import os
+
 import numpy as np
+import pandas as pd
 import pytest
 
 from openalea.adel.development import shoot_scene
 from openalea.adel.leaf_shapes import LeafShapes
-from openalea.adel.tables import echap_shape_indices, sample_tables, wheat_tables
+from openalea.adel.tables import DATA, echap_shape_indices, sample_tables, wheat_tables, with_tillers
 from openalea.metafspm import Planting
 
 VARIABLES = ("organ_length", "visible_length", "organ_area", "inclination", "shape_class", "shape_mature_length")
@@ -121,3 +124,113 @@ def test_each_plant_its_own_inclination_rule():
     _grown_as_alone([dict(), dict(inclination_rate=10., inclination_start_haun_stage=2.)],
                     dict(tiller_inclination=1))
     _grown_as_alone([dict(tiller_inclination=0), dict(tiller_inclination=1, inclination_rate=10.)], dict())
+
+
+def _keyed(scene):
+    """Per element of a grown *scene*, sorted by its key (plant, axis name, phytomer rank, organ, index in organ):
+    (the keys, each one's topological parent's key, {variable: values})."""
+    ds = scene.populations[0].data_structure
+    architecture = scene.populations[0].instance.architecture
+    g = ds.structure
+    rank = np.asarray(ds.get("phytomer_rank"))[np.asarray(ds.owner("Phytomer"))]
+    keys = list(zip(np.asarray(ds.owner("Plant")).tolist(),
+                    architecture.axis_names()[np.asarray(ds.owner("Axis"))].tolist(), rank.tolist(),
+                    architecture.organ_names()[np.asarray(ds.owner("Organ"))].tolist(),
+                    np.asarray(ds.get("element_index")).tolist()))
+    nodes = ds.entity_ids("node").tolist()
+    position = {vid: i for i, vid in enumerate(nodes)}
+    order = sorted(range(len(keys)), key=lambda i: keys[i])
+    parents = [keys[position[g.parent(nodes[i])]] if g.parent(nodes[i]) in position else None for i in order]
+    names = ("length", "area", "green_area", "senesced_area", "rolled_part", "width", "x1", "y1", "z1", "x2", "y2",
+             "z2", "frame_x", "frame_y", "frame_z", "heading_x", "heading_y", "heading_z", "up_x", "up_y", "up_z")
+    values = {name: np.asarray(ds.get(name))[order] for name in names}
+    for name in ("organ_length", "visible_length", "inclination", "age", "organ_area"):
+        values[name] = np.asarray(ds.get(name))[np.asarray(ds.owner("Organ"))][order]
+    return [keys[i] for i in order], parents, values
+
+
+def _tiller_of_tiller_tables():
+    """Adel's sample plant with T1.1 (on T1's phytomer 1, its first leaf at 420 °Cd)."""
+    axes = pd.read_csv(os.path.join(DATA, "axeTable.csv"))
+    tiller = axes.loc[axes["axe"] == "T3"].assign(axe="T1.1", emf1=420., nf=5., nf_end=5.)
+    axes = pd.concat([axes, tiller], ignore_index=True).sort_values("emf1", kind="stable").reset_index(drop=True)
+    return axes, with_tillers(axes, pd.read_csv(os.path.join(DATA, "phytoT.csv")))
+
+
+@pytest.mark.parametrize("own_axis_top", [0, 1])
+def test_one_large_step_as_small_steps(own_axis_top):
+    """A call creates every axis, phytomer and element its thermal time asks for (ScenarioShoot.run_shoot): one large
+    step (from the start, or after a first call) reaches the structure of small steps, its elements' values the
+    same; plants with tillers, a tiller of a tiller, inclined."""
+    axes, phytomers = _tiller_of_tiller_tables()
+    own = [dict(leaf_number=12, tiller_number=3, longest_blade_length=0.25), dict(axes_table=axes,
+                                                                                  phytomer_table=phytomers)]
+
+    def scene(**parameters):
+        return shoot_scene([Planting(), Planting(x=0.2)], plant_scenarios=own, delays=[0., 30.],
+                           tiller_inclination=1, own_axis_top=own_axis_top, **parameters)
+
+    small = scene(start=0., thermal_time_step=10.)
+    for _ in range(81):                                  # the first call starts the thermal time, 80 add 10 °Cd
+        small.run()
+    after_first = scene(start=0., thermal_time_step=800.)
+    for _ in range(2):
+        after_first.run()
+    at_once = scene(start=800.)
+    at_once.run()
+    expected_keys, expected_parents, expected = _keyed(small)
+    assert any(key[1] == "T1.1" for key in expected_keys) and len({key[1] for key in expected_keys}) == 6
+    for large in (after_first, at_once):
+        keys, parents, values = _keyed(large)
+        assert keys == expected_keys and parents == expected_parents
+        for name, array in expected.items():
+            np.testing.assert_allclose(values[name], array, rtol=1e-12, atol=1e-15, err_msg=name)
+
+
+def test_blade_elements_from_their_base_to_their_end():
+    """A blade element's base (x1, y1, z1) and end (x2, y2, z2) lie along its blade, on its triangles' extent (its
+    rolled part's cylinder and its flat part's mesh, drawn from its frame's origin frame_x…: its blade's collar for
+    the first one; within 0.1 mm, its mesh's tip triangle left out below the minimal area), its base the previous
+    element's end, its end away from its frame's origin."""
+    ds, architecture = grow(shoot_scene(leaves=LeafShapes.echap(xy_model="Soissons_byleafclass"), n_sect=3,
+                                        tiller_inclination=1), 70)
+    triangles = architecture.triangles()
+    leaf = architecture._kinds()[0] == 2
+    base = np.stack([np.asarray(ds.get(name)) for name in ("x1", "y1", "z1")], axis=1)
+    end = np.stack([np.asarray(ds.get(name)) for name in ("x2", "y2", "z2")], axis=1)
+    frame = np.stack([np.asarray(ds.get(name)) for name in ("frame_x", "frame_y", "frame_z")], axis=1)
+    drawn = np.unique(triangles.owner[leaf[triangles.owner]])
+    assert drawn.size > 20
+    for node in drawn.tolist():
+        vertices = triangles.vertices[triangles.owner == node].reshape(-1, 3)
+        low, high = vertices.min(axis=0) - 1e-4, vertices.max(axis=0) + 1e-4
+        for point in (base[node], end[node]):
+            assert ((point >= low) & (point <= high)).all(), node
+    organ, index = np.asarray(ds.owner("Organ")), np.asarray(ds.get("element_index"))
+    element = {(organ[node], index[node]): node for node in drawn.tolist()}
+    rolled = np.asarray(ds.get("rolled_part"))
+    pairs = [(element[(organ[node], index[node] - 1)], node) for node in drawn.tolist()
+             if (organ[node], index[node] - 1) in element and rolled[node] == 0]
+    assert pairs
+    previous, following = np.array(pairs).T
+    np.testing.assert_allclose(base[following], end[previous], atol=1e-9)
+    assert (np.linalg.norm(end[drawn] - frame[drawn], axis=1) > 0).all()
+    assert end[drawn, 2].max() > frame[drawn, 2].max() + 0.01             # the blades' tips above their collars
+
+
+def test_a_stand_grown_to_its_stage_before_the_first_step():
+    """A call before a scene's first step grows the plants to their stage (their start, minus their delays): the
+    scene's first step adds no degree-days (none passed since), the next ones the step before's (15 °C, a day)."""
+    scene = shoot_scene([Planting(), Planting(x=0.2)], delays=[0., 30.], time_step=86400.,
+                        forcings={"air_temperature": 15.}, start=600.)
+    model = scene.populations[0].instance
+    model.run_shoot()
+    ds = scene.populations[0].data_structure
+    grown = {name: np.asarray(ds.get(name)).copy() for name in ("organ_length", "z2")}
+    np.testing.assert_allclose(np.asarray(ds.get("thermal_time")), [600., 570.])
+    scene.run()
+    np.testing.assert_allclose(np.asarray(ds.get("thermal_time")), [600., 570.])
+    for name, values in grown.items():
+        np.testing.assert_array_equal(np.asarray(ds.get(name)), values, err_msg=name)
+    scene.run()
+    np.testing.assert_allclose(np.asarray(ds.get("thermal_time")), [615., 585.])

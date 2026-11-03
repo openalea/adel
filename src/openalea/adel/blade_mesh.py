@@ -4,6 +4,8 @@ leaf_element and leaf_to_mesh), in the element's local frame (x along its up, z 
 
     triangles = blade_element_triangles(x, y, s, r, inclination, mature_length, max_width, visible_length, s_base,
                                         s_top, min_area)            the shape's fitted midrib (x, y, s, r)
+    ends = blade_element_midrib_ends(x, y, s, r, inclination, mature_length, max_width, visible_length, s_base,
+                                     s_top)                         its midrib's first and last points
 
 A blade's visible part is drawn as the shape's top: its midrib from the shape's base for the visible length, its
 width from the shape's width profile at the same distances from the tip (the blade grows out of the tube). An element
@@ -107,3 +109,19 @@ def blade_element_triangles(x, y, s, r, inclination, mature_length, max_width, v
     area = np.sqrt((u[:, 1] * v[:, 2] - u[:, 2] * v[:, 1]) ** 2 + (u[:, 2] * v[:, 0] - u[:, 0] * v[:, 2]) ** 2
                    + (u[:, 0] * v[:, 1] - u[:, 1] * v[:, 0]) ** 2) / 2.
     return triangles[area > min_area]
+
+
+@njit(cache=True)
+def blade_element_midrib_ends(x, y, s, r, inclination, mature_length, max_width, visible_length, s_base, s_top):
+    """A blade element's flat part's midrib ends (2, 3), its first and last points, in its local frame as
+    blade_element_triangles draws it (its triangles' rows lie on either side of them); (0, 3) when it has no
+    triangles."""
+    x_inclined, y_inclined = incline(x, y, inclination)
+    x_part, y_part, _ = blade_part(-x_inclined, y_inclined, s, r, mature_length, visible_length, s_base, s_top,
+                                   max_width)
+    ends = np.zeros((0, 3))
+    if len(x_part) >= 2:
+        ends = np.zeros((2, 3))
+        ends[0, 0], ends[0, 2] = x_part[0], y_part[0]
+        ends[1, 0], ends[1, 2] = x_part[-1], y_part[-1]
+    return ends

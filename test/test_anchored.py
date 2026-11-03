@@ -1,7 +1,7 @@
 """ShootArchitecture on a plant another model shares: a crown initiator (a stand-in for the use case's: a seed and its
 subcrown internode, StemElements up to the crown) builds first, the main stem's first element follows the crown's top
 (the plant's scenario's shoot_anchor), and a model of the seed works on it. ShootArchitecture sees its own elements
-only (shoot_elements, its `entities`), its development its own axes and organs, and the shoot grows as a plain plant
+only (SHOOT_ELEMENTS, its `entities`), its development its own axes and organs, and the shoot grows as a plain plant
 sown at the crown's depth; the crown and the seed keep their own values."""
 from dataclasses import dataclass, replace
 

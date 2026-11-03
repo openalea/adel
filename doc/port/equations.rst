@@ -102,14 +102,15 @@ exist, the axis and the plant's axes after it wait. A phytomer holds an internod
 ``n_sect`` ``LeafElement``\ s, on the sheath's last element) (``architecture.phytomer_layout``). All are created in
 one batch per call; their elements are never rebuilt.
 
-**On a plant other models share** (``architecture.shoot_elements``, the initiator's ``shoot_anchor``). With the plant's
+**On a plant other models share** (``architecture.SHOOT_ELEMENTS``, the initiator's ``shoot_anchor``). With the plant's
 scenario entry ``shoot_anchor``, a selector of metafspm's ``MPG.find_anchor`` (``label``, ``scale``, ``where``,
 ``first`` or ``last``), the main stem's first element follows (``<``) that vertex, built by an earlier initiator (a
 crown's top StemElement, the last of them: ``{"label": "StemElement", "last": True}``), instead of starting the plant's
 topology; it is the plant's ``shoot_base`` (an MPG property). The architecture's entities (its ``entities``:
-metafspm's ``EntityView``) are the elements (``HiddenElement``, ``StemElement``, ``LeafElement``) and, on an anchored
-plant, only those its ``shoot_base`` bears, itself included: the nodes whose path from the root meets it. The
-selection uses what a new element has at its creation, its label and its parents. The coarse locations are shared: an
+metafspm's ``EntityView``, in metafspm's filters' syntax ``{"label": ELEMENTS, "axis_row": ">=0"}``) are the
+elements (``HiddenElement``, ``StemElement``, ``LeafElement``) on its axes, those with a row in the axes table: on an
+anchored plant, those its ``shoot_base`` bears, itself included (another model's StemElements, a crown's, are on its
+axis, without a row). The selection uses what a new element has at its creation, its label and its axis' row. The coarse locations are shared: an
 axis without a row in the axes table (``axis_row`` :math:`= -1`, another model's) and its organs keep their values in the steps per
 axis and per organ (``_axis_phytomers``, ``_first_inclination``, ``_elements``' organ areas,
 ``ScenarioDevelopment``'s), and its name is ``""``. The traversal starts each plant at its elements without a parent
@@ -273,10 +274,15 @@ the tillers' base:
   angle :math:`\gamma` between their up before and after rollToVert: rollR(:math:`\gamma`) when rollToVert raised
   the left's :math:`z`, rollR(:math:`-\gamma`) otherwise;
 - a stem element of an internode with an azimuth :math:`\alpha \ne 0` (``organ_azimuth``): rollR(:math:`\alpha`);
-- each element's frame (``x1``, ``y1``, ``z1``, ``heading_*``, ``up_*``) is the frame so obtained; then a stem
-  element moves the top forward by its length, a blade element by its rolled part when it has one; hidden elements
-  leave the top as it is. Its end (``x2``, ``y2``, ``z2``) is its position plus its length (a blade element: its
-  rolled part) along :math:`H`.
+- each element's frame (``frame_x``, ``frame_y``, ``frame_z``, ``heading_*``, ``up_*``) is the frame so obtained;
+  then a stem element moves the top forward by its length, a blade element by its rolled part when it has one;
+  hidden elements leave the top as it is. A stem element's base (``x1``, ``y1``, ``z1``) is its frame's origin, its
+  end (``x2``, ``y2``, ``z2``) that plus its length along :math:`H` (a hidden element's: its base). A blade element
+  is drawn in its blade's frame (Adel's: its flat part's mesh is its blade's shape between its flat part's bounds,
+  from the collar moved up by the rolled parts below it): its base is its rolled part's base when it has one, else
+  its flat part's midrib's first point, its end its flat part's midrib's last point (its rolled part's end without a
+  flat part drawn), placed as its mesh (``blade_mesh.blade_element_midrib_ends``): its base and end lie along its
+  blade, the base of the next one at its end.
 
 The inclinations are 0 unless ``tiller_inclination`` is 1 (AdelDyn's vertical axes). With it, static Adel's rules
 (Adel.R) give the axes' first inclinations and azimuths (``ShootArchitecture._first_inclination``, an axis' step) and
@@ -368,8 +374,10 @@ A deterministic scenario, linear in thermal time, not Adel-Wheat's kinetics. A p
 at ``start`` (by default its main stem's ``emf1``) minus its ``delay``, and is the plant's at the start of each call
 (``ScenarioDevelopment._degree_days``): with the scene's forcing ``air_temperature`` :math:`T` (°C), a call adds the
 degree-days of the step before it, :math:`\max(0, T - T_b)\,\Delta t / 1\,\text{d}`, :math:`T` read at that step's
-start, :math:`T_b` ``base_temperature`` (0 °C), :math:`\Delta t` the time step; without it, a call adds
-``thermal_time_step``. With the phyllochron :math:`\varphi` (``phyllochron``, every axis), an axis' first leaf at :math:`e`
+start, :math:`T_b` ``base_temperature`` (0 °C), :math:`\Delta t` the time step (none when that step started at the
+call's time: a call before a scene's first step, growing a stand to its stage, adds no degree-days to the first
+step); without it, a call adds ``thermal_time_step``. With the phyllochron :math:`\varphi` (``phyllochron``, every
+axis), an axis' first leaf at :math:`e`
 (``emf1``), rank :math:`n` appearing at :math:`a_n = e + (n - 1)\varphi`, and
 :math:`\operatorname{ramp}(b, D) = \operatorname{clip}((t - b)/D, 0, 1)`:
 
@@ -403,4 +411,13 @@ the lengths and the age (``_organ_development``). ``ScenarioShoot`` runs the dev
 one schedule (metafspm's ``CompositeModel.run_together``): the development's potential steps, the shoot's
 segmentation (the axes and phytomers asked for), the development's postsegmentation steps (the new axes' Haun stages
 and the new organs' lengths, ``ScenarioDevelopment._new_axes``, ``_new_organs``), then the shoot's
-postsegmentation.
+postsegmentation (``ScenarioShoot.run_shoot``). A call creates every axis, phytomer and element its thermal time asks
+for: the shoot's segmentation creates all the phytomers an axis' ``phytomer_number`` asks for, each after the
+previous one, and the axes on a bearer's phytomer it creates; an axis it creates has its first phytomer, its
+``phytomer_number`` given by the development's postsegmentation, after which the shoot's segmentation and the
+development's postsegmentation run again until nothing is created, then the shoot's postsegmentation once more. One
+large step then reaches the structure and the values of the small steps reaching the same thermal time: the scenario
+is a function of the thermal time, and the shoot's steps of their inputs. What differs: the order the elements are
+created in (their vertex ids and their order in the DataStructure: a large step creates an axis' phytomers before the
+axes created after them in small steps); with the forcing ``air_temperature``, a call's degree-days are the step
+before's, so a large step's are added at the next call, as a small step's.

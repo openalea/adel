@@ -1,7 +1,7 @@
 """ShootArchitecture's placement and triangles against the legacy's turtle (mtg_interpreter.AdelVisitor) and meshes
-(compute_element), on the harness' scenario: every drawn element's anchor point (the legacy's anchor_point), its
-triangles (stem elements' cylinders; blade elements' rolled parts and flat parts' meshes), the legacy in cm, the port
-in m.
+(compute_element), on the harness' scenario: every drawn element's anchor point (the legacy's anchor_point, the port's
+frame origin frame_x…), its triangles (stem elements' cylinders; blade elements' rolled parts and flat parts' meshes),
+the legacy in cm, the port in m.
 
 The scenarios: the legacy's (no inclination, the plant's azimuth 0), with echap's leaves or the samples, one or
 several elements per blade; a plant azimuth with inclined internodes (the main stem's 3rd, the tillers' first: the
@@ -63,7 +63,8 @@ def test_the_same_anchor_points(runs):
             expected = np.array(list(legacy_record.props["anchor_point"][element]), dtype=float) * 1e-2
             if key[0].startswith("T1"):
                 expected += coleoptile_top(port_record)            # the port starts T1 at the coleoptile's top
-            assert [values["x1"], values["y1"], values["z1"]] == pytest.approx(expected, abs=1e-12), (key, label)
+            assert [values["frame_x"], values["frame_y"], values["frame_z"]] == pytest.approx(expected, abs=1e-12), (
+                key, label)
             compared += 1
     assert compared > 200
 

@@ -17,9 +17,10 @@ model shares (a crown's axis and its subcrown internode, the roots' organs), the
 
 A plant's thermal time starts at `start` (by default its main stem's first leaf) minus its `delay`. It is the
 plant's at the start of each call: a call adds the degree-days of the step before it, the air temperature (the
-forcing `air_temperature`, °C, read at that step's start) above `base_temperature`; without that forcing, each call
-adds `thermal_time_step`. ScenarioShoot is the plant model of ShootArchitecture grown by it; shoot_scene builds a scene
-of such plants:
+forcing `air_temperature`, °C, read at that step's start) above `base_temperature` (none when that step started at
+the call's time); without that forcing, each call adds `thermal_time_step`. A call grows the plants to their thermal
+time whatever its step: a stand is grown to its stage by one call (its `start` the stage). ScenarioShoot is the plant
+model of ShootArchitecture grown by it; shoot_scene builds a scene of such plants:
 
     scene = shoot_scene(sown_stand(20), delays=random_delays(20), leaves=LeafShapes.echap(), thermal_time_step=10.)
     scene.run()                                        # 10 °Cd of development, then the shoot
@@ -149,15 +150,17 @@ class ScenarioDevelopment(FunctionalComponent):
     def _degree_days(self, thermal_time_step, base_temperature):
         """Per plant, the thermal time a call adds: with the forcing air_temperature, the degree-days of the step
         before (its temperature, read at its start, above *base_temperature*, over its duration), kept from that
-        step's call; without it, *thermal_time_step*."""
+        step's call, none when that call started at the same time (no time passed: e.g. a stand grown to its stage
+        by a call before a scene's first step); without it, *thermal_time_step*."""
         try:
             temperature = self.forcing("air_temperature")
         except KeyError:                                  # no air temperature given
             return np.asarray(thermal_time_step, dtype=float)
         step_before = self.kept("degree_days")
+        start = self.forcing_time("start")
         above_base = np.maximum(0., temperature - np.asarray(base_temperature, dtype=float))
-        self.keep("degree_days", above_base * self.dt / DAY)
-        return 0. if step_before is None else step_before
+        self.keep("degree_days", (start, above_base * self.dt / DAY))
+        return 0. if step_before is None or step_before[0] >= start else step_before[1]
 
     @postsegmentation(location="Axis")
     def _new_axes(self, thermal_time, shoot_tables, axis_row, phytomer_number, haun_stage, phyllochron) -> dict:
@@ -283,7 +286,8 @@ class ScenarioShoot(CompositeModel):
     the shoot's tables, axis rows and organ ranks the development's), as couplings() lists. Both run together, in one
     schedule: the development's potential (its thermal time and what it gives per plant, axis and organ), the shoot's
     segmentation (the axes and phytomers asked for), the development's postsegmentation (the new axes' Haun stages,
-    the new organs' lengths), then the shoot's postsegmentation (its elements)."""
+    the new organs' lengths), then the shoot's postsegmentation (its elements). A call grows the plants to their
+    thermal time, whatever its step (run_shoot)."""
     initiators = (ShootArchitecture,)
 
     def __init__(self, data_structure, time_step):
@@ -292,7 +296,26 @@ class ScenarioShoot(CompositeModel):
         self.couple(self.development, self.architecture)
 
     def run(self):
+        self.run_shoot()
+
+    def run_shoot(self):
+        """The development and the shoot run together; then, while the axes the call created have phytomers to come
+        (the development gives a new axis' phytomer_number in its postsegmentation, after the shoot's segmentation),
+        the shoot's segmentation and the development's postsegmentation again, and the shoot's postsegmentation
+        once more: a call creates every axis, phytomer and element its thermal time asks for, one large step as the
+        small steps reaching it. A model extending ScenarioShoot calls it in its run."""
         self.run_together(self.development, self.architecture)
+        ds = self.architecture.data_structure
+        grown = False
+        while True:
+            nodes = len(ds.entity_ids("node"))
+            self.architecture.run_stage("segmentation")
+            if len(ds.entity_ids("node")) == nodes:
+                break
+            self.development.run_stage("postsegmentation")
+            grown = True
+        if grown:
+            self.architecture.run_stage("postsegmentation")
 
 
 def sown_stand(n_plants, n_rows=4, row_spacing=0.15, plant_spacing=0.04, seed=0):
