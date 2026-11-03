@@ -36,9 +36,10 @@ The elements are placed by Adel's turtle (openalea.adel.turtle), from each plant
 x1, y1, z1, their end x2, y2, z2, and the frame they are drawn in (heading_x…, up_x…), at each step after their
 lengths. triangles() gives their triangles (metafspm's coupling.geometry.Triangles) for light models and display.
 The axes are vertical, as AdelDyn's; with tiller_inclination=1, inclined by static Adel's rules from the axes table
-(incT ramping with the axes' Haun stage, the straightening at dredT, the azimuths azTb and azT: _inclination). The
-turtle is Adel's, which places a tiller of a tiller (T1.1) and its bearer after it from saved frames of other axes
-(AD-37); with own_axis_top=1, each axis continues on its own top and a tiller starts on its bearer's.
+(incT ramping with the axes' Haun stage, the straightening at dredT, the azimuths azTb and azT: _first_inclination per
+axis, _inclination per organ). The turtle is Adel's, which places a tiller of a tiller (T1.1) and its bearer after it
+from saved frames of other axes (AD-37); with own_axis_top=1, each axis continues on its own top and a tiller starts
+on its bearer's.
 
 The coupling contract, what other models write and read (lengths in m, on the DataStructure):
 
@@ -190,6 +191,11 @@ class ShootArchitecture(StructuralComponent):
     first_azimuth: float = state_variable(unit='°', description="The azimuth of the axis' first phytomer (Adel's azT)",
                                           value_comment="used with tiller_inclination", kind=DESCRIPTOR,
                                           default=0., scale=SCALES.Axis)
+    first_inclination: float = state_variable(unit='°',
+                                              description="The axis' first internode's inclination (Adel.R's "
+                                                          "getIncT: incT, a tiller's ramping with its Haun stage)",
+                                              value_comment="used with tiller_inclination",
+                                              kind=DESCRIPTOR, default=0., scale=SCALES.Axis)
 
     # --- The phytomers and organs (from the phytomer table, at their creation) ---
     phytomer_rank: int = state_variable(unit='adim', description="The phytomer's rank on its axis, from 1",
@@ -673,43 +679,54 @@ class ShootArchitecture(StructuralComponent):
         return self.cached("traversal", build)
 
     @postsegmentation
-    def _inclination(self, inclination, organ_azimuth, axis_azimuth, visible_length, organ_rank, haun_stage,
-                     bearer_row, table_inclination, straightening_distance, insertion_azimuth,
-                     first_azimuth) -> dict:
-        """With tiller_inclination, the stem organs' inclinations and the axes' azimuths by static Adel's rules
-        (turtle.base_inclination, stem_inclinations): each axis' first internode inclined by its base inclination, a
-        tiller straightened at its straightening distance; its insertion azimuth (azTb) and its first internode's
-        azimuth (azT). Without it, nothing is written (AdelDyn's: 0, the phytomer table's Azim)."""
-        ds = self.data_structure
-        on = np.asarray(ds.parameter_view("tiller_inclination", "Axis")) > 0
+    def _first_inclination(self, first_inclination, axis_azimuth, table_inclination, bearer_row, haun_stage,
+                           insertion_azimuth, tiller_inclination, inclination_start_haun_stage,
+                           inclination_rate) -> dict:
+        """With tiller_inclination, each axis' first internode's inclination by static Adel's rule
+        (turtle.base_inclination: a tiller's ramps with its Haun stage) and its azimuth at its insertion, its
+        insertion azimuth (azTb); an axis' step, its parameters its plant's. Without it, nothing is written."""
+        on = np.asarray(tiller_inclination) > 0
         if not on.any():
             return None
+        first = base_inclination(np.asarray(table_inclination, dtype=float), np.asarray(bearer_row) < 0,
+                                 np.asarray(haun_stage, dtype=float),
+                                 np.asarray(inclination_start_haun_stage, dtype=float),
+                                 np.asarray(inclination_rate, dtype=float))
+        return {"first_inclination": np.where(on, first, first_inclination),
+                "axis_azimuth": np.where(on, np.asarray(insertion_azimuth, dtype=float), axis_azimuth)}
+
+    @postsegmentation
+    def _inclination(self, inclination, organ_azimuth, visible_length, organ_rank, first_inclination,
+                     straightening_distance, first_azimuth, tiller_inclination) -> dict:
+        """With tiller_inclination, the stem organs' inclinations by static Adel's rule (turtle.stem_inclinations):
+        each axis' first internode inclined by its first inclination, a tiller straightened at its straightening
+        distance; its first internode's azimuth (azT). An organ's step, its parameter its plant's. Without it,
+        nothing is written (AdelDyn's: 0, the phytomer table's Azim)."""
+        on = np.asarray(tiller_inclination) > 0
+        if not on.any():
+            return None
+        ds = self.data_structure
         _, organ_kind = self._kinds()
-        n_organs = len(inclination)
-        kind = np.full(n_organs, -1)
+        kind = np.full(len(inclination), -1)
         kind[np.asarray(ds.owner("Organ"))] = organ_kind
         axis = ds.owner("Axis", of="Organ")
-        start = np.asarray(ds.parameter_view("inclination_start_haun_stage", "Axis"), dtype=float)     # each axis'
-        rate = np.asarray(ds.parameter_view("inclination_rate", "Axis"), dtype=float)
-        first = base_inclination(np.asarray(table_inclination, dtype=float), np.asarray(bearer_row) < 0,
-                                 np.asarray(haun_stage, dtype=float), start, rate)
         stem = np.flatnonzero((kind == 0) | (kind == 1))
         stem = stem[np.lexsort((kind[stem], organ_rank[stem], axis[stem]))]
         inclined = np.array(inclination, dtype=float)
         computed = stem_inclinations(axis[stem], kind[stem].astype(np.int64),
-                                     np.asarray(visible_length, dtype=float)[stem], first,
+                                     np.asarray(visible_length, dtype=float)[stem],
+                                     np.asarray(first_inclination, dtype=float),
                                      np.asarray(straightening_distance, dtype=float))
-        chosen = on[axis[stem]]
+        chosen = on[stem]
         inclined[stem[chosen]] = computed[chosen]
         azimuth = np.array(organ_azimuth, dtype=float)
-        first_internode = (kind == 0) & (np.asarray(organ_rank) == 1) & on[axis]
+        first_internode = (kind == 0) & (np.asarray(organ_rank) == 1) & on
         azimuth[first_internode] = np.asarray(first_azimuth, dtype=float)[axis[first_internode]]
-        return {"inclination": inclined, "organ_azimuth": azimuth,
-                "axis_azimuth": np.where(on, np.asarray(insertion_azimuth, dtype=float), axis_azimuth)}
+        return {"inclination": inclined, "organ_azimuth": azimuth}
 
     @postsegmentation
     def _placement(self, length, rolled_part, inclination, organ_azimuth, axis_azimuth, bearer_row,
-                   phytomer_rank, x, y, z, rotation) -> dict:
+                   phytomer_rank, x, y, z, rotation, own_axis_top) -> dict:
         """The elements' placement, their frames by Adel's turtle (turtle.interpret): each one's base, heading and up
         where it is drawn, and its end; from its plant's position and rotation, on the elements' lengths."""
         ds = self.data_structure
@@ -729,7 +746,7 @@ class ShootArchitecture(StructuralComponent):
             np.where(stem, np.asarray(inclination, dtype=float)[organ], 0.),
             np.where(stem & (organ_kind == 0), np.asarray(organ_azimuth, dtype=float)[organ], 0.),
             np.asarray(length, dtype=float), np.asarray(rolled_part, dtype=float), frame_source, parent,
-            np.asarray(ds.parameter_view("own_axis_top", "node")) > 0)
+            np.asarray(own_axis_top) > 0)
         return {"x1": position[:, 0], "y1": position[:, 1], "z1": position[:, 2], "x2": end[:, 0], "y2": end[:, 1],
                 "z2": end[:, 2], "heading_x": heading[:, 0], "heading_y": heading[:, 1], "heading_z": heading[:, 2],
                 "up_x": up[:, 0], "up_y": up[:, 1], "up_z": up[:, 2]}

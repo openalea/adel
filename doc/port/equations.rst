@@ -263,9 +263,10 @@ the tillers' base:
   leave the top as it is. Its end (``x2``, ``y2``, ``z2``) is its position plus its length (a blade element: its
   rolled part) along :math:`H`.
 
-The inclinations are 0 unless ``tiller_inclination`` is 1 (AdelDyn's vertical axes). With it
-(``ShootArchitecture._inclination``), static Adel's rules (Adel.R) give the stem organs' inclinations and the axes'
-azimuths:
+The inclinations are 0 unless ``tiller_inclination`` is 1 (AdelDyn's vertical axes). With it, static Adel's rules
+(Adel.R) give the axes' first inclinations and azimuths (``ShootArchitecture._first_inclination``, an axis' step) and
+the stem organs' inclinations (``ShootArchitecture._inclination``, an organ's step), each step getting its parameters
+per axis or per organ, its plant's:
 
 **The base inclination** (``turtle.base_inclination``, Adel.R's ``getIncT``): an axis' first internode is inclined by
 
@@ -276,7 +277,7 @@ azimuths:
    \max\big(3°,\ \min(\text{incT},\ \kappa\,(HS - HS_0))\big) & \text{a tiller, } HS > HS_0 \end{cases}
 
 with the axis' Haun stage :math:`HS` (``haun_stage``, an input), :math:`HS_0` ``inclination_start_haun_stage`` (1)
-and :math:`\kappa` ``inclination_rate`` (30° per Haun stage).
+and :math:`\kappa` ``inclination_rate`` (30° per Haun stage): the axis' ``first_inclination``.
 
 **The straightening** (``turtle.stem_inclinations``, Adel.R's ``axe_inclination``): per axis, its stem organs sorted
 by rank, the internode before the sheath, those of positive visible length :math:`\ell_j` in turn, with
@@ -380,7 +381,11 @@ are :math:`\max(0, l_\text{blade} - l'_\text{sheath})`, :math:`\max(0, l_\text{s
    l_s = \min\big(\text{Ll}_n\,\operatorname{ramp}(a_n + 5\varphi,\ 3\varphi)\,[l_\text{blade} > 0],\ l_\text{blade}\big)
 
 (``senescence_start``, ``senescence_duration``), and its age :math:`t - a_n` once it has appeared. The lengths are
-multiplied by the tables' unit. The scenario writes no rolled length. ``ScenarioShoot`` runs the development and the
-shoot together, in one schedule (metafspm's ``CompositeModel.run_together``): the development's potential step, the
-shoot's segmentation (the phytomers asked for), the development's postsegmentation step (the new organs' lengths,
-``ScenarioDevelopment._new_organs``), then the shoot's postsegmentation.
+multiplied by the tables' unit. The scenario writes no rolled length. Each output location has its steps, which get
+their parameters there, a plant's value per axis or organ: per plant the thermal time and ``axis_number``
+(``_thermal_time``, ``_axis_number``), per axis ``phytomer_number`` and :math:`HS` (``_axis_development``), per organ
+the lengths and the age (``_organ_development``). ``ScenarioShoot`` runs the development and the shoot together, in
+one schedule (metafspm's ``CompositeModel.run_together``): the development's potential steps, the shoot's
+segmentation (the axes and phytomers asked for), the development's postsegmentation steps (the new axes' Haun stages
+and the new organs' lengths, ``ScenarioDevelopment._new_axes``, ``_new_organs``), then the shoot's
+postsegmentation.
