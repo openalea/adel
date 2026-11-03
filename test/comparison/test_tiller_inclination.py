@@ -67,8 +67,7 @@ def grown():
                 "inclination", "organ_azimuth", "axis_azimuth", "visible_length", "organ_rank", "haun_stage",
                 "table_inclination", "straightening_distance", "insertion_azimuth", "first_azimuth")}
                            | dict(axes=axis_names(scene), organs=organ_names(ds),
-                                  organ_axis=ds.map_to(np.arange(len(ds.entity_ids("Axis")), dtype=float), "Axis",
-                                                       "Organ", "broadcast").astype(int)))
+                                  organ_axis=ds.owner("Axis", of="Organ")))
     return scene, records
 
 

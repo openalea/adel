@@ -18,7 +18,7 @@ def expected(scene, lengths):
     ds = scene.populations[0].data_structure
     names = axis_names(scene)
     axis_plant = plant_of(ds, "Axis")
-    organ_axis = ds.map_to(np.arange(names.size, dtype=float), "Axis", "Organ", "broadcast").astype(int)
+    organ_axis = ds.owner("Axis", of="Organ")
     organ_plant, ranks, organs = plant_of(ds, "Organ"), np.asarray(ds.get("organ_rank")), organ_names(ds)
     out = dict(axis_number=np.array([float(sum(len(axis) > 0 for axis in mine.values())) for mine in lengths]),
                phytomer_number=np.array([len(lengths[plant][name]) for plant, name in zip(axis_plant, names)],

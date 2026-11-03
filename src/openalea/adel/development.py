@@ -107,25 +107,31 @@ class ScenarioDevelopment(FunctionalComponent):
     senescence_duration: float = parameter(unit='phyllochron', description="The blade's senescence", by=BY, default=3.)
 
     @potential
-    def _development(self, thermal_time, shoot_tables) -> dict:
-        """The plants' thermal time advanced by the step before (set at start - delay at the first call), and what is
-        given at it: before the shoot's segmentation, which creates the phytomers it asks for."""
+    def _thermal_time(self, thermal_time, shoot_tables, start, delay, thermal_time_step, base_temperature):
+        """The plants' thermal time advanced by the step before (set at start - delay at the first call); a plant's
+        step, its parameters per plant."""
         thermal_time = np.asarray(thermal_time, dtype=float)
-        tables = self._tables(shoot_tables)
-        first = self._start(tables) - self._plant_values("delay")
-        thermal_time = np.where(np.isnan(thermal_time), first, thermal_time + self._degree_days())
-        return dict(self.given(thermal_time, tables), thermal_time=thermal_time)
+        first = self._start(self._tables(shoot_tables), start) - delay
+        return np.where(np.isnan(thermal_time), first,
+                        thermal_time + self._degree_days(thermal_time_step, base_temperature))
 
-    def _degree_days(self):
+    @potential
+    def _development(self, thermal_time, shoot_tables) -> dict:
+        """What is given at the plants' thermal time: before the shoot's segmentation, which creates the phytomers it
+        asks for."""
+        return self.given(np.asarray(thermal_time, dtype=float), self._tables(shoot_tables))
+
+    def _degree_days(self, thermal_time_step, base_temperature):
         """Per plant, the thermal time a call adds: with the forcing air_temperature, the degree-days of the step
-        before (its temperature, read at its start, above base_temperature, over its duration), kept from that
-        step's call; without it, thermal_time_step."""
+        before (its temperature, read at its start, above *base_temperature*, over its duration), kept from that
+        step's call; without it, *thermal_time_step*."""
         try:
             temperature = self.forcing("air_temperature")
         except KeyError:                                  # no air temperature given
-            return self._plant_values("thermal_time_step")
+            return np.asarray(thermal_time_step, dtype=float)
         step_before = self.kept("degree_days")
-        self.keep("degree_days", np.maximum(0., temperature - self._plant_values("base_temperature")) * self.dt / DAY)
+        above_base = np.maximum(0., temperature - np.asarray(base_temperature, dtype=float))
+        self.keep("degree_days", above_base * self.dt / DAY)
         return 0. if step_before is None else step_before
 
     @postsegmentation
@@ -136,8 +142,11 @@ class ScenarioDevelopment(FunctionalComponent):
 
     def given(self, thermal_time, tables):
         """{variable: values} at the plants' *thermal_time*: their axis numbers, their axes' phytomer numbers and Haun
-        stages, their organs' lengths (m) and blades' ages."""
+        stages, their organs' lengths (m) and blades' ages. Its parameters are read per plant (_plant_values), not
+        taken as arguments: its outputs are at several locations (Plant, Axis, Organ), none the step's."""
         ds = self.data_structure
+        plant_of_axis, axis_of_organ = ds.owner("Plant", of="Axis"), ds.owner("Axis", of="Organ")
+        plant_of_organ = ds.owner("Plant", of="Organ")
         emf1, nf = tables["emf1"], tables["nf"]
 
         # Plants: their axes emerged (in their tables' rows)
@@ -146,8 +155,8 @@ class ScenarioDevelopment(FunctionalComponent):
 
         # Axes: their metamers appeared
         axis_row = np.asarray(ds.get("axis_row"), dtype=int)
-        axis_time = ds.map_to(thermal_time, "Plant", "Axis", "broadcast")
-        axis_phyllochron = ds.map_to(self._plant_values("phyllochron"), "Plant", "Axis", "broadcast")
+        axis_time = thermal_time[plant_of_axis]
+        axis_phyllochron = self._plant_values("phyllochron")[plant_of_axis]
         ranks = np.arange(1, tables["Ll"].shape[1])
         appeared = emf1[axis_row][:, None] + (ranks[None, :] - 1) * axis_phyllochron[:, None]
         phytomer_number = np.sum((axis_time[:, None] >= appeared) & (ranks[None, :] <= nf[axis_row][:, None]),
@@ -155,11 +164,11 @@ class ScenarioDevelopment(FunctionalComponent):
         haun_stage = np.clip((axis_time - emf1[axis_row]) / axis_phyllochron, 0., nf[axis_row])
 
         # Organs: their lengths
-        row = ds.map_to(axis_row.astype(float), "Axis", "Organ", "broadcast").astype(int)
+        row = axis_row[axis_of_organ]
         rank = np.asarray(ds.get("organ_rank"), dtype=int)
 
         def per_organ(values):
-            return ds.map_to(np.asarray(values, dtype=float), "Plant", "Organ", "broadcast")
+            return np.asarray(values, dtype=float)[plant_of_organ]
 
         time = per_organ(thermal_time)
         phyllochron = per_organ(self._plant_values("phyllochron"))
@@ -214,10 +223,10 @@ class ScenarioDevelopment(FunctionalComponent):
                         Ll=dimensions["Ll"], Gl=dimensions["Gl"], El=dimensions["El"])
         return self.cached("tables", build, key=tuple(id(record) for record in records))
 
-    def _start(self, tables):
-        """Each plant's start: its parameter, by default its main stem's first leaf (emf1)."""
+    def _start(self, tables, start):
+        """Each plant's start: its parameter *start*, by default (NaN) its main stem's first leaf (emf1)."""
         main_stem = np.array([tables["emf1"][tables["plant_rows"][number][0]] for number in tables["numbers"]])
-        start = self._plant_values("start")
+        start = np.asarray(start, dtype=float)
         return np.where(np.isnan(start), main_stem, start)
 
     def _organ_kinds(self):

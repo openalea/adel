@@ -34,8 +34,8 @@ def grow(n_steps, shown, tiller_inclination):
     for step in range(n_steps + 1):
         scene.run()
         first_internodes = (architecture.organ_names() == "internode") & (np.asarray(ds.get("organ_rank")) == 1)
-        axis_of = ds.map_to(np.arange(len(ds.entity_ids("Axis")), dtype=float), "Axis", "Organ", "broadcast")
-        inclination = dict(zip(architecture.axis_names()[axis_of[first_internodes].astype(int)],
+        axis_of = ds.owner("Axis", of="Organ")
+        inclination = dict(zip(architecture.axis_names()[axis_of[first_internodes]],
                                np.asarray(ds.get("inclination"))[first_internodes]))
         inclinations.append(inclination)
         if step in shown:

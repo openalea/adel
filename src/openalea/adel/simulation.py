@@ -98,8 +98,7 @@ class Simulation:
         return self.scene.populations[0].instance.architecture
 
     def _plant_of(self, scale):
-        ds = self.data_structure
-        return ds.map_to(np.arange(len(ds.entity_ids("Plant")), dtype=float), "Plant", scale, "broadcast").astype(int)
+        return self.data_structure.owner("Plant", of=scale)
 
     def axes(self) -> pd.DataFrame:
         """The axes now, one row each: its plant (from 0), its name (MS the main stem, T1, T2... the tillers), the
@@ -115,9 +114,8 @@ class Simulation:
         axis (from 1, the bottom), its length, its visible length (out of the sheaths), its senesced length (m) and
         its visible area (m2)."""
         ds = self.data_structure
-        axis_of = ds.map_to(np.arange(len(ds.entity_ids("Axis")), dtype=float), "Axis", "Organ", "broadcast")
         return pd.DataFrame(dict(plant=self._plant_of("Organ"),
-                                 axis=self.architecture.axis_names()[axis_of.astype(int)],
+                                 axis=self.architecture.axis_names()[ds.owner("Axis", of="Organ")],
                                  organ=self.architecture.organ_names(), rank=np.asarray(ds.get("organ_rank")),
                                  length=np.asarray(ds.get("organ_length")),
                                  visible_length=np.asarray(ds.get("visible_length")),
@@ -145,7 +143,7 @@ def _summary_row(day: float, ds, architecture) -> dict:
     n_plants = len(ds.entity_ids("Plant"))
     main_stem = np.asarray(ds.get("bearer_row")) < 0
     blade = architecture.organ_names() == "blade"
-    on_main = ds.map_to(main_stem.astype(float), "Axis", "Organ", "broadcast") > 0
+    on_main = main_stem[ds.owner("Axis", of="Organ")]
     visible_leaf = blade & on_main & (np.asarray(ds.get("visible_length")) > 0)
     visible_leaves = ds.map_to(visible_leaf.astype(float), "Organ", "Plant", "sum")
     stem = np.asarray(ds.labels()) == "StemElement"

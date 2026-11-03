@@ -55,14 +55,14 @@ def test_plants_of_their_own_in_one_population():
     ds, architecture = grow(scene, 150)
     axes, phytomers, numbers, offsets = architecture.tables()
     assert len(set(numbers.tolist())) == 2 and len(axes) == 1 + 3          # the same scalars, the same tables
-    plant_of_axis = ds.map_to(np.arange(3, dtype=float), "Plant", "Axis", "broadcast").astype(int)
+    plant_of_axis = ds.owner("Plant", of="Axis")
     names = architecture.axis_names()
     assert [sorted(names[plant_of_axis == p].tolist()) for p in range(3)] == [["MS"], ["MS", "T1", "T2"],
                                                                               ["MS", "T1", "T2"]]
     final = np.asarray(ds.get("final_leaf_number"))
     assert final[(plant_of_axis == 0) & (names == "MS")].tolist() == [9]
     assert final[(plant_of_axis == 1) & (names == "MS")].tolist() == [12]
-    organ_plant = ds.map_to(np.arange(3, dtype=float), "Plant", "Organ", "broadcast").astype(int)
+    organ_plant = ds.owner("Plant", of="Organ")
     longest = [np.asarray(ds.get("shape_mature_length"))[organ_plant == p].max() for p in range(3)]
     assert longest[1] == pytest.approx(0.25) and longest[2] == pytest.approx(0.25) and longest[0] < 0.2
     assert np.asarray(ds.get("phytomer_number"))[(plant_of_axis == 0)].tolist() == [9]
@@ -88,7 +88,7 @@ def test_sown_below_the_coleoptile_and_t1_at_its_top():
 def _grown_as_alone(own, shared, n_steps=80):
     """Plants of one population with their own scenarios *own* (and *shared*) grow as each alone."""
     ds, _ = grow(shoot_scene([Planting(x=0.15 * k) for k in range(len(own))], plant_scenarios=own, **shared), n_steps)
-    organ_plant = ds.map_to(np.arange(len(own), dtype=float), "Plant", "Organ", "broadcast").astype(int)
+    organ_plant = ds.owner("Plant", of="Organ")
     node_plant = np.asarray(ds.owner("Plant"))
     triangles = ds.triangles()
     plant_areas = ds.map_to(triangles.per_owner(triangles.areas(), ds.n_nodes()), "node", "Plant", "sum")
@@ -116,9 +116,8 @@ def test_each_plant_its_own_phyllochrons_and_length_unit():
                     dict(leaves=LeafShapes.echap(xy_model="Soissons_byleafclass")))
 
 
-@pytest.mark.xfail(strict=True, raises=ValueError,
-                   reason="metafspm: MPGDataStructure.parameter_view(name, 'Axis') gives the nodes' values when the "
-                          "plants' values differ (_broadcast_to_entities ignores a coarse target)")
 def test_each_plant_its_own_inclination_rule():
+    """Each plant's inclination rule (its tillers inclined or not, its ramp's start and rate), in one population."""
     _grown_as_alone([dict(), dict(inclination_rate=10., inclination_start_haun_stage=2.)],
                     dict(tiller_inclination=1))
+    _grown_as_alone([dict(tiller_inclination=0), dict(tiller_inclination=1, inclination_rate=10.)], dict())

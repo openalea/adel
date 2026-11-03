@@ -688,7 +688,7 @@ class ShootArchitecture(StructuralComponent):
         n_organs = len(inclination)
         kind = np.full(n_organs, -1)
         kind[np.asarray(ds.owner("Organ"))] = organ_kind
-        axis = ds.map_to(np.arange(len(axis_azimuth), dtype=float), "Axis", "Organ", "broadcast").astype(np.int64)
+        axis = ds.owner("Axis", of="Organ")
         start = np.asarray(ds.parameter_view("inclination_start_haun_stage", "Axis"), dtype=float)     # each axis'
         rate = np.asarray(ds.parameter_view("inclination_rate", "Axis"), dtype=float)
         first = base_inclination(np.asarray(table_inclination, dtype=float), np.asarray(bearer_row) < 0,
@@ -782,7 +782,7 @@ class ShootArchitecture(StructuralComponent):
         if meshed.size == 0 or not shapes.fitted:
             return np.zeros((0, 3, 3)), np.zeros(0, dtype=np.int64)
         blade = organ[meshed]
-        main = ds.map_to(np.asarray(ds.get("bearer_row"), dtype=float), "Axis", "Organ", "broadcast")[blade] < 0
+        main = np.asarray(ds.get("bearer_row"))[ds.owner("Axis", of="Organ")[blade]] < 0
         plant = np.asarray(ds.owner("Plant"))[meshed]
         phyllochron = np.where(main, np.asarray(ds.parameter_view("phyllochron", "Plant"))[plant],     # its plant's
                                np.asarray(ds.parameter_view("tiller_phyllochron", "Plant"))[plant])

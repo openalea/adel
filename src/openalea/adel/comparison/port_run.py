@@ -56,8 +56,7 @@ def port_scene(leaves="samples", time_step=3600, rotation=0., phyllochron=PHYLLO
 
 def plant_of(ds, scale):
     """Each entity's plant (its index among the plants) at *scale*."""
-    plants = np.arange(len(ds.entity_ids("Plant")), dtype=float)
-    return ds.map_to(plants, "Plant", scale, "broadcast").astype(int)
+    return ds.owner("Plant", of=scale)
 
 
 def organ_names(ds):
@@ -76,7 +75,7 @@ def write_inclinations(scene, inclinations):
     """The internodes' inclinations, {(axis, rank): degrees}."""
     ds = scene.populations[0].data_structure
     names = axis_names(scene)
-    organ_axis = names[ds.map_to(np.arange(names.size, dtype=float), "Axis", "Organ", "broadcast").astype(int)]
+    organ_axis = names[ds.owner("Axis", of="Organ")]
     ranks, organs = np.asarray(ds.get("organ_rank")), organ_names(ds)
     values = np.array(ds.get("inclination"), dtype=float)
     for i in range(values.size):
@@ -97,8 +96,7 @@ def structure(scene, plant=0):
         label_name[getattr(g.labels.SubOrgan, name)] = name
     out = {}
     names, ranks = organ_names(ds), np.asarray(ds.get("organ_rank"))
-    organ_axis = axis_names(scene)[ds.map_to(np.arange(len(ds.entity_ids("Axis")), dtype=float), "Axis", "Organ",
-                                             "broadcast").astype(int)]
+    organ_axis = axis_names(scene)[ds.owner("Axis", of="Organ")]
     organ_ids = np.asarray(ds.entity_ids("Organ"))
     variables = ("diameter", "shape_mature_length", "shape_max_width", "shape_class", "shape_seed", "ntop",
                  "organ_azimuth")

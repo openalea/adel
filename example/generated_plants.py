@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     figure = plt.figure(figsize=(14, 5))
     axes = figure.add_subplot(1, 2, 1, projection="3d")
-    plant_of = ds.map_to(np.arange(len(PLANTS), dtype=float), "Plant", "node", "broadcast").astype(int)
+    plant_of = ds.owner("Plant")
     draw(axes, architecture.triangles(), colors=colormaps["tab10"](plant_of)[:, :3])
     axes.set_title(f"three generated plants, {n_steps * 10} °Cd")
     axes = figure.add_subplot(1, 2, 2)
