@@ -12,6 +12,9 @@ advanced at each call. It is a scenario, linear in thermal time, not Adel-Wheat'
   previous sheath, the internode for `internode_visible_fraction` of its length; the blade senesces from
   `senescence_start` for `senescence_duration`; its age is the thermal time since it appeared.
 
+Its axes and organs are ShootArchitecture's, those with a row in the axes table (axis_row >= 0): on a plant another
+model shares (a crown's axis and its subcrown internode, the roots' organs), the others keep their values.
+
 A plant's thermal time starts at `start` (by default its main stem's first leaf) minus its `delay`. It is the
 plant's at the start of each call: a call adds the degree-days of the step before it, the air temperature (the
 forcing `air_temperature`, °C, read at that step's start) above `base_temperature`; without that forcing, each call
@@ -125,20 +128,23 @@ class ScenarioDevelopment(FunctionalComponent):
                          for p, number in enumerate(tables["numbers"].tolist())])
 
     @potential(location="Axis")
-    def _axis_development(self, thermal_time, shoot_tables, axis_row, phyllochron) -> dict:
+    def _axis_development(self, thermal_time, shoot_tables, axis_row, phytomer_number, haun_stage,
+                          phyllochron) -> dict:
         """Per axis, at its plant's thermal time: its phytomers appeared and its Haun stage (an axis' step, its
         phyllochron its plant's); before the shoot's segmentation, which creates the phytomers it asks for."""
-        return self._axes_given(thermal_time, shoot_tables, axis_row, phyllochron)
+        return self._axes_given(thermal_time, shoot_tables, axis_row, phytomer_number, haun_stage, phyllochron)
 
     @potential(location="Organ")
-    def _organ_development(self, thermal_time, shoot_tables, axis_row, organ_rank, age, phyllochron, length_unit,
-                           internode_visible_fraction, blade_duration, sheath_start, sheath_duration, internode_start,
-                           internode_duration, senescence_start, senescence_duration) -> dict:
+    def _organ_development(self, thermal_time, shoot_tables, axis_row, organ_rank, organ_length, visible_length,
+                           organ_senesced_length, age, phyllochron, length_unit, internode_visible_fraction,
+                           blade_duration, sheath_start, sheath_duration, internode_start, internode_duration,
+                           senescence_start, senescence_duration) -> dict:
         """Per organ, at its plant's thermal time: its lengths and a blade's age (an organ's step, its parameters
         its plant's)."""
-        return self._organs_given(thermal_time, shoot_tables, axis_row, organ_rank, age, phyllochron, length_unit,
-                                  internode_visible_fraction, blade_duration, sheath_start, sheath_duration,
-                                  internode_start, internode_duration, senescence_start, senescence_duration)
+        return self._organs_given(thermal_time, shoot_tables, axis_row, organ_rank, organ_length, visible_length,
+                                  organ_senesced_length, age, phyllochron, length_unit, internode_visible_fraction,
+                                  blade_duration, sheath_start, sheath_duration, internode_start, internode_duration,
+                                  senescence_start, senescence_duration)
 
     def _degree_days(self, thermal_time_step, base_temperature):
         """Per plant, the thermal time a call adds: with the forcing air_temperature, the degree-days of the step
@@ -154,45 +160,56 @@ class ScenarioDevelopment(FunctionalComponent):
         return 0. if step_before is None else step_before
 
     @postsegmentation(location="Axis")
-    def _new_axes(self, thermal_time, shoot_tables, axis_row, phyllochron) -> dict:
+    def _new_axes(self, thermal_time, shoot_tables, axis_row, phytomer_number, haun_stage, phyllochron) -> dict:
         """What is given per axis again, after the shoot's segmentation: the axes it created are given their
         phytomers and Haun stages at once (their tillers' inclination ramps with it), before the shoot's
         postsegmentation."""
-        return self._axes_given(thermal_time, shoot_tables, axis_row, phyllochron)
+        return self._axes_given(thermal_time, shoot_tables, axis_row, phytomer_number, haun_stage, phyllochron)
 
     @postsegmentation(location="Organ")
-    def _new_organs(self, thermal_time, shoot_tables, axis_row, organ_rank, age, phyllochron, length_unit,
-                    internode_visible_fraction, blade_duration, sheath_start, sheath_duration, internode_start,
-                    internode_duration, senescence_start, senescence_duration) -> dict:
+    def _new_organs(self, thermal_time, shoot_tables, axis_row, organ_rank, organ_length, visible_length,
+                    organ_senesced_length, age, phyllochron, length_unit, internode_visible_fraction, blade_duration,
+                    sheath_start, sheath_duration, internode_start, internode_duration, senescence_start,
+                    senescence_duration) -> dict:
         """What is given per organ again, after the shoot's segmentation: the organs it created are given their
         lengths at once (as cnwgrass writes a new metamer's), before the shoot's postsegmentation."""
-        return self._organs_given(thermal_time, shoot_tables, axis_row, organ_rank, age, phyllochron, length_unit,
-                                  internode_visible_fraction, blade_duration, sheath_start, sheath_duration,
-                                  internode_start, internode_duration, senescence_start, senescence_duration)
+        return self._organs_given(thermal_time, shoot_tables, axis_row, organ_rank, organ_length, visible_length,
+                                  organ_senesced_length, age, phyllochron, length_unit, internode_visible_fraction,
+                                  blade_duration, sheath_start, sheath_duration, internode_start, internode_duration,
+                                  senescence_start, senescence_duration)
 
-    def _axes_given(self, thermal_time, shoot_tables, axis_row, phyllochron):
+    def _axes_given(self, thermal_time, shoot_tables, axis_row, phytomer_number, haun_stage, phyllochron):
         """{variable: values} per axis at its plant's *thermal_time*: its phytomer number (its phytomers appeared,
-        one per *phyllochron* from its first leaf, nf at most) and its Haun stage."""
+        one per *phyllochron* from its first leaf, nf at most) and its Haun stage; another model's axis (without a
+        row, axis_row -1) keeps its *phytomer_number* and *haun_stage*."""
         tables = self._tables(shoot_tables)
         emf1, nf = tables["emf1"], tables["nf"]
-        axis_row = np.asarray(axis_row, dtype=int)
+        own = np.asarray(axis_row, dtype=int) >= 0
+        axis_row = np.where(own, np.asarray(axis_row, dtype=int), 0)
         axis_time = np.asarray(thermal_time, dtype=float)[self.data_structure.owner("Plant", of="Axis")]
         phyllochron = np.asarray(phyllochron, dtype=float)
         ranks = np.arange(1, tables["Ll"].shape[1])
         appeared = emf1[axis_row][:, None] + (ranks[None, :] - 1) * phyllochron[:, None]
-        phytomer_number = np.sum((axis_time[:, None] >= appeared) & (ranks[None, :] <= nf[axis_row][:, None]),
+        appeared_number = np.sum((axis_time[:, None] >= appeared) & (ranks[None, :] <= nf[axis_row][:, None]),
                                  axis=1).astype(float)
-        haun_stage = np.clip((axis_time - emf1[axis_row]) / phyllochron, 0., nf[axis_row])
-        return dict(phytomer_number=phytomer_number, haun_stage=haun_stage)
+        given_haun_stage = np.clip((axis_time - emf1[axis_row]) / phyllochron, 0., nf[axis_row])
+        return dict(phytomer_number=np.where(own, appeared_number, np.asarray(phytomer_number, dtype=float)),
+                    haun_stage=np.where(own, given_haun_stage, np.asarray(haun_stage, dtype=float)))
 
-    def _organs_given(self, thermal_time, shoot_tables, axis_row, organ_rank, age, phyllochron, length_unit,
-                      internode_visible_fraction, blade_duration, sheath_start, sheath_duration, internode_start,
-                      internode_duration, senescence_start, senescence_duration):
+    def _organs_given(self, thermal_time, shoot_tables, axis_row, organ_rank, organ_length, visible_length,
+                      organ_senesced_length, age, phyllochron, length_unit, internode_visible_fraction,
+                      blade_duration, sheath_start, sheath_duration, internode_start, internode_duration,
+                      senescence_start, senescence_duration):
         """{variable: values} per organ at its plant's *thermal_time*: its lengths (m), out of the sheaths' tube and
-        senesced, and a blade's age; its parameters (durations in phyllochrons) one value per organ, its plant's."""
+        senesced, and a blade's age; its parameters (durations in phyllochrons) one value per organ, its plant's.
+        Another model's organ (on an axis without a row, or of another kind: a crown's, a root's) keeps its
+        *organ_length*, *visible_length*, *organ_senesced_length* and *age*."""
         ds = self.data_structure
         tables = self._tables(shoot_tables)
         row = np.asarray(axis_row, dtype=int)[ds.owner("Axis", of="Organ")]
+        kind = self._organ_kinds()
+        own = (row >= 0) & (kind >= 0)
+        row = np.where(own, row, 0)
         rank = np.asarray(organ_rank, dtype=int)
         time = np.asarray(thermal_time, dtype=float)[ds.owner("Plant", of="Organ")]
         phyllochron = np.asarray(phyllochron, dtype=float)
@@ -201,7 +218,6 @@ class ScenarioDevelopment(FunctionalComponent):
             ("internode_start", internode_start), ("internode_duration", internode_duration),
             ("senescence_start", senescence_start), ("senescence_duration", senescence_duration))}
         organ_unit = np.asarray(length_unit, dtype=float)
-        kind = self._organ_kinds()
         organ_appeared = tables["emf1"][row] + (rank - 1) * phyllochron
 
         def ramp(begin, duration):
@@ -225,10 +241,12 @@ class ScenarioDevelopment(FunctionalComponent):
                             [visible_fraction * internode, np.maximum(0., sheath - previous_sheath),
                              np.maximum(0., blade - previous_sheath)], 0.)
         senesced = np.where(kind == 2, blade_senesced, 0.)
-        age = np.where((kind == 2) & (time >= organ_appeared), time - organ_appeared,
+        age = np.where(own & (kind == 2) & (time >= organ_appeared), time - organ_appeared,
                        np.asarray(age, dtype=float))              # a blade not appeared yet keeps its age
-        return dict(organ_length=length * organ_unit, visible_length=visible * organ_unit,
-                    organ_senesced_length=senesced * organ_unit, age=age)
+        return dict(organ_length=np.where(own, length * organ_unit, np.asarray(organ_length, dtype=float)),
+                    visible_length=np.where(own, visible * organ_unit, np.asarray(visible_length, dtype=float)),
+                    organ_senesced_length=np.where(own, senesced * organ_unit,
+                                                   np.asarray(organ_senesced_length, dtype=float)), age=age)
 
     def _tables(self, shoot_tables):
         """From the population's tables (the plants' shoot_tables, ShootArchitecture's): emf1 and nf per row, each

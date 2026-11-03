@@ -43,8 +43,8 @@ HIDDEN, STEM, LEAF = 0, 1, 2
 def traversal_order(g, nodes):
     """(order, frame_source): the positions of *nodes* (the elements' vertex ids, in the DataStructure's order) in
     Adel's traversal: per
-    plant, from its base element (the one without topological parent), depth first, branches before successors (each
-    group in the MPG's children order).
+    plant, from its base element (the one without topological parent among *nodes*: none, or another model's vertex
+    it is anchored on), depth first, branches before successors (each group in the MPG's children order).
 
     One change to Adel's: a tiller borne on the main stem's phytomer 1 (T1, in the axil of leaf 1) is visited after
     that phytomer's sheath and blade, as the last branch of its internode's last element, instead of right after the
@@ -54,7 +54,7 @@ def traversal_order(g, nodes):
     takes (-1 for the others). The MPG keeps T1 on phytomer 1."""
     position = {vid: i for i, vid in enumerate(nodes)}
     edge_type = g.property("edge_type")
-    roots = [vid for vid in nodes if g.parent(vid) is None]
+    roots = [vid for vid in nodes if g.parent(vid) not in position]
     deferred = {}                                      # an element: the coleoptile tillers visited after its branches
     for root in roots:
         tillers = [child for child in g.children(root) if child in position and edge_type.get(child) == "+"]

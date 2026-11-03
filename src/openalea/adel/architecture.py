@@ -56,6 +56,16 @@ The coupling contract, what other models write and read (lengths in m, on the Da
 - a light model reads triangles() (each triangle's element, its node index) and gives its results back per element
   (Triangles.per_owner).
 
+On a plant other models share (a crown model's seed and subcrown internode, a root model's roots), its entities are
+its elements (shoot_elements: metafspm's EntityView), and the plant's scenario entry shoot_anchor (a selector for
+metafspm's MPG.find_anchor) hangs the main stem's first element '<' on another initiator's vertex, its base on that
+vertex's top (shoot_base_height):
+
+    scenario={"shoot_anchor": {"label": "StemElement", "where": {"crown_top": 1}}}  # initiators (Crown, ShootArchitecture)
+
+Its steps per axis and organ leave another model's axes (without a row in the axes table, axis_row -1) and organs as
+they are.
+
 The organs a call creates get their lengths at the next call; a development model giving them at once (as cnwgrass
 after add_metamer) gives them in its postsegmentation step, run together with ShootArchitecture's
 (CompositeModel.run_together: openalea.adel.development's ScenarioShoot).
@@ -81,6 +91,26 @@ BY = "model_shoot_architecture"
 DESCRIPTOR = "descriptor"
 SCALES = ScalesConfig
 ORGANS = ("internode", "sheath", "blade")
+ELEMENTS = ("HiddenElement", "StemElement", "LeafElement")
+
+
+def shoot_elements(ds):
+    """ShootArchitecture's entities (its class attribute `entities`: metafspm's EntityView, when other models share
+    the plant): per node of *ds*, whether it is one of its elements. They are the shoot's elements (ELEMENTS); on a
+    plant whose main stem is anchored on another model's structure (its scenario's shoot_anchor: a crown's subcrown
+    internode, whose elements are StemElements too), only those its main stem's first element bears, itself included
+    (its main stem and its tillers): the MPG's property shoot_base, {plant: that element}, its initiator's. Selected
+    from the labels and the topology, which a new element has when it is created (its axis' values come after)."""
+    element = np.isin(np.asarray(ds.labels(), dtype=object), ELEMENTS)
+    bases = ds.structure.properties().get("shoot_base")
+    if not bases:
+        return element
+    plants = np.asarray(ds.entity_ids("Plant"))
+    anchored = np.isin(plants, np.fromiter(bases.keys(), dtype=np.int64))
+    base = np.zeros(ds.n_nodes())
+    base[np.atleast_1d(ds.index_of(np.fromiter(bases.values(), dtype=np.int64)))] = 1.
+    borne = ds.accumulate(base, direction="down", op="max") > 0
+    return element & (~anchored[np.asarray(ds.owner("Plant"))] | borne)
 
 
 @lru_cache(maxsize=1)
@@ -122,6 +152,9 @@ def phytomer_layout(labels, n_sect):
 class ShootArchitecture(StructuralComponent):
     """Adel's shoot architecture: topology, organs' dimensions and shapes, elements, geometry."""
 
+    # Its elements, when other models share the plant (a crown's, the roots'): its view of the DataStructure
+    entities = staticmethod(shoot_elements)
+
     # --- Inputs: what development and senescence models write ---
     axis_number: float = input_variable(unit='adim',
                                         description="The number of the plant's axes emerged, in its axes table's order "
@@ -151,6 +184,12 @@ class ShootArchitecture(StructuralComponent):
                                               description="The blade's maximal width, given by development",
                                               value_comment="NaN: not given (the phytomer table's Lw)",
                                               by='model_development', default=np.nan, scale=SCALES.Organ)
+    shoot_base_height: float = input_variable(unit='m',
+                                              description="The height of the main stem's base, on the top of the "
+                                                          "vertex it is anchored on (its scenario's shoot_anchor)",
+                                              value_comment="NaN: the plant's z (the planting's); written at "
+                                                            "initiation from the anchor's z2 when its model gave it",
+                                              by='model_anchor', default=np.nan, scale=SCALES.Plant, optional=True)
 
     # --- The axes (from the axes table) ---
     shoot_tables: object = state_variable(unit='', description="The plant's tables: (axes table, phytomer table, its "
@@ -357,10 +396,19 @@ class ShootArchitecture(StructuralComponent):
     def initiate_plant(cls, g, plant, parameters):
         """The plant's tables (tables.plant_tables: its shoot_tables), its main stem (its Axis, GrowthUnit) and its
         first phytomer; its axes' rows are the population's tables' (its tables at their offset among the plants built
-        before it)."""
+        before it).
+
+        With a scenario's `shoot_anchor` (a selector of the vertex another initiator built, given to metafspm's
+        MPG.find_anchor: {"label": ..., "scale": ..., "where": {...}, "first": ...}, e.g. a crown's top StemElement),
+        the main stem's first element follows that vertex ('<') instead of starting the plant's topology; it is
+        recorded as the plant's shoot_base (shoot_elements: the elements it bears are the architecture's), and the
+        anchor's z2, when its model gave it, as the plant's shoot_base_height (the main stem's base: the anchor's
+        top)."""
         axes, phytomers, number = plant_tables(parameters, dict(table_plant=cls.table_plant,
                                                                 phyllochron=cls.phyllochron,
                                                                 length_unit=cls.length_unit))
+        selector = parameters.get("shoot_anchor")
+        anchored_on = None if selector is None else g.find_anchor(plant, **selector)
         record_plant_tables(g, plant, (axes, phytomers, number))
         built = g.properties()["shoot_tables"]
         offset = int(population_tables([built[p] for p in sorted(built) if p <= plant])[3][-1])
@@ -387,7 +435,14 @@ class ShootArchitecture(StructuralComponent):
         cls._set_phytomer(g, created, dimensions, main_stem, 1, int(rows.loc[main_stem, "nf"]), unit)
         vids = []
         for complex_index, parent, edge, label, _, index in elements:
-            if parent == "previous":
+            if parent == "previous" and anchored_on is not None:          # on the anchor's top
+                vid = g.add_component_with_topo(created[complex_index], anchored_on, **PropsConfig(
+                    scale=scales.SubOrgan, edge_type='<', label=label))
+                g.property("shoot_base")[plant] = vid
+                top = g.properties().get("z2", {}).get(anchored_on)
+                if top is not None:
+                    g.property("shoot_base_height")[plant] = float(top)
+            elif parent == "previous":
                 vid = g.add_component(created[complex_index], **PropsConfig(scale=scales.SubOrgan, edge_type='/',
                                                                             label=label))
             else:
@@ -455,8 +510,11 @@ class ShootArchitecture(StructuralComponent):
         return population_tables(self.data_structure.get("shoot_tables"))
 
     def axis_names(self):
-        """Each Axis' name (MS, T1, ...), from its row in the population's axes table."""
-        return self.tables()[0]["axe"].to_numpy()[np.asarray(self.data_structure.get("axis_row"))]
+        """Each Axis' name (MS, T1, ...), from its row in the population's axes table ("" for another model's axis,
+        without a row: a crown's)."""
+        rows = np.asarray(self.data_structure.get("axis_row"))
+        names = self.tables()[0]["axe"].to_numpy()[np.maximum(rows, 0)]
+        return np.where(rows >= 0, names, "")
 
     def organ_names(self):
         """Each Organ's kind: "internode", "sheath" or "blade"."""
@@ -491,7 +549,8 @@ class ShootArchitecture(StructuralComponent):
     def _axis_phytomers(self, axis_phytomers, phytomer_number, axis_row) -> dict:
         """The axes the plants' axis_number asks for (in their axes table's order, each with its first phytomer, once
         its bearer has the phytomer it is inserted on), and the phytomers the axes' phytomer_number asks for: created
-        with their organs and elements (NewNodes), their dimensions and shapes from the phytomer table."""
+        with their organs and elements (NewNodes), their dimensions and shapes from the phytomer table. Its axes are
+        those with a row in the axes table (another model's, a crown's, has none: left as they are)."""
         ds = self.data_structure
         g = ds.structure
         plant_rows, axis_values = self._axes_lookup()
@@ -499,7 +558,7 @@ class ShootArchitecture(StructuralComponent):
         count = np.array(axis_phytomers, dtype=int)
         target = np.floor(np.asarray(phytomer_number, dtype=float)).astype(int)
         axes = np.asarray(ds.entity_ids("Axis"))
-        axis_of = {(g.complex(int(axis)), int(row)): int(axis) for axis, row in zip(axes, axis_row)}
+        axis_of = {(g.complex(int(axis)), int(row)): int(axis) for axis, row in zip(axes, axis_row) if row >= 0}
         batch = _Batch(g.labels, int(self.n_sect))
 
         # New axes, with their first phytomer
@@ -522,6 +581,8 @@ class ShootArchitecture(StructuralComponent):
         # New phytomers on the axes
         axis_plant = ds.index_of(np.array([g.complex(axis) for axis in axes.tolist()], dtype=np.int64), "Plant")
         for a, axis in enumerate(axes.tolist()):
+            if axis_row[a] < 0:                             # another model's axis
+                continue
             unit = float(plant_unit[axis_plant[a]])
             values = axis_values(int(axis_row[a]), unit)
             for rank in range(count[a] + 1, target[a] + 1):
@@ -551,12 +612,14 @@ class ShootArchitecture(StructuralComponent):
 
     @postsegmentation
     def _elements(self, element_index, organ_length, visible_length, organ_senesced_length, rolled_length, diameter,
-                  shape_mature_length, shape_max_width, final_blade_length, final_blade_width, shape_class) -> dict:
+                  shape_mature_length, shape_max_width, final_blade_length, final_blade_width, shape_class,
+                  organ_area) -> dict:
         """The elements from their organs' lengths (Adel's internode_elements, sheath_elements, blade_elements):
         a stem organ's hidden element (its length out of sight) and visible one, its green and senesced parts; a
         blade's hidden part, and its sectors along its mature shape (its visible part the shape's top; its final
         dimensions the development's once given), each one's green and senesced parts, rolled part, flat part and
-        width; areas from the diameters and the shapes' width profiles; the organs' visible areas."""
+        width; areas from the diameters and the shapes' width profiles; the organs' visible areas (another model's
+        organs, without its elements, keep theirs)."""
         shape_mature_length = np.where(np.isfinite(final_blade_length), final_blade_length, shape_mature_length)
         shape_max_width = np.where(np.isfinite(final_blade_width), final_blade_width, shape_max_width)
         ds = self.data_structure
@@ -607,7 +670,9 @@ class ShootArchitecture(StructuralComponent):
 
         # The organs' visible areas
         visible = ((element_kind == 1) & stem) | ((element_kind == 2) & blade)
-        areas = np.bincount(organ[visible], weights=out["area"][visible], minlength=len(ds.entity_ids("Organ")))
+        n_organs = len(ds.entity_ids("Organ"))
+        areas = np.bincount(organ[visible], weights=out["area"][visible], minlength=n_organs)
+        areas = np.where(np.bincount(organ, minlength=n_organs) > 0, areas, organ_area)
         return dict(out, is_green=is_green, organ_area=areas, shape_mature_length=shape_mature_length,
                     shape_max_width=shape_max_width)
 
@@ -667,27 +732,30 @@ class ShootArchitecture(StructuralComponent):
 
     def _traversal(self):
         """Per node: its position in Adel's traversal and its frame's source (turtle.traversal_order), whether it is
-        its plant's base, and its topological parent's index (-1: none); once per topology."""
+        its plant's base (without a topological parent among the elements: none, or the vertex it is anchored on),
+        and its topological parent's index (-1: none among them); once per topology."""
         def build():
             ds = self.data_structure
             g = ds.structure
             nodes = ds.entity_ids("node").tolist()
             index = {vid: i for i, vid in enumerate(nodes)}
             parents = [g.parent(v) for v in nodes]
-            return (*traversal_order(g, nodes), np.array([parent is None for parent in parents]),
+            return (*traversal_order(g, nodes), np.array([parent not in index for parent in parents]),
                     np.array([index.get(parent, -1) for parent in parents], dtype=np.int64))
         return self.cached("traversal", build)
 
     @postsegmentation
     def _first_inclination(self, first_inclination, axis_azimuth, table_inclination, bearer_row, haun_stage,
-                           insertion_azimuth, tiller_inclination, inclination_start_haun_stage,
+                           insertion_azimuth, axis_row, tiller_inclination, inclination_start_haun_stage,
                            inclination_rate) -> dict:
         """With tiller_inclination, each axis' first internode's inclination by static Adel's rule
         (turtle.base_inclination: a tiller's ramps with its Haun stage) and its azimuth at its insertion, its
-        insertion azimuth (azTb); an axis' step, its parameters its plant's. Without it, nothing is written."""
+        insertion azimuth (azTb); an axis' step, its parameters its plant's. Without it, nothing is written; nor on
+        another model's axis (without a row in the axes table)."""
         on = np.asarray(tiller_inclination) > 0
         if not on.any():
             return None
+        on = on & (np.asarray(axis_row) >= 0)
         first = base_inclination(np.asarray(table_inclination, dtype=float), np.asarray(bearer_row) < 0,
                                  np.asarray(haun_stage, dtype=float),
                                  np.asarray(inclination_start_haun_stage, dtype=float),
@@ -726,16 +794,18 @@ class ShootArchitecture(StructuralComponent):
 
     @postsegmentation
     def _placement(self, length, rolled_part, inclination, organ_azimuth, axis_azimuth, bearer_row,
-                   phytomer_rank, x, y, z, rotation, own_axis_top) -> dict:
+                   phytomer_rank, x, y, z, rotation, shoot_base_height, own_axis_top) -> dict:
         """The elements' placement, their frames by Adel's turtle (turtle.interpret): each one's base, heading and up
-        where it is drawn, and its end; from its plant's position and rotation, on the elements' lengths."""
+        where it is drawn, and its end; from its plant's position and rotation (its main stem's base at its
+        shoot_base_height when given: an anchored main stem's, on the anchor's top), on the elements' lengths."""
         ds = self.data_structure
         element_kind, organ_kind = self._kinds()
         order, frame_source, plant_base, parent = self._traversal()
         organ, axis = np.asarray(ds.owner("Organ")), np.asarray(ds.owner("Axis"))
         plant, phytomer = np.asarray(ds.owner("Plant")), np.asarray(ds.owner("Phytomer"))
         plant_position = np.column_stack([np.asarray(x, dtype=float), np.asarray(y, dtype=float),
-                                          np.asarray(z, dtype=float)]).reshape(-1, 3)    # the planting's
+                                          np.where(np.isnan(shoot_base_height), np.asarray(z, dtype=float),
+                                                   shoot_base_height)]).reshape(-1, 3)    # the planting's
         plant_rotation = np.asarray(rotation, dtype=float)
         axis_is_main = np.asarray(bearer_row) < 0
         stem = element_kind == 1

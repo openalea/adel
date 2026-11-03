@@ -97,7 +97,8 @@ In `example/tutorials/developer/`, after the first user tutorial:
 
 0. [Overview](example/tutorials/developer/00_overview.ipynb): the modules, the original Adel, the validation;
 1. [ShootArchitecture in metafspm](example/tutorials/developer/01_shoot_architecture_in_metafspm.ipynb): the
-   component formalism, Adel's tables, a canopy, the tillers, the coupling contract, the comparison and the speed;
+   component formalism, Adel's tables, a canopy, the tillers, the coupling contract, the comparison and the speed, a
+   plant shared with other models (entities, an anchor);
 2. [Extend the component](example/tutorials/developer/02_extend_the_component.ipynb): a new variable and process.
 
 ### ShootArchitecture: Adel's shoots in metafspm
@@ -144,6 +145,15 @@ triangles = architecture.triangles()                   # every triangle and its 
   times its coleoptile's length; T1 starts at the coleoptile's top, as T2.
 - **Display:** metafspm's matplotlib drawings of the triangles (`openalea.metafspm.display`), with the shoot's
   colours (`openalea.adel.display.state_colors`).
+- **A plant other models share** (a crown model's seed and subcrown internode, a root model's roots): ShootArchitecture
+  declares its `entities` (`architecture.shoot_elements`), and works on metafspm's `EntityView` of its elements only;
+  on an anchored plant, the elements its main stem's first element bears (the subcrown's elements are StemElements
+  too). Its steps per axis and organ, and ScenarioDevelopment's, leave the axes without a row in the axes table
+  (`axis_row` -1) and their organs as they are. The plant's scenario entry `shoot_anchor` (a selector for metafspm's
+  `MPG.find_anchor`, e.g. `{"label": "StemElement", "where": {"crown_top": 1}}`) hangs the main stem's first element
+  `'<'` on that vertex, built by an initiator before ShootArchitecture; the main stem's base is then at the plant's x,
+  y and at the anchor's `z2` (`shoot_base_height`), else the plant's z. Without an anchor, nothing changes
+  (`test/test_anchored.py`).
 
 Examples: `example/canopy.py`, `example/generated_plants.py`, `example/tillers.py`, `example/light_coupling.py` (a
 toy light model coupled through the triangles). The docs' port pages (`doc/port/`) give the declarations, the equations,

@@ -102,6 +102,21 @@ exist, the axis and the plant's axes after it wait. A phytomer holds an internod
 ``n_sect`` ``LeafElement``\ s, on the sheath's last element) (``architecture.phytomer_layout``). All are created in
 one batch per call; their elements are never rebuilt.
 
+**On a plant other models share** (``architecture.shoot_elements``, the initiator's ``shoot_anchor``). With the plant's
+scenario entry ``shoot_anchor``, a selector of metafspm's ``MPG.find_anchor`` (``label``, ``scale``, ``where``,
+``first``), the main stem's first element follows (``<``) that vertex, built by an earlier initiator (a crown's top
+StemElement), instead of starting the plant's topology; it is the plant's ``shoot_base`` (an MPG property). The
+architecture's entities (its ``entities``: metafspm's ``EntityView``) are the elements (``HiddenElement``,
+``StemElement``, ``LeafElement``) and, on an anchored plant, only those its ``shoot_base`` bears, itself included: the
+nodes whose path from the root meets it. The selection uses what a new element has at its creation, its label and its
+parents; the values of its axis (``axis_row``) are written after it. The coarse locations are shared: an axis without a
+row in the axes table (``axis_row`` :math:`= -1`, another model's) and its organs keep their values in the steps per
+axis and per organ (``_axis_phytomers``, ``_first_inclination``, ``_elements``' organ areas,
+``ScenarioDevelopment``'s), and its name is ``""``. The traversal starts each plant at its elements without a parent
+among them. The main stem's base is at :math:`(x, y, z_a)`, :math:`z_a` the anchor's ``z2`` when the model that built it
+gave it (``shoot_base_height``, written at initiation), else the plant's :math:`z`: a plant sown at the depth of the
+crown's top grows the same elements.
+
 
 The elements (``ShootArchitecture._elements``)
 ==============================================
