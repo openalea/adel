@@ -1,5 +1,5 @@
 """
-Exporting growing wheat shoots as fspm-TF files: a stand of plants, one frame every 10 days, the format the other FSPM
+Exporting growing wheat shoots as encoding3d files: a stand of plants, one frame every 10 days, the format the other FSPM
 platforms (CPlantBox, GroIMP, VirtualPlantLab) and ParaView read.
 
     python export_frames.py [--days D] [--plants N]      frames in ./outputs/frames: frame_<step>.glb, scene.fspm.json
@@ -7,18 +7,18 @@ platforms (CPlantBox, GroIMP, VirtualPlantLab) and ParaView read.
 The scene is Adel's (openalea.adel.development.shoot_scene: ScenarioShoot plants sown in rows, daily steps at 15 °C,
 as openalea.adel.simulation.simulate runs them). Its recorder, given a frame_period, writes the whole scene every 10
 steps: every plant, axis, organ and element with its variables (declared units, kinds), and the leaves' and stems'
-triangles as a mesh. The sequence is then checked with fspm-TF's validator.
+triangles as a mesh. The sequence is then checked with encoding3d's validator.
 
 A second, filtered export shows logging: the first plant only (with all its axes, organs and elements) and its
 lengths and areas, in ./outputs/log/frames (outputs only: such frames are not reimported).
 
-Open outputs/frames/scene.fspm.json in ParaView with fspm-TF's reader plugin (fspm-TF/paraview/fspm_tf_reader.py) to
+Open outputs/frames/scene.fspm.json in ParaView with encoding3d's reader plugin (encoding3d/paraview/encoding3d_reader.py) to
 play the days; import_frames.py reads the files back.
 """
 import argparse
 import os
 
-from openalea.fspm_tf.validate import validate_sequence
+from openalea.encoding3d.validate import validate_sequence
 from openalea.metafspm.scene.recorder import SceneRecorder
 
 from openalea.adel.development import ScenarioShoot, random_delays, shoot_scene, sown_stand
@@ -45,7 +45,7 @@ def export(days: int = 80, plants: int = 3, temperature: float = 15., outputs: s
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Adel's wheat shoots as fspm-TF frames, one every 10 days")
+    parser = argparse.ArgumentParser(description="Adel's wheat shoots as encoding3d frames, one every 10 days")
     parser.add_argument("--days", type=int, default=80)
     parser.add_argument("--plants", type=int, default=3)
     arguments = parser.parse_args()
@@ -53,7 +53,7 @@ def main():
     report = validate_sequence(index)
     frames = sorted(name for name in os.listdir(os.path.dirname(index)) if name.endswith(".glb"))
     print(f"{len(frames)} frames ({folder_size(os.path.dirname(index)):.1f} MB) and their index: {index}")
-    print(f"fspm-TF validator: {len(report.errors)} error(s), {len(report.warnings)} warning(s)")
+    print(f"encoding3d validator: {len(report.errors)} error(s), {len(report.warnings)} warning(s)")
     log = export(arguments.days, arguments.plants, outputs=os.path.join(OUTPUTS, "log"), frame_options=LOG)
     report = validate_sequence(log)
     print(f"logged (plant {LOG['entities'][0]}, {len(LOG['variables'])} variables): {folder_size(os.path.dirname(log)):.1f} "

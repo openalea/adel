@@ -52,12 +52,12 @@ installation until metafspm is published.
 
 ```bash
 git clone -b data_structure_api https://github.com/openalea/metafspm.git metafspm
-git clone https://github.com/openalea/fspm-TF.git fspm-TF
+git clone https://github.com/openalea/encoding3d.git encoding3d
 git clone -b to_metafspm https://github.com/openalea/adel.git adel
 cd adel
 mamba env create -n adel_dev -f ./conda/environment.yml
 mamba activate adel_dev
-pip install -e ../fspm-TF               # openalea.fspm_tf, metafspm's dependency, until it is published
+pip install -e ../encoding3d               # openalea.encoding3d, metafspm's dependency, until it is published
 pip install -e ../metafspm                            # ShootArchitecture's framework, until it is published
 ```
 
