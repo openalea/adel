@@ -12,7 +12,7 @@ triangles as a mesh. The sequence is then checked with encoding3d's validator.
 A second, filtered export shows logging: the first plant only (with all its axes, organs and elements) and its
 lengths and areas, in ./outputs/log/frames (outputs only: such frames are not reimported).
 
-Open outputs/frames/scene.fspm.json in ParaView with encoding3d's reader plugin (encoding3d/paraview/encoding3d_reader.py) to
+Open outputs/frames/scene.fspm.json in ParaView with encoding3d's reader plugin (encoding3d/paraview/plugin_encoding3d.py) to
 play the days; import_frames.py reads the files back.
 """
 import argparse
