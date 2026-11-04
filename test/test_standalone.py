@@ -35,6 +35,16 @@ def test_the_sample_plant_with_echap_shapes():
     assert np.sum(ds.get("green_area")) > 0
 
 
+def test_cnwheat_shapes_are_echap_s_mercia_profiles_and_soissons_midribs():
+    preset, given = LeafShapes.cnwheat(), LeafShapes.echap(sr_model="Mercia", xy_model="Soissons_byleafclass")
+    assert len(preset.fitted) == len(given.fitted)
+    for mine, theirs in zip(preset.fitted, given.fitted):
+        for a, b in zip(mine, theirs):
+            np.testing.assert_array_equal(a, b)
+    np.testing.assert_array_equal(preset.relative_area([1, 2], [0., 0.2], [1., 0.7]),
+                                  given.relative_area([1, 2], [0., 0.2], [1., 0.7]))
+
+
 def test_generated_tables():
     axes, phytomers = wheat_tables(leaf_number=11, tiller_number=2, longest_blade_length=0.2,
                                    longest_blade_width=0.015)

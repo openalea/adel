@@ -4,7 +4,8 @@ to 1 at the tip, r relative to the maximal width), the areas of blade parts, vec
 fitted once for their meshes.
 
     shapes = LeafShapes.samples()                        Adel's samples (data/SRSo.csv, data/So99.csv)
-    shapes = LeafShapes.echap(sr_model="Mercia")         echap's (echap_leaf_data), the ones cnwgrass uses
+    shapes = LeafShapes.echap(sr_model="Mercia")         echap's (echap_leaf_data)
+    shapes = LeafShapes.cnwheat()                        CN-Wheat's wheat: echap's Mercia profiles, Soissons' midribs
     shapes.relative_area(classes, s_base, s_top)         the integral of r between s_base and s_top, per blade part
     shapes.shape_index(classes, seeds, age_classes)      the fitted midrib of each blade (-1: none)
     shapes.fitted[i]                                     a fitted midrib: (x, y, s, r) arrays
@@ -104,6 +105,14 @@ class LeafShapes:
             midribs[int(key)] = [{int(age): (group["x"].to_numpy(), group["y"].to_numpy())
                                   for age, group in mine.groupby("age_class")}]
         return cls.from_table(table, midribs, age_bins, discretisation_level)
+
+    @classmethod
+    def cnwheat(cls, discretisation_level=7):
+        """CN-Wheat's wheat leaf shapes, those of its stands (CN-Wheat's and CNW-Grass's runs with Adel: its
+        echap_leaves(xy_model='Soissons_byleafclass')): echap's Mercia width profiles (Grignon 2010, two classes)
+        and Soissons' median midribs by leaf class and age (Grignon 2010), echap(xy_model="Soissons_byleafclass")."""
+        return cls.echap(sr_model="Mercia", xy_model="Soissons_byleafclass",
+                         discretisation_level=discretisation_level)
 
     # --- The midribs ---
 

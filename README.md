@@ -110,7 +110,8 @@ without PlantGL:
 - the plants' topology in metafspm's MPG: axes (main stem and tillers), phytomers, organs (internode, sheath, blade),
   elements;
 - the organs' dimensions and leaf shapes, from Adel's tables (`axeT`, `phytoT`) and leaf databases (`LeafShapes`:
-  Adel's samples, echap's shapes by age);
+  Adel's samples, echap's shapes by age; `LeafShapes.cnwheat()`, CN-Wheat's wheat: echap's Mercia profiles and
+  Soissons' midribs);
 - the elements, derived from the organs' lengths (hidden and visible parts, green and senesced, rolled and flat), and
   their areas;
 - their placement by Adel's turtle (compiled), and their triangles (`triangles()`, metafspm's `Triangles`) for light
