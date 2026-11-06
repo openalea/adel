@@ -78,7 +78,7 @@ class ScenarioDevelopment(FunctionalComponent):
                                 default=0., scale=SCALES.Organ)
 
     # --- Forcing ---
-    air_temperature: float = forcing_variable(unit='°C', description="The air temperature", at="start",
+    air_temperature: float = forcing_variable(unit='°C', description="The air temperature (its mean over the step)",
                                               required=False)
 
     # --- Parameters ---
@@ -149,7 +149,7 @@ class ScenarioDevelopment(FunctionalComponent):
 
     def _degree_days(self, thermal_time_step, base_temperature):
         """Per plant, the thermal time a call adds: with the forcing air_temperature, the degree-days of the step
-        before (its temperature, read at its start, above *base_temperature*, over its duration), kept from that
+        before (its mean temperature over that step, above *base_temperature*, times its duration), kept from that
         step's call, none when that call started at the same time (no time passed: e.g. a stand grown to its stage
         by a call before a scene's first step); without it, *thermal_time_step*."""
         try:
