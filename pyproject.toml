@@ -69,6 +69,10 @@ Changelog = "https://github.com/openalea/adel/releases"
 [project.entry-points."wralea"]
 "adel" = "openalea.adel.legacy"
 
+# numba's cache filled by metafspm's warm_up (python -m openalea.metafspm warm_up)
+[project.entry-points."openalea.metafspm.warm_up"]
+"adel" = "openalea.adel.kernels:warm_up"
+
 [tool.conda.environment]
 channels = [
   "openalea3",

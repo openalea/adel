@@ -64,7 +64,9 @@ Each keeps the legacy's results (the comparisons hold before and after):
 
 - **the axes table read once** (``ShootArchitecture._axes_lookup``, cached): its pandas lookups were three quarters
   of the structural step;
-- **the blade meshes compiled** (``blade_mesh``, numba);
+- **the blade meshes compiled** (``kernels``, numba: the turtle's ``interpret`` and ``stem_inclinations`` and the
+  meshes, in ``openalea.adel.kernels``; ``kernels.warm_up()``, run by metafspm's ``python -m openalea.metafspm
+  warm_up``, compiles them once at install);
 - **the midribs' simplification in plain arithmetic** on 3-vectors (``leaf_shapes._squared_distance``, in PlantGL's
   order of operations): fitting echap's database went from 2 s to 0.15 s, about 13× faster;
 - **the default leaf shapes fitted once** (``architecture.default_leaves``): without a ``leaves`` parameter, Adel's
@@ -77,7 +79,7 @@ Where the time goes
 
 - For one plant, metafspm's cost per step dominates the port's step (above).
 - Before the axes table was read once, its pandas lookups were three quarters of the structural step.
-- The turtle (``turtle.interpret``, compiled) places every element at each call; the blade meshes are rebuilt only for
+- The turtle (``kernels.interpret``, compiled) places every element at each call; the blade meshes are rebuilt only for
   the elements that changed, so ``triangles()`` costs little once the canopy stops growing (1.1 ms against 20 ms on one
   plant).
 - The traversal order (``turtle.traversal_order``) is computed in Python, once per change of topology. Its cost has

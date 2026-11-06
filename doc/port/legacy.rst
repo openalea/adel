@@ -51,13 +51,13 @@ The legacy's chain and the port
      - ``LeafShapes.relative_area``, ``LeafShapes.mean_width``
    * - the turtle
      - ``mtg_interpreter.mtg_interpreter``, ``AdelVisitor``, ``AdelTurtle`` (PlantGL's ``PglTurtle``)
-     - ``turtle.traversal_order``, ``turtle.interpret`` (compiled), metafspm's ``coupling.geometry`` frame operations
+     - ``turtle.traversal_order``, ``kernels.interpret`` (compiled), metafspm's ``kernels`` frame operations
    * - the stem meshes
      - ``mtg_interpreter.compute_element``, ``StemElement_mesh``, ``slim_cylinder``
      - ``ShootArchitecture.triangles``, metafspm's ``slim_cylinders``, ``place``
    * - the blade meshes
      - ``Leaves.mesh``, ``incline_leaf``, ``fitting.mesh4``, ``leaf_element``, ``leaf_to_mesh``
-     - ``blade_mesh.incline``, ``blade_part``, ``strip_triangles``, ``blade_element_triangles``; a cache by vertex
+     - ``kernels.incline``, ``blade_part``, ``strip_triangles``, ``blade_element_triangles``; a cache by vertex
    * - the plants' placement
      - the turtle from the plant's position, then ``update_geometry``'s ``transform_geom`` and the T1 offset
      - the turtle only (``_placement``)
@@ -66,7 +66,7 @@ The legacy's chain and the port
      - ``ShootArchitecture.triangles()`` (metafspm's ``Triangles``: vertices and owner elements)
    * - the tillers' inclination
      - static Adel's R (``Adel.R``: ``getIncT``, ``axe_inclination``); none in ``AdelDyn``
-     - ``turtle.base_inclination``, ``turtle.stem_inclinations``, with ``tiller_inclination=1``
+     - ``turtle.base_inclination``, ``kernels.stem_inclinations``, with ``tiller_inclination=1``
    * - the organs' lengths
      - cnwgrass' morphogenesis and senescence (Wheat-BRIDGES); AdelWheat's R kinetics offline
      - any development model; ``development.ScenarioDevelopment`` (a linear scenario)
@@ -127,8 +127,8 @@ rolled first by the axis' azimuth), the next ones after ``rollToVert`` and rolle
 azimuth rolls it. ``compute_element`` meshes a stem element of length at least ``min_length`` as a slim cylinder, a
 blade element's rolled part as a slim cylinder and its flat part by ``Leaves.mesh`` (``incline_leaf``, x flipped,
 ``mesh4``: ``leaf_element``, ``leaf_to_mesh``, the triangles above ``min_length² / 100``), the flat part lifted by the
-rolled length. ``AdelTurtle.transform`` places each mesh in the turtle's frame. The port's ``turtle.interpret`` follows
-the same rules on arrays (compiled), and ``blade_mesh`` the same mesh functions (compiled), in the legacy's order of
+rolled length. ``AdelTurtle.transform`` places each mesh in the turtle's frame. The port's ``kernels.interpret`` follows
+the same rules on arrays (compiled), and ``kernels`` the same mesh functions (compiled), in the legacy's order of
 operations.
 
 
@@ -336,7 +336,7 @@ Placement
        top saved. So a tiller of a tiller (T1.1) starts on the tillers' base, not on its bearer's phytomer, and its
        bearer continues after it on the main stem's top, not on its own, with its first inclined stem element (when
        still to come) treated as a next one: it loses its azimuth
-     - reproduced by default (``turtle.interpret``: a tiller start only at the axis' first visit; T1's continuation
+     - reproduced by default (``kernels.interpret``: a tiller start only at the axis' first visit; T1's continuation
        on the main stem's top saved before its deferred start, AD-33), compared with T1.1 on T1's phytomer 1
        (``test_tiller_of_tiller``: anchors 1e-12 m, triangles 1e-10 m). Corrected with ``own_axis_top=1``: an axis
        continues on its own top where the turtle left it (a tiller with its first inclined element still to come),
@@ -380,7 +380,7 @@ Meshes
      - dropped (no twist, slim cylinders, the turtle's frame)
    * - AD-45
      - one triangle at the tip when its width is below 0.001, an absolute value in the scene's unit
-     - reproduced as 1e-5 m (Adel's 0.001 cm, ``blade_mesh.TIP_WIDTH``)
+     - reproduced as 1e-5 m (Adel's 0.001 cm, ``kernels.TIP_WIDTH``)
    * - AD-46
      - the triangles of area at most ``min_length² / 100`` left out, ``min_length`` 0.01 cm
      - reproduced (``min_length`` 1e-4 m)

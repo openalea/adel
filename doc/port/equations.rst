@@ -253,7 +253,7 @@ phytomer's sheath and blade, as the last branch of its internode's last element;
 and up of the element it is branched on (``frame_source``). It then starts at the coleoptile's top, where phytomer 2
 and T2 start. The MPG keeps T1 on phytomer 1.
 
-**The turtle** (``turtle.interpret``, compiled; Adel's ``AdelVisitor``). It does not follow the topology: each element
+**The turtle** (``kernels.interpret``, compiled; Adel's ``AdelVisitor``). It does not follow the topology: each element
 starts from the frame on top of the elements placed so far (the top), with two saved frames, the main stem's top and
 the tillers' base:
 
@@ -281,7 +281,7 @@ the tillers' base:
   is drawn in its blade's frame (Adel's: its flat part's mesh is its blade's shape between its flat part's bounds,
   from the collar moved up by the rolled parts below it): its base is its rolled part's base when it has one, else
   its flat part's midrib's first point, its end its flat part's midrib's last point (its rolled part's end without a
-  flat part drawn), placed as its mesh (``blade_mesh.blade_element_midrib_ends``): its base and end lie along its
+  flat part drawn), placed as its mesh (``kernels.blade_element_midrib_ends``): its base and end lie along its
   blade, the base of the next one at its end.
 
 The inclinations are 0 unless ``tiller_inclination`` is 1 (AdelDyn's vertical axes). With it, static Adel's rules
@@ -300,7 +300,7 @@ per axis or per organ, its plant's:
 with the axis' Haun stage :math:`HS` (``haun_stage``, an input), :math:`HS_0` ``inclination_start_haun_stage`` (1)
 and :math:`\kappa` ``inclination_rate`` (30° per Haun stage): the axis' ``first_inclination``.
 
-**The straightening** (``turtle.stem_inclinations``, Adel.R's ``axe_inclination``): per axis, its stem organs sorted
+**The straightening** (``kernels.stem_inclinations``, Adel.R's ``axe_inclination``): per axis, its stem organs sorted
 by rank, the internode before the sheath, those of positive visible length :math:`\ell_j` in turn, with
 :math:`\alpha = 90° - \theta_0`, the cumulated length :math:`\Lambda_j = \sum_{i \le j} \ell_i` and the horizontal
 distance :math:`D_j = \Lambda_j \cos\alpha`. At the first :math:`j` with :math:`D_j \ge D` (:math:`D` the
@@ -320,7 +320,7 @@ internode's ``organ_azimuth`` becomes its ``first_azimuth`` (azT), each axis' ``
 ``insertion_azimuth`` (azTb).
 
 
-The triangles (``ShootArchitecture.triangles``, ``blade_mesh``)
+The triangles (``ShootArchitecture.triangles``, ``kernels``)
 ===============================================================
 
 Each element is drawn in its frame: a local point :math:`(p_x, p_y, p_z)` is placed at
@@ -331,11 +331,11 @@ Each element is drawn in its frame: a local point :math:`(p_x, p_y, p_z)` is pla
 :math:`d/2` (the rolled diameter's half for a rolled part): three points at the angles :math:`0, 2\pi/3, 4\pi/3` at
 its base, three at the same angles plus :math:`\pi` at :math:`p_z = \ell`, eight triangles.
 
-**Blade elements' flat parts** (``ShootArchitecture._blade_triangles``, ``blade_mesh.blade_element_triangles``), for
+**Blade elements' flat parts** (``ShootArchitecture._blade_triangles``, ``kernels.blade_element_triangles``), for
 a blade of visible length at least ``min_length`` and an element with a flat part, from its shape's fitted midrib
 :math:`(x_i, y_i, s_i, r_i)` (unit length):
 
-1. **inclination** (``blade_mesh.incline``, Adel's ``incline_leaf``): with the base angle
+1. **inclination** (``kernels.incline``, Adel's ``incline_leaf``): with the base angle
    :math:`\phi = \operatorname{atan2}(x_1 - x_0,\ y_1 - y_0)` and a factor :math:`c`, the midrib rotated by
    :math:`\psi = \phi - \min(\pi, c\,\phi)`,
 
@@ -345,7 +345,7 @@ a blade of visible length at least ``min_length`` and an element with a flat par
 
    :math:`c = 1` for a dynamic database (its shapes carry their inclination), the blade's ``inclination`` otherwise;
    then :math:`x' \leftarrow -x'`;
-2. **the part** (``blade_mesh.blade_part``, Adel's ``fitting.leaf_element``): with the visible fraction
+2. **the part** (``kernels.blade_part``, Adel's ``fitting.leaf_element``): with the visible fraction
    :math:`v = \min(l_v, L)/L` and the part :math:`[\sigma_b, \sigma_t]` = [flat_base, flat_top]: the whole shape
    scaled when :math:`v = 1` and the part is :math:`[0, 1]`; otherwise :math:`r` at the tip set to 0, the midrib's
    abscissae the shape's points below :math:`v` and those above :math:`1 - v` moved down by :math:`1 - v`, with
@@ -354,7 +354,7 @@ a blade of visible length at least ``min_length`` and an element with a flat par
    two ends kept; at each abscissa :math:`u`, the midrib point :math:`(x'(u), y'(u))` and the width
    :math:`r(u + 1 - v)` (the blade grows out of the tube: its visible top is the shape's top), interpolated linearly;
    the points cut after the first zero width; :math:`x, y` multiplied by :math:`L`, :math:`r` by :math:`W`;
-3. **the strip** (``blade_mesh.strip_triangles``, Adel's ``leaf_to_mesh`` without twist): the points
+3. **the strip** (``kernels.strip_triangles``, Adel's ``leaf_to_mesh`` without twist): the points
    :math:`(x_i, -r_i/2, y_i)` and :math:`(x_i, r_i/2, y_i)`, :math:`i = 0 \dots m - 1`, two triangles between
    consecutive points up to :math:`m - 2`, one at the tip when its width is below 1e-5 m (Adel's 0.001 cm), two
    otherwise;

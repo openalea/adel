@@ -22,7 +22,8 @@ context's top), which the visible parts move up:
   hidden elements leave the top as it is.
 
 interpret returns each element's frame where it is drawn (its position, heading and up) and its end (the position
-plus its length along the heading for a stem element, its rolled part's for a blade element).
+plus its length along the heading for a stem element, its rolled part's for a blade element). interpret and
+stem_inclinations are numba kernels, in openalea.adel.kernels (the elements' kinds HIDDEN, STEM, LEAF there).
 
 The stem organs' inclinations, by static Adel's rules (Adel.R's getIncT and axe_inclination; AdelDyn sets them to 0):
 an axis' first internode inclined by its base inclination (a tiller's ramps with its Haun stage, base_inclination),
@@ -33,11 +34,8 @@ back to the vertical.
 from math import acos, cos, degrees, pi, radians
 
 import numpy as np
-from numba import njit
 
-from openalea.metafspm.coupling.geometry import down, left_of, roll_right, roll_to_vertical
-
-HIDDEN, STEM, LEAF = 0, 1, 2
+from openalea.metafspm.kernels import down, left_of, roll_right, roll_to_vertical
 
 
 def traversal_order(g, nodes):
@@ -78,101 +76,6 @@ def traversal_order(g, nodes):
     return np.asarray(order, dtype=np.int64), frame_source
 
 
-@njit(cache=True)
-def interpret(order, kind, plant_base, axis, axis_is_main, tiller_start, plant_position, plant_rotation,
-              axis_azimuth, inclination, azimuth, length, rolled, frame_source, parent, own_axis_top):
-    """Per element: (position, heading, up, end), each (n, 3), by Adel's turtle (above). *order*: traversal_order;
-    per element: *kind* (HIDDEN, STEM, LEAF), *plant_base* (its plant's first), *axis* (its axis' index),
-    *tiller_start* (on a tiller's first phytomer), its plant's *plant_position* (n, 3) and *plant_rotation* (°), its
-    axis' *axis_azimuth* (°), its *inclination* and *azimuth* (°, stem elements), *length*, *rolled* (a blade
-    element's rolled part), *frame_source* (traversal_order's: a deferred tiller's heading and up are that element's),
-    *parent* (its topological parent's position, -1 for none), *own_axis_top* (its plant's correction AD-37: at a
-    change of axis, an axis continuing on its own top, a tiller on the top its parent left); per axis:
-    *axis_is_main*."""
-    n = kind.size
-    position, heading, up, end = np.zeros((n, 3)), np.zeros((n, 3)), np.zeros((n, 3)), np.zeros((n, 3))
-    left_top = np.zeros((n, 3, 3))               # per element: the top it left
-    top = np.zeros((3, 3))                       # rows: position, heading, up
-    main_top, tiller_base = np.zeros((3, 3)), np.zeros((3, 3))
-    tiller_continuation = np.zeros((3, 3))       # the legacy's main stem's top saved for a tiller after its tiller
-    entered = np.zeros(axis_is_main.size, dtype=np.bool_)
-    left_axis_top = np.zeros((axis_is_main.size, 3, 3))           # per axis: the top when the turtle left it
-    left_first = np.zeros(axis_is_main.size, dtype=np.bool_)      # and is_axis_first
-    is_axis_first = True
-    previous_axis = -1
-    for i in order:
-        a = axis[i]
-        if previous_axis < 0:
-            previous_axis = a
-        if plant_base[i]:
-            top[0] = plant_position[i]
-            top[1] = np.array([0., 0., 1.])
-            top[2] = np.array([-1., 0., 0.])
-            roll_right(top[1], top[2], plant_rotation[i])
-            main_top[:] = top
-            tiller_base[:] = top
-            tiller_continuation[:] = top
-            is_axis_first = True
-        if a != previous_axis:
-            left_axis_top[previous_axis], left_first[previous_axis] = top, is_axis_first
-            if tiller_start[i] and not entered[a]:     # the legacy's metamer0: a tiller's first visit only
-                is_axis_first = True
-                if axis_is_main[previous_axis]:
-                    main_top[:] = top
-                    if frame_source[i] >= 0:           # at the coleoptile's top, oriented as where it branches
-                        top[1], top[2] = heading[frame_source[i]], up[frame_source[i]]
-                    tiller_base[:] = top
-                    tiller_continuation[:] = top           # main_top but for a deferred tiller's orientation
-                else:
-                    top[:] = tiller_base
-            elif axis_is_main[a]:
-                top[:] = main_top
-            else:
-                top[:] = tiller_continuation
-            if own_axis_top[i] and entered[a]:                  # an axis continuing: as the turtle left it
-                top[:] = left_axis_top[a]
-                if not axis_is_main[a]:
-                    is_axis_first = left_first[a]
-            elif own_axis_top[i] and parent[i] >= 0 and frame_source[i] < 0:     # a tiller: on its bearer's top
-                top[:] = left_top[parent[i]]
-        entered[a] = True
-        p, h, u = top[0].copy(), top[1].copy(), top[2].copy()
-        if kind[i] == STEM:
-            if inclination[i] != 0.:
-                if is_axis_first:
-                    if not axis_is_main[previous_axis]:
-                        roll_right(h, u, axis_azimuth[i])
-                        tiller_base[0], tiller_base[1], tiller_base[2] = p, h, u
-                    down(h, u, inclination[i])
-                    is_axis_first = False
-                else:
-                    up_before = u.copy()
-                    left_z = left_of(h, u)[2]
-                    roll_to_vertical(h, u)
-                    cosine = min(1., max(-1., up_before[0] * u[0] + up_before[1] * u[1] + up_before[2] * u[2]))
-                    angle = degrees(acos(cosine))
-                    left_change = left_z - left_of(h, u)[2]
-                    down(h, u, inclination[i])
-                    if left_change < 0:
-                        angle = -angle
-                    roll_right(h, u, -angle)
-            if azimuth[i] != 0.:
-                roll_right(h, u, azimuth[i])
-        position[i], heading[i], up[i] = p, h, u
-        if kind[i] == STEM:
-            if length[i] > 0:
-                p = p + h * length[i]
-            top[0], top[1], top[2] = p, h, u
-        elif kind[i] == LEAF:
-            if rolled[i] > 0:
-                p = p + h * rolled[i]
-                top[0], top[1], top[2] = p, h, u
-        end[i] = p
-        left_top[i] = top
-        previous_axis = a
-    return position, heading, up, end
-
-
 def base_inclination(table_inclination, is_main, haun_stage, start_haun_stage=1., rate=30.):
     """Each axis' first internode's inclination (°, Adel.R's getIncT): the table's (incT) for a main stem; a tiller's
     3° until its Haun stage reaches *start_haun_stage*, then *rate* degrees per Haun stage, from 3° to the table's."""
@@ -180,45 +83,3 @@ def base_inclination(table_inclination, is_main, haun_stage, start_haun_stage=1.
     return np.where(is_main, table_inclination, np.where(haun_stage > start_haun_stage, ramp, 3.))
 
 
-@njit(cache=True)
-def stem_inclinations(axis, kind, visible, first_inclination, straightening, epsilon=1e-6):
-    """The stem organs' inclinations (°, Adel.R's axe_inclination). *axis*, *kind* (0 internode, 1 sheath), *visible*
-    (their visible lengths): per organ, sorted by axis, rank and kind (each axis from its first internode); per axis:
-    its first internode's inclination and its straightening distance (Adel's dredT, in the lengths' unit; 0: none).
-    The stem's visible organs follow each other from the insertion; the first whose end is at the straightening
-    distance horizontally (the stem straight, at its first internode's inclination) is bent so that its end falls at
-    it, and the next one is turned back to the vertical."""
-    n = axis.size
-    out = np.zeros(n)
-    start = 0
-    while start < n:
-        a = axis[start]
-        stop = start
-        total = 0.
-        while stop < n and axis[stop] == a:
-            total += visible[stop]
-            stop += 1
-        out[start] = first_inclination[a]
-        if straightening[a] > 0 and total > epsilon:
-            alpha = radians(90. - first_inclination[a])
-            elements = np.array([k for k in range(start, stop) if visible[k] > 0])
-            length, distance = 0., 0.
-            for j in range(elements.size):
-                k = elements[j]
-                previous_length, previous_distance = length, distance
-                length += visible[k]
-                distance = length * cos(alpha)
-                if distance >= straightening[a]:
-                    if j > 0:
-                        beta = acos((straightening[a] - previous_distance) / (length - previous_length))
-                        out[k] = -degrees(beta - alpha)
-                        if j + 1 < elements.size:
-                            out[elements[j + 1]] = -degrees(pi / 2 - beta)
-                    else:                                  # the base inclination too large: the first one bent
-                        beta = acos(straightening[a] / length)
-                        out[start] = degrees(pi / 2 - beta)
-                        if elements.size > 1:
-                            out[elements[1]] = -out[start]
-                    break
-        start = stop
-    return out

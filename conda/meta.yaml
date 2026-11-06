@@ -44,6 +44,7 @@ test:
     - test/**
     - test/data/**
   commands:
+    - python -m openalea.metafspm warm_up      # numba's cache filled before the suites (adel's kernels)
     - cd test
     - pytest -v --ignore=legacy/test_povray.py --ignore=legacy/test_dataflow.py
 

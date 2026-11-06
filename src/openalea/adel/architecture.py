@@ -82,11 +82,11 @@ from openalea.metafspm.coupling.component import (NewComplexes, NewNodes, Struct
 from openalea.metafspm.coupling.geometry import Triangles, place, slim_cylinders
 from openalea.metafspm.data_structure.configs import PropsConfig, ScalesConfig
 from openalea.metafspm.solve.decorator import postsegmentation, segmentation
-from openalea.adel.blade_mesh import blade_element_midrib_ends, blade_element_triangles
+from openalea.adel.kernels import blade_element_midrib_ends, blade_element_triangles, interpret, stem_inclinations
 from openalea.adel.leaf_shapes import LeafShapes
 from openalea.adel.tables import (phytomer_dimensions, plant_rows, plant_tables, population_tables,
                                   record_plant_tables)
-from openalea.adel.turtle import base_inclination, interpret, stem_inclinations, traversal_order
+from openalea.adel.turtle import base_inclination, traversal_order
 
 BY = "model_shoot_architecture"
 DESCRIPTOR = "descriptor"
@@ -773,7 +773,7 @@ class ShootArchitecture(StructuralComponent):
     @postsegmentation
     def _inclination(self, inclination, organ_azimuth, visible_length, organ_rank, first_inclination,
                      straightening_distance, first_azimuth, tiller_inclination) -> dict:
-        """With tiller_inclination, the stem organs' inclinations by static Adel's rule (turtle.stem_inclinations):
+        """With tiller_inclination, the stem organs' inclinations by static Adel's rule (kernels.stem_inclinations):
         each axis' first internode inclined by its first inclination, a tiller straightened at its straightening
         distance; its first internode's azimuth (azT). An organ's step, its parameter its plant's. Without it,
         nothing is written (AdelDyn's: 0, the phytomer table's Azim)."""
@@ -802,14 +802,14 @@ class ShootArchitecture(StructuralComponent):
     @postsegmentation
     def _placement(self, length, rolled_part, inclination, organ_azimuth, axis_azimuth, bearer_row,
                    phytomer_rank, x, y, z, rotation, shoot_base_height, own_axis_top) -> dict:
-        """The elements' placement, their frames by Adel's turtle (turtle.interpret): each one's frame (its origin,
+        """The elements' placement, their frames by Adel's turtle (kernels.interpret): each one's frame (its origin,
         heading and up) where it is drawn, its base and its end; from its plant's position and rotation (its main
         stem's base at its shoot_base_height when given: an anchored main stem's, on the anchor's top), on the
         elements' lengths. A stem element's base is its frame's origin, its end that plus its length along its
         heading (a hidden element's: its base). A blade element is drawn in its blade's frame (Adel's: a blade's
         elements from its collar, each moved up by the rolled parts below it): its base is its rolled part's base
         when it has one, else its flat part's midrib's first point; its end its flat part's midrib's last point, its
-        rolled part's end without a flat part drawn (blade_mesh.blade_element_midrib_ends)."""
+        rolled part's end without a flat part drawn (kernels.blade_element_midrib_ends)."""
         ds = self.data_structure
         element_kind, organ_kind = self._kinds()
         order, frame_source, plant_base, parent = self._traversal()
@@ -850,7 +850,7 @@ class ShootArchitecture(StructuralComponent):
     def triangles(self, where=None) -> Triangles:
         """The elements' triangles (metafspm's coupling.geometry.Triangles), as Adel draws them: a stem element's
         slim cylinder of its organ's diameter; a blade element's rolled part's, of its rolled diameter, then its
-        flat part's mesh above it (blade_mesh). *where*: a node mask."""
+        flat part's mesh above it (kernels' blade meshes). *where*: a node mask."""
         ds = self.data_structure
         element_kind, _ = self._kinds()
         organ = np.asarray(ds.owner("Organ"))
