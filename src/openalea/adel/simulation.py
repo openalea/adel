@@ -174,7 +174,8 @@ def simulate(parameters: dict = None, days: float = 80, temperature=15., base_te
     *outputs*: a folder for the run's files (metafspm's SceneRecorder): run.json, scenario.json, summary.csv (the
     summary), Plant/<model>/summaries.csv (every variable per plant, every day) and a frame of the plants every 10
     days (frames/, for ParaView or another platform).
-    *compute*: the Scene's run configuration (metafspm's Compute: its threads, its memory trim; None: Compute())."""
+    *compute*: the Scene's run configuration (metafspm's Compute: its threads, its process pool and sparse solver,
+    its memory trim; None: Compute())."""
     values = dict(parameters or {})
     values.setdefault("start", 0.)
     values.setdefault("base_temperature", base_temperature)
