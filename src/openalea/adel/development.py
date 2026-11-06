@@ -334,14 +334,15 @@ def random_delays(n_plants, max_delay=60., seed=0):
 
 
 def shoot_scene(plants=None, model=ScenarioShoot, time_step=3600, delays=None, plant_scenarios=None,
-                sowing_depth="coleoptile", forcings=None, recorder=None, **parameters):
+                sowing_depth="coleoptile", forcings=None, recorder=None, compute=None, **parameters):
     """A scene of *plants* (metafspm's Planting, m; by default one at the origin), each a *model* (ScenarioShoot or one
     extending it) with *parameters* (its components' parameters, e.g. axes_table, phytomer_table, leaves, n_sect,
     thermal_time_step, tiller_inclination, leaf_number), its own *plant_scenarios* (one dict per plant, e.g. its
     leaf_number) and *delays* (°Cd, ScenarioDevelopment's delay of each plant). A plant's z is minus its sowing
     depth (metafspm's planting convention: the shoot starts there, as a root model would): *sowing_depth* (m) for
     every plant, "coleoptile" for each its coleoptile_sowing_depth, None for the Plantings' z. *forcings*,
-    *recorder*: the Scene's (e.g. forcings={"air_temperature": ...}, °C, for ScenarioDevelopment's degree-days)."""
+    *recorder*, *compute*: the Scene's (e.g. forcings={"air_temperature": ...}, °C, for ScenarioDevelopment's
+    degree-days; compute its run configuration, metafspm's Compute)."""
     plants = plants or [Planting()]
     own = [dict(values) for values in (plant_scenarios or [{}] * len(plants))]
     for values, delay in zip(own, delays or [0.] * len(plants)):
@@ -350,7 +351,8 @@ def shoot_scene(plants=None, model=ScenarioShoot, time_step=3600, delays=None, p
         depths = [coleoptile_sowing_depth(dict(parameters, **values)) if sowing_depth == "coleoptile"
                   else float(sowing_depth) for values in own]
         plants = [replace(plant, z=-depth) for plant, depth in zip(plants, depths)]
-    return Scene(planting(plants, model, parameters, own), time_step=time_step, forcings=forcings, recorder=recorder)
+    return Scene(planting(plants, model, parameters, own), time_step=time_step, forcings=forcings, recorder=recorder,
+                 compute=compute)
 
 
 COLEOPTILE_DEPTH_FRACTION = 0.9

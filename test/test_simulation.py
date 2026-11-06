@@ -68,3 +68,10 @@ def test_draw(default):
     default.draw(color_by="area")
 
 
+
+
+def test_the_run_configuration_is_the_scenes():
+    """compute= (metafspm's Compute) is the Scene's run configuration."""
+    from openalea.metafspm.compute import Compute
+    compute = Compute(threads=1, memory="keep")
+    assert simulate(days=1, compute=compute).scene.compute is compute

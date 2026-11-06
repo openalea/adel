@@ -159,7 +159,8 @@ def _summary_row(day: float, ds, architecture) -> dict:
 
 
 def simulate(parameters: dict = None, days: float = 80, temperature=15., base_temperature: float = 0.,
-             plants: int = 1, every: int = 1, seed: int = 0, model=ScenarioShoot, outputs: str = None) -> Simulation:
+             plants: int = 1, every: int = 1, seed: int = 0, model=ScenarioShoot, outputs: str = None,
+             compute=None) -> Simulation:
     """Grow *plants* wheat plants (one by default; several: a stand sown in rows, with random development delays of up
     to 60 °Cd) for *days* days, one step per day, from the plant model's default parameters (Adel's sample plant)
     changed by *parameters* ({name: value}; see parameters()). The summary is recorded every *every* days.
@@ -172,7 +173,8 @@ def simulate(parameters: dict = None, days: float = 80, temperature=15., base_te
 
     *outputs*: a folder for the run's files (metafspm's SceneRecorder): run.json, scenario.json, summary.csv (the
     summary), Plant/<model>/summaries.csv (every variable per plant, every day) and a frame of the plants every 10
-    days (frames/, for ParaView or another platform)."""
+    days (frames/, for ParaView or another platform).
+    *compute*: the Scene's run configuration (metafspm's Compute: its threads, its memory trim; None: Compute())."""
     values = dict(parameters or {})
     values.setdefault("start", 0.)
     values.setdefault("base_temperature", base_temperature)
@@ -181,9 +183,11 @@ def simulate(parameters: dict = None, days: float = 80, temperature=15., base_te
                              frame_period=10 if outputs is not None else None)
     forcings = {"air_temperature": as_forcing(temperature, time_unit=DAY)}
     if plants == 1:
-        built = shoot_scene(model=model, time_step=DAY, forcings=forcings, recorder=recorder, **values)
+        built = shoot_scene(model=model, time_step=DAY, forcings=forcings, recorder=recorder, compute=compute,
+                            **values)
     else:
         built = shoot_scene(sown_stand(plants, seed=seed), model=model, time_step=DAY,
-                            delays=random_delays(plants, seed=seed), forcings=forcings, recorder=recorder, **values)
+                            delays=random_delays(plants, seed=seed), forcings=forcings, recorder=recorder,
+                            compute=compute, **values)
     built.simulate(int(days) + 1)                      # day 0's step sets the thermal time to its start
     return Simulation(scene=built, summary=recorder.table("summary"), parameters=dict(parameters or {}))
