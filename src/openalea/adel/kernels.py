@@ -162,8 +162,10 @@ def stem_inclinations(axis, kind, visible, first_inclination, straightening, eps
 # The blade elements' meshes, as Adel draws them (geometric_elements.Leaves.mesh: incline_leaf, then fitting.mesh4's
 # leaf_element and leaf_to_mesh), in the element's local frame (x along its up, z along its heading), in m.
 #
-#     triangles = blade_element_triangles(x, y, s, r, inclination, mature_length, max_width, visible_length, s_base,
-#                                         s_top, min_area)            the shape's fitted midrib (x, y, s, r)
+#     triangles, abscissae = blade_element_triangles(x, y, s, r, inclination, mature_length, max_width,
+#                                                    visible_length, s_base, s_top, min_area)
+#                                                     the shape's fitted midrib (x, y, s, r); each vertex's abscissa
+#                                                     along the midrib from the flat part's base
 #     ends = blade_element_midrib_ends(x, y, s, r, inclination, mature_length, max_width, visible_length, s_base,
 #                                      s_top)                         its midrib's first and last points
 #
@@ -186,15 +188,16 @@ def incline(x, y, inclination):
 
 @njit(cache=True)
 def blade_part(x, y, s, r, mature_length, visible_length, s_base, s_top, max_width):
-    """Adel's fitting.leaf_element: the midrib's points (x, y) and the width r of the part [s_base, s_top] of the
-    visible length, scaled to the blade's mature length and maximal width (empty when nothing is visible)."""
+    """Adel's fitting.leaf_element: the midrib's points (x, y), the width r and the abscissa along the midrib (from
+    the visible part's base) of the part [s_base, s_top] of the visible length, scaled to the blade's mature length
+    and maximal width (empty when nothing is visible)."""
     s_base = min(s_base, s_top, 1.)
     s_top = max(s_base, s_top, 0.)
     if visible_length <= 0.:
-        return np.zeros(0), np.zeros(0), np.zeros(0)
+        return np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0)
     visible_length = min(visible_length, mature_length)
     if visible_length == mature_length and s_base == 0 and s_top == 1:
-        return x * mature_length, y * mature_length, r * max_width
+        return x * mature_length, y * mature_length, r * max_width, s * mature_length
     r = r.copy()
     r[-1] = 0.
     visible = visible_length / mature_length
@@ -217,8 +220,9 @@ def blade_part(x, y, s, r, mature_length, visible_length, s_base, s_top, max_wid
     if zero.any():
         end = np.searchsorted(zero, 1)                  # as Adel's (a search on the mask)
         x_part, y_part, r_part = x_part[:end + 1], y_part[:end + 1], r_part[:end + 1].copy()
+        kept = kept[:end + 1]
         r_part[-1] = 0.
-    return x_part * mature_length, y_part * mature_length, r_part * max_width
+    return x_part * mature_length, y_part * mature_length, r_part * max_width, kept * mature_length
 
 
 @njit(cache=True)
@@ -229,15 +233,7 @@ def strip_triangles(x, y, r):
     points = np.zeros((2 * n, 3))
     points[:n, 0], points[:n, 1], points[:n, 2] = x, -r / 2., y + 0.
     points[n:, 0], points[n:, 1], points[n:, 2] = x, r / 2., y - 0.
-    pairs = max(n - 2, 1)
-    tip = 1 if r[-1] < TIP_WIDTH else 2
-    indices = np.zeros((2 * pairs + tip, 3), dtype=np.int64)
-    for i in range(pairs):
-        indices[i] = (i, i + n, i + n + 1)
-        indices[pairs + i] = (i, i + n + 1, i + 1)
-    indices[2 * pairs] = (n - 2, 2 * n - 2, 2 * n - 1)
-    if tip == 2:
-        indices[2 * pairs + 1] = (n - 2, 2 * n - 1, n - 1)
+    indices = strip_indices(n, r[-1] < TIP_WIDTH)
     triangles = np.zeros((indices.shape[0], 3, 3))
     for t in range(indices.shape[0]):
         for k in range(3):
@@ -246,22 +242,46 @@ def strip_triangles(x, y, r):
 
 
 @njit(cache=True)
+def strip_indices(n, narrow_tip):
+    """The strip's triangles (T, 3) as indices of its points: the first row 0 … n - 1, the second n … 2n - 1, two
+    triangles between consecutive points, one at the tip when it is narrow (*narrow_tip*)."""
+    pairs = max(n - 2, 1)
+    tip = 1 if narrow_tip else 2
+    indices = np.zeros((2 * pairs + tip, 3), dtype=np.int64)
+    for i in range(pairs):
+        indices[i] = (i, i + n, i + n + 1)
+        indices[pairs + i] = (i, i + n + 1, i + 1)
+    indices[2 * pairs] = (n - 2, 2 * n - 2, 2 * n - 1)
+    if tip == 2:
+        indices[2 * pairs + 1] = (n - 2, 2 * n - 1, n - 1)
+    return indices
+
+
+@njit(cache=True)
 def blade_element_triangles(x, y, s, r, inclination, mature_length, max_width, visible_length, s_base, s_top,
                             min_area):
     """A blade element's triangles (T, 3, 3) in its local frame (Adel's Leaves.mesh with flipx), from its shape's
     fitted midrib (x, y, s, r): *inclination* a factor of the shape's base angle (a dynamic database's shapes carry
-    their inclination: 1); those of area at most *min_area* left out."""
+    their inclination: 1); those of area at most *min_area* left out. With each one's vertices' abscissae (T, 3)
+    along the midrib from the flat part's base (its green and senesced parts are along it)."""
     x_inclined, y_inclined = incline(x, y, inclination)
-    x_part, y_part, r_part = blade_part(-x_inclined, y_inclined, s, r, mature_length, visible_length, s_base, s_top,
-                                        max_width)
+    x_part, y_part, r_part, abscissa = blade_part(-x_inclined, y_inclined, s, r, mature_length, visible_length,
+                                                  s_base, s_top, max_width)
     if len(x_part) < 2:
-        return np.zeros((0, 3, 3))
+        return np.zeros((0, 3, 3)), np.zeros((0, 3))
     triangles = strip_triangles(x_part, y_part, r_part)
+    indices = strip_indices(len(x_part), r_part[-1] < TIP_WIDTH)
+    n = len(x_part)
+    along = np.zeros((indices.shape[0], 3))
+    for t in range(indices.shape[0]):
+        for k in range(3):
+            along[t, k] = abscissa[indices[t, k] % n] - abscissa[0]
     a, b, c = triangles[:, 0], triangles[:, 1], triangles[:, 2]
     u, v = b - a, c - a
     area = np.sqrt((u[:, 1] * v[:, 2] - u[:, 2] * v[:, 1]) ** 2 + (u[:, 2] * v[:, 0] - u[:, 0] * v[:, 2]) ** 2
                    + (u[:, 0] * v[:, 1] - u[:, 1] * v[:, 0]) ** 2) / 2.
-    return triangles[area > min_area]
+    kept = area > min_area
+    return triangles[kept], along[kept]
 
 
 @njit(cache=True)
@@ -270,8 +290,8 @@ def blade_element_midrib_ends(x, y, s, r, inclination, mature_length, max_width,
     blade_element_triangles draws it (its triangles' rows lie on either side of them); (0, 3) when it has no
     triangles."""
     x_inclined, y_inclined = incline(x, y, inclination)
-    x_part, y_part, _ = blade_part(-x_inclined, y_inclined, s, r, mature_length, visible_length, s_base, s_top,
-                                   max_width)
+    x_part, y_part, _, _ = blade_part(-x_inclined, y_inclined, s, r, mature_length, visible_length, s_base, s_top,
+                                      max_width)
     ends = np.zeros((0, 3))
     if len(x_part) >= 2:
         ends = np.zeros((2, 3))

@@ -366,6 +366,17 @@ whole visible midrib. An element's local mesh is kept between calls, by MPG vert
 same (its shape, inclination factor, mature length and width, visible length, flat part, rolled part, the area
 threshold); every element is placed again at each call.
 
+**The triangles' green share** (``ShootArchitecture._green_shares``, the triangles' attribute ``"green"``). An
+element's green part is its first :math:`\ell_g` (``green_length``) from its base, its senesced part above (the
+senescence goes down from the top: a blade's sectors, a sheath's or an internode's visible part). Each triangle's
+green share is the fraction of its area at a distance at most :math:`\ell_g` along its element, the distance linear
+over the triangle: a cylinder's local :math:`p_z`, a blade mesh vertex's abscissa along the midrib (``u L``, from
+the flat part's base, ``kernels.blade_element_triangles``'s second output) plus the rolled part. The cut is exact
+(metafspm's ``Triangles.fraction_in``); a wholly green element's triangles are 1 (its top cap too), a wholly senesced
+one's 0. An element's triangles' green area over their area is its green area over its area within its mesh's
+resolution. The light models carry it along (metafspm's ``Triangles.clip``), the gas exchange's soil cut weighs by
+it (CNW-Grass's ``emerged_links``: the green area above the soil).
+
 
 The scenario development (``development.ScenarioDevelopment``)
 ==============================================================

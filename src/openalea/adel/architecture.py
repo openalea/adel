@@ -79,7 +79,7 @@ import pandas as pd
 
 from openalea.metafspm.coupling.component import (NewComplexes, NewNodes, StructuralComponent, input_variable,
                                                    parameter, planting_variable, setting, state_variable)
-from openalea.metafspm.coupling.geometry import Triangles, place, slim_cylinders
+from openalea.metafspm.coupling.geometry import HalfSpace, Triangles, place, slim_cylinders
 from openalea.metafspm.data_structure.configs import PropsConfig, ScalesConfig
 from openalea.metafspm.solve.decorator import postsegmentation, segmentation
 from openalea.adel.kernels import blade_element_midrib_ends, blade_element_triangles, interpret, stem_inclinations
@@ -850,7 +850,10 @@ class ShootArchitecture(StructuralComponent):
     def triangles(self, where=None) -> Triangles:
         """The elements' triangles (metafspm's coupling.geometry.Triangles), as Adel draws them: a stem element's
         slim cylinder of its organ's diameter; a blade element's rolled part's, of its rolled diameter, then its
-        flat part's mesh above it (kernels' blade meshes). *where*: a node mask."""
+        flat part's mesh above it (kernels' blade meshes). *where*: a node mask. Each triangle carries its "green"
+        attribute: the share of its area in its element's green part, the element's first green_length from its base
+        (the senescence going down from the top: a blade's sectors, a sheath's or an internode's visible part), its
+        area beyond it the senesced part ("senesced": 1 - green)."""
         ds = self.data_structure
         element_kind, _ = self._kinds()
         organ = np.asarray(ds.owner("Organ"))
@@ -864,19 +867,38 @@ class ShootArchitecture(StructuralComponent):
         radius = np.where(stem, 0.5 * np.asarray(ds.get("diameter"))[organ],
                           0.5 * np.asarray(ds.get("rolled_diameter")))[cylinder]
         position, heading, up = self.frames()
-        vertices = place(slim_cylinders(cylinder_length, radius, radius), position[cylinder], heading[cylinder],
-                         up[cylinder]).reshape(-1, 3, 3)
+        local = slim_cylinders(cylinder_length, radius, radius)
+        vertices = place(local, position[cylinder], heading[cylinder], up[cylinder]).reshape(-1, 3, 3)
         owner = np.repeat(cylinder, 8)
-        blade_vertices, blade_owner = self._blade_triangles(leaf, rolled, minimum, organ)
+        green_length = np.asarray(ds.get("green_length"), dtype=float)
+        green = self._green_shares(local.reshape(-1, 3, 3)[..., 2], green_length[owner], length[owner])
+        blade_vertices, blade_owner, blade_abscissae = self._blade_triangles(leaf, rolled, minimum, organ)
         if blade_owner.size:
             placed = place(blade_vertices[:, None], position[blade_owner], heading[blade_owner],
                            up[blade_owner])[:, 0]
             vertices, owner = np.concatenate([vertices, placed]), np.concatenate([owner, blade_owner])
-        return Triangles(vertices, owner)
+            green = np.concatenate([green, self._green_shares(blade_abscissae, green_length[blade_owner],
+                                                              length[blade_owner])])
+        return Triangles(vertices, owner, attributes={"green": green})
+
+    @staticmethod
+    def _green_shares(along, green_length, length) -> np.ndarray:
+        """The share of each triangle's area within its element's first *green_length* of its *length*: its green
+        part, from its vertices' distances *along* its element from its base ((T, 3): a cylinder's local z, a blade
+        mesh's abscissa along its midrib above its rolled part), linear over the triangle (metafspm's
+        Triangles.fraction_in, exact); a wholly green element's triangles 1 (its top cap included), a wholly senesced
+        one's 0 (its base cap included)."""
+        green_length = np.asarray(green_length, dtype=float)
+        along = np.asarray(along, dtype=float)
+        shifted = np.zeros(along.shape + (3,))
+        shifted[..., 2] = along - green_length[:, None]
+        shares = Triangles(shifted, np.zeros(len(shifted), dtype=np.int64)).fraction_in(HalfSpace(0., above=False))
+        return np.where(green_length >= np.asarray(length, dtype=float), 1., np.where(green_length > 0., shares, 0.))
 
     def _blade_triangles(self, leaf, rolled, minimum, organ):
         """The flat parts' meshes of the blade elements *leaf* (a node mask) in their local frames, above their rolled
-        parts: (T, 3, 3) vertices, (T,) node indices. Each blade's shape is its class', seed's and, in a dynamic
+        parts: (T, 3, 3) vertices, (T,) node indices, (T, 3) their vertices' distances along their element from its
+        base (the rolled part, then the midrib's abscissa). Each blade's shape is its class', seed's and, in a dynamic
         database, its age class' (its age in its axis' phyllochrons, minus 0.3, as Adel's). An element's mesh is
         kept from one call to the next while what it is made from is the same (its shape, visible length, flat
         part, ...): only the grown and new ones are meshed again, every one placed again."""
@@ -886,23 +908,25 @@ class ShootArchitecture(StructuralComponent):
         vertex_ids = ds.entity_ids("node")
         previous = self.kept("blade_meshes", {})
         cache = {}
-        parts, owners = [], []
+        parts, owners, abscissae = [], [], []
         for node, made_from in self._meshed_blades(leaf, rolled, minimum, organ):
             made_from = made_from + (min_area,)
             vertex = int(vertex_ids[node])
             kept = previous.get(vertex)
             if kept is not None and kept[0] == made_from:
-                triangles = kept[1]
+                triangles, along = kept[1], kept[2]
             else:
-                triangles = blade_element_triangles(*shapes.fitted[made_from[1]], *made_from[2:8], min_area)
+                triangles, along = blade_element_triangles(*shapes.fitted[made_from[1]], *made_from[2:8], min_area)
                 triangles[..., 2] += rolled[node]
-            cache[vertex] = (made_from, triangles)
+                along += rolled[node]
+            cache[vertex] = (made_from, triangles, along)
             parts.append(triangles)
             owners.append(np.full(len(triangles), node, dtype=np.int64))
+            abscissae.append(along)
         self.keep("blade_meshes", cache, saved=False)       # rebuilt when missing: not checkpointed
         if not parts:
-            return np.zeros((0, 3, 3)), np.zeros(0, dtype=np.int64)
-        return np.concatenate(parts), np.concatenate(owners)
+            return np.zeros((0, 3, 3)), np.zeros(0, dtype=np.int64), np.zeros((0, 3))
+        return np.concatenate(parts), np.concatenate(owners), np.concatenate(abscissae)
 
     def _meshed_blades(self, leaf, rolled, minimum, organ):
         """[(node, what its mesh is made from)]: the blade elements of *leaf* (a node mask) drawn with a mesh (a

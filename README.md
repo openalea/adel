@@ -130,6 +130,7 @@ for _ in range(100):
     scene.run()                                        # 10 °Cd of development, then the shoot
 architecture = scene.populations[0].instance.architecture
 triangles = architecture.triangles()                   # every triangle and its element's node index
+green = triangles.attributes["green"]                  # each triangle's green share (the senescence from the top)
 ```
 
 - **Tables** (`openalea.adel.tables`): the tables given (`axes_table`, `phytomer_table`), or a plant generated from a

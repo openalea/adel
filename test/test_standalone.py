@@ -244,3 +244,23 @@ def test_a_stand_grown_to_its_stage_before_the_first_step():
         np.testing.assert_array_equal(np.asarray(ds.get(name)), values, err_msg=name)
     scene.run()
     np.testing.assert_allclose(np.asarray(ds.get("thermal_time")), [615., 585.])
+
+
+def test_the_triangles_carry_their_green_share():
+    """Each triangle's "green" attribute: the share of its area in its element's green part (the first green_length
+    from the element's base, along a stem's axis or a blade's midrib): an element's triangles' green area, over their
+    area, is its green_area over its area (within its mesh's resolution); a wholly green element's 1, a senesced
+    one's 0."""
+    ds, architecture = grow(shoot_scene(leaves=LeafShapes.echap(xy_model="Soissons_byleafclass"), n_sect=3), 90)
+    triangles = architecture.triangles()
+    green = triangles.attributes["green"]
+    assert green.min() >= 0. and green.max() <= 1.
+    n = ds.n_nodes()
+    area = triangles.per_owner(triangles.areas(), n)
+    green_area = triangles.per_owner(triangles.areas() * green, n)
+    expected_area, expected_green = np.asarray(ds.get("area")), np.asarray(ds.get("green_area"))
+    drawn = (area > 0) & (expected_area > 0)
+    partly = drawn & (expected_green > 0) & (expected_green < 0.999 * expected_area)
+    assert partly.sum() >= 5 and (drawn & (expected_green == 0)).any()
+    np.testing.assert_allclose(green_area[drawn] / area[drawn], expected_green[drawn] / expected_area[drawn],
+                               atol=0.05)
