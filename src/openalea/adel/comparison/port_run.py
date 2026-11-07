@@ -48,7 +48,7 @@ def port_scene(leaves="samples", time_step=3600, rotation=0., phyllochron=PHYLLO
     axes, phytomers = tables if tables is not None else harness_tables(leaves)
     plants = plants or [StandPlant(azimuth=rotation)]
     return shoot_scene([Planting(x=plant.x * 0.01, y=plant.y * 0.01, rotation=plant.azimuth) for plant in plants],
-                       delays=[plant.delay for plant in plants], model=model, time_step=time_step, sowing_depth=0.,
+                       delays=[plant.delay for plant in plants], model=model, time_step=time_step, depth=0.,
                        axes_table=axes, phytomer_table=phytomers, table_plant=1, leaves=leaf_shapes(leaves),
                        phyllochron=phyllochron, tiller_phyllochron=phyllochron, n_sect=n_sect,
                        thermal_time_step=thermal_time_step, **(parameters or {}))

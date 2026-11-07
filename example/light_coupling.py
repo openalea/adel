@@ -20,7 +20,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from openalea.adel.architecture import SCALES
-from openalea.adel.development import ScenarioShoot, random_delays, shoot_scene, sown_stand
+from openalea.adel.development import ScenarioShoot, random_delays, shoot_scene
+from openalea.metafspm.scene.population import stand
 from openalea.adel.leaf_shapes import LeafShapes
 from openalea.metafspm.coupling.component import (FunctionalComponent, geometry_input, input_variable, setting,
                                                    state_variable)
@@ -87,7 +88,7 @@ class LitShoot(ScenarioShoot):
 
 if __name__ == "__main__":
     n_steps = int(sys.argv[1]) if len(sys.argv) > 1 else 100
-    plants = sown_stand(20)
+    plants = stand(20, rows=4, plant_spacing=0.04, jitter=0.005, seed=0)
     scene = shoot_scene(plants, delays=random_delays(len(plants)), model=LitShoot,
                         leaves=LeafShapes.echap(xy_model="Soissons_byleafclass"), n_sect=2,
                         thermal_time_step=THERMAL_TIME_STEP)

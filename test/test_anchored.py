@@ -9,7 +9,8 @@ import numpy as np
 import pytest
 
 from openalea.adel.architecture import ShootArchitecture
-from openalea.adel.development import DAY, ScenarioShoot, shoot_scene, sown_stand
+from openalea.adel.development import DAY, ScenarioShoot, shoot_scene
+from openalea.metafspm.scene.population import stand
 from openalea.metafspm.coupling.component import FunctionalComponent, StructuralComponent, parameter, state_variable
 from openalea.metafspm.data_structure.configs import PropsConfig, ScalesConfig
 from openalea.metafspm.data_structure.data_api import EntityView
@@ -86,16 +87,16 @@ class CrownedShoot(ScenarioShoot):
 
 
 def _scene(plants, model, **parameters):
-    return shoot_scene(plants, model=model, time_step=DAY, sowing_depth=None, forcings={"air_temperature": 15.},
+    return shoot_scene(plants, model=model, time_step=DAY, depth=None, forcings={"air_temperature": 15.},
                        start=0., delays=[0., 40.][:len(plants)], tiller_inclination=1, n_sect=2, **parameters)
 
 
 def _grown(n_days=70):
     """(the crowned scene, the plain one): two plants sown at SOWING_DEPTH on a crown at CROWN_DEPTH, and the same
     plants without a crown, sown at CROWN_DEPTH; grown n_days."""
-    plants = [replace(plant, z=-SOWING_DEPTH) for plant in sown_stand(2)]
+    plants = stand(2, rows=4, plant_spacing=0.04, depth=SOWING_DEPTH, jitter=0.005, seed=0)
     crowned = _scene(plants, CrownedShoot, shoot_anchor=CROWN_TOP, crown_depth=CROWN_DEPTH)
-    plain = _scene([replace(plant, z=-CROWN_DEPTH) for plant in plants], ScenarioShoot)
+    plain = _scene([replace(plant, depth=CROWN_DEPTH) for plant in plants], ScenarioShoot)
     for _ in range(n_days):
         crowned.run()
         plain.run()
@@ -199,4 +200,4 @@ def test_without_its_anchor_built_first_it_raises():
     class Reversed(CrownedShoot):
         initiators = (ShootArchitecture, StandInCrown)
     with pytest.raises(AnchorError, match="StandInCrown"):
-        _scene([sown_stand(1)[0]], Reversed, shoot_anchor=CROWN_TOP)
+        _scene(stand(1, plant_spacing=0.04, jitter=0.005, seed=0), Reversed, shoot_anchor=CROWN_TOP)

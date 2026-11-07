@@ -22,7 +22,8 @@ the call's time); without that forcing, each call adds `thermal_time_step`. A ca
 time whatever its step: a stand is grown to its stage by one call (its `start` the stage). ScenarioShoot is the plant
 model of ShootArchitecture grown by it; shoot_scene builds a scene of such plants:
 
-    scene = shoot_scene(sown_stand(20), delays=random_delays(20), leaves=LeafShapes.echap(), thermal_time_step=10.)
+    scene = shoot_scene(stand(20, rows=4, plant_spacing=0.04, jitter=0.005, seed=0), delays=random_delays(20),
+                        leaves=LeafShapes.echap(), thermal_time_step=10.)
     scene.run()                                        # 10 °Cd of development, then the shoot
     scene = shoot_scene(time_step=86400., forcings={"air_temperature": 15.}, start=0.)    # 15 °Cd a day
 """
@@ -35,7 +36,7 @@ from openalea.adel.tables import phytomer_dimensions, plant_rows, plant_tables, 
 from openalea.metafspm.coupling.component import (FunctionalComponent, forcing_variable, input_variable, parameter,
                                                    state_variable)
 from openalea.metafspm.coupling.composite_wrapper import CompositeModel
-from openalea.metafspm.scene.population import Planting, planting
+from openalea.metafspm.scene.population import Planting, Stand, planting
 from openalea.metafspm.scene.scene import Scene
 from openalea.metafspm.solve.decorator import postsegmentation, potential
 
@@ -318,39 +319,30 @@ class ScenarioShoot(CompositeModel):
             self.architecture.run_stage("postsegmentation")
 
 
-def sown_stand(n_plants, n_rows=4, row_spacing=0.15, plant_spacing=0.04, seed=0):
-    """A sown stand of *n_plants* (metafspm's Planting, m) in *n_rows* rows, a little off their sowing spots (5 mm),
-    their rotations random."""
-    random = np.random.default_rng(seed)
-    per_row = int(np.ceil(n_plants / n_rows))
-    return [Planting(x=(k % per_row) * plant_spacing + random.normal(0., 0.005),
-                     y=(k // per_row) * row_spacing + random.normal(0., 0.005), rotation=random.uniform(0., 360.))
-            for k in range(n_plants)]
-
-
 def random_delays(n_plants, max_delay=60., seed=0):
     """*n_plants* development delays (°Cd), uniform up to *max_delay*."""
     return np.random.default_rng(seed).uniform(0., max_delay, n_plants).tolist()
 
 
 def shoot_scene(plants=None, model=ScenarioShoot, time_step=3600, delays=None, plant_scenarios=None,
-                sowing_depth="coleoptile", forcings=None, recorder=None, compute=None, **parameters):
-    """A scene of *plants* (metafspm's Planting, m; by default one at the origin), each a *model* (ScenarioShoot or one
-    extending it) with *parameters* (its components' parameters, e.g. axes_table, phytomer_table, leaves, n_sect,
-    thermal_time_step, tiller_inclination, leaf_number), its own *plant_scenarios* (one dict per plant, e.g. its
-    leaf_number) and *delays* (°Cd, ScenarioDevelopment's delay of each plant). A plant's z is minus its sowing
-    depth (metafspm's planting convention: the shoot starts there, as a root model would): *sowing_depth* (m) for
-    every plant, "coleoptile" for each its coleoptile_sowing_depth, None for the Plantings' z. *forcings*,
-    *recorder*, *compute*: the Scene's (e.g. forcings={"air_temperature": ...}, °C, for ScenarioDevelopment's
-    degree-days; compute its run configuration, metafspm's Compute)."""
+                depth="coleoptile", forcings=None, recorder=None, compute=None, **parameters):
+    """A scene of *plants* (metafspm's Planting, m, or its stand(); by default one at the origin), each a *model*
+    (ScenarioShoot or a model nesting it) with *parameters* (its components' parameters, e.g. axes_table,
+    phytomer_table, leaves, n_sect, thermal_time_step, tiller_inclination, leaf_number), its own *plant_scenarios*
+    (one dict per plant, e.g. its leaf_number) and *delays* (°Cd, ScenarioDevelopment's delay of each plant). A
+    plant's shoot starts at its planting depth (metafspm's Planting.depth, below the soil surface, as a root model's
+    would): *depth* (m) for every plant, "coleoptile" for each its coleoptile_sowing_depth, None for the Plantings'.
+    *forcings*, *recorder*, *compute*: the Scene's (e.g. forcings={"air_temperature": ...}, °C, for
+    ScenarioDevelopment's degree-days; compute its run configuration, metafspm's Compute)."""
     plants = plants or [Planting()]
     own = [dict(values) for values in (plant_scenarios or [{}] * len(plants))]
     for values, delay in zip(own, delays or [0.] * len(plants)):
         values["delay"] = float(delay)
-    if sowing_depth is not None:
-        depths = [coleoptile_sowing_depth(dict(parameters, **values)) if sowing_depth == "coleoptile"
-                  else float(sowing_depth) for values in own]
-        plants = [replace(plant, z=-depth) for plant, depth in zip(plants, depths)]
+    if depth is not None:
+        depths = [coleoptile_sowing_depth(dict(parameters, **values)) if depth == "coleoptile" else float(depth)
+                  for values in own]
+        placed = [replace(plant, depth=value) for plant, value in zip(plants, depths)]
+        plants = Stand(placed, plants.xrange, plants.yrange, plants.models) if isinstance(plants, Stand) else placed
     return Scene(planting(plants, model, parameters, own), time_step=time_step, forcings=forcings, recorder=recorder,
                  compute=compute)
 

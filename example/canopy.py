@@ -11,7 +11,8 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 
-from openalea.adel.development import random_delays, shoot_scene, sown_stand
+from openalea.adel.development import random_delays, shoot_scene
+from openalea.metafspm.scene.population import stand
 from openalea.adel.display import state_colors
 from openalea.adel.leaf_shapes import LeafShapes
 from openalea.metafspm.display import draw
@@ -22,7 +23,7 @@ THERMAL_TIME_STEP = 10.                                # °Cd per step
 
 def grow(n_steps, shown):
     """The canopy's triangles and its elements' state at the steps *shown*, and its areas at every step."""
-    scene = shoot_scene(sown_stand(N_PLANTS), delays=random_delays(N_PLANTS),
+    scene = shoot_scene(stand(N_PLANTS, rows=4, plant_spacing=0.04, jitter=0.005, seed=0), delays=random_delays(N_PLANTS),
                         leaves=LeafShapes.echap(xy_model="Soissons_byleafclass"), n_sect=2,
                         thermal_time_step=THERMAL_TIME_STEP)
     ds = scene.populations[0].data_structure

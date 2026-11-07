@@ -21,7 +21,8 @@ import os
 from openalea.encoding3d.validate import validate_sequence
 from openalea.metafspm.scene.recorder import SceneRecorder
 
-from openalea.adel.development import ScenarioShoot, random_delays, shoot_scene, sown_stand
+from openalea.adel.development import ScenarioShoot, random_delays, shoot_scene
+from openalea.metafspm.scene.population import stand
 from openalea.adel.simulation import DAY
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -37,7 +38,7 @@ def export(days: int = 80, plants: int = 3, temperature: float = 15., outputs: s
     by *frame_options*, e.g. LOG); the sequence's index path."""
     recorder = SceneRecorder(outputs, summaries=False, frame_period=FRAME_PERIOD,   # the scene's frames only
                              frame_options=frame_options)
-    built = shoot_scene(sown_stand(plants, seed=0), model=ScenarioShoot, time_step=DAY,
+    built = shoot_scene(stand(plants, rows=4, plant_spacing=0.04, jitter=0.005, seed=0), model=ScenarioShoot, time_step=DAY,
                         delays=random_delays(plants, seed=0), start=0., recorder=recorder,
                         forcings={"air_temperature": temperature})        # °C: its degree-days above 0 °C
     built.simulate(days + 1)                                             # day 0: the thermal time set to its start

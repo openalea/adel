@@ -127,10 +127,11 @@ Development and senescence models write the organs' lengths. The coupling contra
 A canopy of plants is one population, in one MPG:
 
 ```python
-from openalea.adel.development import random_delays, shoot_scene, sown_stand
+from openalea.adel.development import random_delays, shoot_scene
+from openalea.metafspm.scene.population import stand
 from openalea.adel.leaf_shapes import LeafShapes
 
-scene = shoot_scene(sown_stand(20), delays=random_delays(20), leaves=LeafShapes.echap(), n_sect=2,
+scene = shoot_scene(stand(20, rows=4, plant_spacing=0.04, jitter=0.005, seed=0), delays=random_delays(20), leaves=LeafShapes.echap(), n_sect=2,
                     thermal_time_step=10.)
 for _ in range(100):
     scene.run()                                        # 10 °Cd of development, then the shoot

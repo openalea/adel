@@ -31,7 +31,8 @@ from openalea.metafspm.scene.recorder import SceneRecorder
 from openalea.metafspm.scene.scenarios import parameter_table
 
 from openalea.adel.architecture import ShootArchitecture
-from openalea.adel.development import DAY, ScenarioDevelopment, ScenarioShoot, random_delays, shoot_scene, sown_stand
+from openalea.adel.development import DAY, ScenarioDevelopment, ScenarioShoot, random_delays, shoot_scene
+from openalea.metafspm.scene.population import stand
 from openalea.adel.tables import wheat_tables, with_tillers
 
 # The parameters a user changes first: the plant described by four numbers (without tables, instead of Adel's sample
@@ -189,7 +190,7 @@ def simulate(parameters: dict = None, days: float = 80, temperature=15., base_te
         built = shoot_scene(model=model, time_step=DAY, forcings=forcings, recorder=recorder, compute=compute,
                             **values)
     else:
-        built = shoot_scene(sown_stand(plants, seed=seed), model=model, time_step=DAY,
+        built = shoot_scene(stand(plants, rows=4, plant_spacing=0.04, jitter=0.005, seed=seed), model=model, time_step=DAY,
                             delays=random_delays(plants, seed=seed), forcings=forcings, recorder=recorder,
                             compute=compute, **values)
     built.simulate(int(days) + 1)                      # day 0's step sets the thermal time to its start
