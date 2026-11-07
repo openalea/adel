@@ -150,7 +150,7 @@ def _sample_tables_once(dynamic_shapes):
 def record_plant_tables(g, plant, tables):
     """Keep a plant's (axes table, phytomer table, table plant): its value of ShootArchitecture's shoot_tables (a Plant
     state, dtype object), written by its initiator."""
-    g.property("shoot_tables")[plant] = tables
+    g.set_values("shoot_tables", [plant], [tables])
 
 
 _POPULATION = []                                  # [(records, tables)]: the last population gathered

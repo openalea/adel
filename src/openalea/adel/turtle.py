@@ -51,11 +51,11 @@ def traversal_order(g, nodes):
     frame_source gives its first element the position of the element it is branched on, whose heading and up it
     takes (-1 for the others). The MPG keeps T1 on phytomer 1."""
     position = {vid: i for i, vid in enumerate(nodes)}
-    edge_type = g.property("edge_type")
+    edge_type = g.column("edge_type")[0]               # over the vid index, None where there is none
     roots = [vid for vid in nodes if g.parent(vid) not in position]
     deferred = {}                                      # an element: the coleoptile tillers visited after its branches
     for root in roots:
-        tillers = [child for child in g.children(root) if child in position and edge_type.get(child) == "+"]
+        tillers = [child for child in g.children(root) if child in position and edge_type[child] == "+"]
         if tillers:
             deferred[g.components(g.complex(root))[-1]] = tillers
     moved = {tiller for tillers in deferred.values() for tiller in tillers}
@@ -70,8 +70,8 @@ def traversal_order(g, nodes):
             vid = stack.pop()
             order.append(position[vid])
             children = [child for child in g.children(vid) if child in position and child not in moved]
-            branches = [child for child in children if edge_type.get(child) != "<"] + deferred.get(vid, [])
-            successors = [child for child in children if edge_type.get(child) == "<"]
+            branches = [child for child in children if edge_type[child] != "<"] + deferred.get(vid, [])
+            successors = [child for child in children if edge_type[child] == "<"]
             stack.extend(reversed(branches + successors))
     return np.asarray(order, dtype=np.int64), frame_source
 

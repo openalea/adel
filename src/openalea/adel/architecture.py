@@ -417,8 +417,8 @@ class ShootArchitecture(StructuralComponent):
         selector = parameters.get("shoot_anchor")
         anchored_on = None if selector is None else g.find_anchor(plant, **selector)
         record_plant_tables(g, plant, (axes, phytomers, number))
-        built = g.properties()["shoot_tables"]
-        offset = int(population_tables([built[p] for p in sorted(built) if p <= plant])[3][-1])
+        planted, built = g.values_at("shoot_tables", np.arange(plant + 1, dtype=np.int64))  # the plants so far
+        offset = int(population_tables(built.tolist())[3][-1])
         n_sect = int(parameters.get("n_sect", cls.n_sect))
         unit = float(parameters.get("length_unit", cls.length_unit))          # the plant's
         rows = axes.reset_index(drop=True)
@@ -432,7 +432,7 @@ class ShootArchitecture(StructuralComponent):
         values["axis_row"] += offset                              # the population's rows
         values["bearer_row"] = values["bearer_row"] + offset if values["bearer_row"] >= 0 else -1
         for name, value in dict(values, axis_phytomers=1).items():
-            g.property(name)[axis] = value
+            g.set_values(name, [axis], [value])
         dimensions = phytomer_dimensions(phytomers, rows, 1.)                  # in the table's unit
         complexes, elements = phytomer_layout(labels, n_sect)
         created = []
@@ -445,17 +445,17 @@ class ShootArchitecture(StructuralComponent):
             if parent == "previous" and anchored_on is not None:          # on the anchor's top
                 vid = g.add_component_with_topo(created[complex_index], anchored_on, **PropsConfig(
                     scale=scales.SubOrgan, edge_type='<', label=label))
-                g.property("shoot_base")[plant] = vid
-                top = g.properties().get("z2", {}).get(anchored_on)
-                if top is not None:
-                    g.property("shoot_base_height")[plant] = float(top)
+                g.set_values("shoot_base", [plant], [vid])
+                found, top = g.values_at("z2", [anchored_on])
+                if found.size:
+                    g.set_values("shoot_base_height", [plant], [float(top[0])])
             elif parent == "previous":
                 vid = g.add_component(created[complex_index], **PropsConfig(scale=scales.SubOrgan, edge_type='/',
                                                                             label=label))
             else:
                 vid = g.add_component_with_topo(created[complex_index], vids[parent], **PropsConfig(
                     scale=scales.SubOrgan, edge_type=edge, label=label))
-            g.property("element_index")[vid] = index
+            g.set_values("element_index", [vid], [index])
             vids.append(vid)
 
     @staticmethod
@@ -483,8 +483,8 @@ class ShootArchitecture(StructuralComponent):
         for name, value in cls._phytomer_values(dimensions, np.array([row]), np.array([rank]), np.array([nff]),
                                                 np.array([unit])).items():
             level, values = value
-            for vid, v in zip([created[i] for i in level], values):
-                g.property(name)[vid] = np.asarray(v).reshape(-1)[0].item()     # this one phytomer's
+            g.set_values(name, [created[i] for i in level],
+                         [np.asarray(v).reshape(-1)[0].item() for v in values])   # this one phytomer's
 
     @staticmethod
     def _phytomer_values(dimensions, rows, ranks, nff, units):

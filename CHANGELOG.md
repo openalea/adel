@@ -38,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- metafspm P1 (the MPG's properties as columns): `ShootArchitecture`'s initiator writes the axes', phytomers' and
+  elements' values with `g.set_values`, reads the plants' tables with `g.values_at`, and the turtle the edge types
+  with `g.column("edge_type")`; `g.property(name)` is metafspm's read-only mapping now. The comparison with the
+  legacy keeps openalea.mtg's API on the legacy's MTG.
 - metafspm O-12 (part b): `ScenarioShoot` declares its parts and its `grow` step (`run_shoot` gone), nested by the
   plant models using it (`parts = {"shoot": ScenarioShoot, ...}`, `initiators = (..., ScenarioShoot, ...)`); the
   elements' `x1 ... z2` are topological (each element's base at its parent's end, its chord the heading times its

@@ -50,13 +50,13 @@ class StandInCrown(StructuralComponent):
             element = g.add_child(element, **PropsConfig(scale=scales.SubOrgan, edge_type='<',
                                                          label=labels.SubOrgan.StemElement))
             cls._place(g, element, x, y, z + k * rise, z + (k + 1) * rise)
-            g.property("length")[element] = rise
-            g.property("area")[element] = CROWN_VALUES["area"]
+            g.set_values("length", [element], [rise])
+            g.set_values("area", [element], [CROWN_VALUES["area"]])
 
     @staticmethod
     def _place(g, element, x, y, bottom, top):
         for name, value in dict(x1=x, y1=y, z1=bottom, x2=x, y2=y, z2=top).items():
-            g.property(name)[element] = value
+            g.set_values(name, [element], [value])
 
 
 @dataclass
