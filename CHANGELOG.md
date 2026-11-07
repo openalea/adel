@@ -30,13 +30,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed some scipy function call as well as pandas functions.
 - `ShootArchitecture`: a call creates every phytomer and axis its development asks for (it crashed when a call asked
-  for more than one phytomer per axis); `ScenarioShoot.run_shoot` segments again for the axes a call created, one
+  for more than one phytomer per axis); `ScenarioShoot.grow` (was `run_shoot`) segments again for the axes a call created, one
   large step reaching the structure of small steps.
 - `ShootArchitecture`: a blade element's `x1`...`z2` are its base and end along its blade (they were its blade's
   collar for all its elements); its frame's origin is `frame_x`, `frame_y`, `frame_z`.
 - Some documentation warnings.
 
 ### Changed
+
+- metafspm O-12 (part b): `ScenarioShoot` declares its parts and its `grow` step (`run_shoot` gone), nested by the
+  plant models using it (`parts = {"shoot": ScenarioShoot, ...}`, `initiators = (..., ScenarioShoot, ...)`); the
+  elements' `x1 ... z2` are topological (each element's base at its parent's end, its chord the heading times its
+  length, a blade element's drawn chord), the turtle's ends their display ends `display_x1 ... display_z2`;
+  `sown_stand` is gone (metafspm's `stand(n, rows=4, plant_spacing=0.04, jitter=0.005, seed=0)`) and
+  `shoot_scene(depth=)` replaces `sowing_depth=` (metafspm's `Planting(depth=)`).
 
 - `simulate(every="1 d")`: the summary's period is a duration (metafspm's `coupling.durations`: `"5 d"`), no longer a
   number of days; the frames every `"10 d"`.
