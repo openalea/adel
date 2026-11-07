@@ -25,6 +25,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
+from openalea.metafspm.coupling.durations import duration
 from openalea.metafspm.coupling.forcings import as_forcing
 from openalea.metafspm.scene.recorder import SceneRecorder
 from openalea.metafspm.scene.scenarios import parameter_table
@@ -68,14 +69,14 @@ def tables_from_measurements(dimensions: pd.DataFrame, tiller_number: int = 4, p
 
 
 class _Summary:
-    """The summary row of the day just grown (the scene's iteration - 1), every *every* days and on the last day."""
+    """The summary row of the day just grown (the scene's iteration - 1), every *every* (s) and on the last day."""
 
-    def __init__(self, every: int, last_day: int):
+    def __init__(self, every: float, last_day: int):
         self.every, self.last_day = every, last_day
 
     def __call__(self, scene):
         day = scene.iteration - 1
-        if day < 0 or not (day % self.every == 0 or day == self.last_day):
+        if day < 0 or not (round(day * DAY / self.every, 9).is_integer() or day == self.last_day):
             return None
         population = scene.populations[0]
         return _summary_row(float(day), population.data_structure, population.instance.architecture)
@@ -159,11 +160,12 @@ def _summary_row(day: float, ds, architecture) -> dict:
 
 
 def simulate(parameters: dict = None, days: float = 80, temperature=15., base_temperature: float = 0.,
-             plants: int = 1, every: int = 1, seed: int = 0, model=ScenarioShoot, outputs: str = None,
+             plants: int = 1, every="1 d", seed: int = 0, model=ScenarioShoot, outputs: str = None,
              compute=None) -> Simulation:
     """Grow *plants* wheat plants (one by default; several: a stand sown in rows, with random development delays of up
     to 60 °Cd) for *days* days, one step per day, from the plant model's default parameters (Adel's sample plant)
-    changed by *parameters* ({name: value}; see parameters()). The summary is recorded every *every* days.
+    changed by *parameters* ({name: value}; see parameters()). The summary is recorded every *every* (a duration,
+    whole days: "1 d", "5 d").
 
     *temperature* (°C; 15 by default) is the daily mean temperature: a number, a function of the day, or a pandas
     Series indexed by day (the scene's forcing air_temperature). Each day adds its temperature above
@@ -180,8 +182,8 @@ def simulate(parameters: dict = None, days: float = 80, temperature=15., base_te
     values.setdefault("start", 0.)
     values.setdefault("base_temperature", base_temperature)
     recorder = SceneRecorder(outputs, summaries=outputs is not None,
-                             tables={"summary": _Summary(int(every), int(days))},
-                             frame_period=10 if outputs is not None else None)
+                             tables={"summary": _Summary(duration(every, "every"), int(days))},
+                             frame_period="10 d" if outputs is not None else None)
     forcings = {"air_temperature": as_forcing(temperature, time_unit=DAY)}
     if plants == 1:
         built = shoot_scene(model=model, time_step=DAY, forcings=forcings, recorder=recorder, compute=compute,

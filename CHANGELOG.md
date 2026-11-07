@@ -38,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `simulate(every="1 d")`: the summary's period is a duration (metafspm's `coupling.durations`: `"5 d"`), no longer a
+  number of days; the frames every `"10 d"`.
 - The modules not ported to metafspm are frozen in `openalea.adel.legacy` (their tests and examples in `test/legacy`
   and `example/legacy`); the `wralea` entry point points there.
 

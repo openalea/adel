@@ -6,7 +6,7 @@ platforms (CPlantBox, GroIMP, VirtualPlantLab) and ParaView read.
 
 The scene is Adel's (openalea.adel.development.shoot_scene: ScenarioShoot plants sown in rows, daily steps at 15 °C,
 as openalea.adel.simulation.simulate runs them). Its recorder, given a frame_period, writes the whole scene every 10
-steps: every plant, axis, organ and element with its variables (declared units, kinds), and the leaves' and stems'
+days: every plant, axis, organ and element with its variables (declared units, kinds), and the leaves' and stems'
 triangles as a mesh. The sequence is then checked with encoding3d's validator.
 
 A second, filtered export shows logging: the first plant only (with all its axes, organs and elements) and its
@@ -26,7 +26,7 @@ from openalea.adel.simulation import DAY
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUTPUTS = os.path.join(HERE, "outputs")
-FRAME_PERIOD = 10                       # days
+FRAME_PERIOD = "10 d"
 # a log of one plant (by its name in the planting table, with everything it holds), its elements' lengths and areas
 LOG = dict(entities=["p0"], variables=["length", "area", "green_area"])
 
