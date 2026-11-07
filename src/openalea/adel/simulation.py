@@ -149,7 +149,7 @@ def _summary_row(day: float, ds, architecture) -> dict:
     visible_leaf = blade & on_main & (np.asarray(ds.get("visible_length")) > 0)
     visible_leaves = ds.map_to(visible_leaf.astype(float), "Organ", "Plant", "sum")
     stem = np.asarray(ds.labels()) == "StemElement"
-    height = ds.map_to(np.where(stem, np.asarray(ds.get("z2")), 0.), "node", "Plant", "max")    # its stems' top
+    height = ds.map_to(np.where(stem, np.asarray(ds.get("display_z2")), 0.), "node", "Plant", "max")  # stems' drawn top
     leaf = np.asarray(ds.labels()) == "LeafElement"
     return dict(day=day, thermal_time=float(np.mean(ds.get("thermal_time"))),
                 haun_stage=float(np.mean(np.asarray(ds.get("haun_stage"))[main_stem])),

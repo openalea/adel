@@ -8,9 +8,9 @@ from dataclasses import dataclass, replace
 import numpy as np
 import pytest
 
-from openalea.adel.architecture import ShootArchitecture
 from openalea.adel.development import DAY, ScenarioShoot, shoot_scene
 from openalea.metafspm.scene.population import stand
+from openalea.metafspm.coupling.composite_wrapper import CompositeModel
 from openalea.metafspm.coupling.component import FunctionalComponent, StructuralComponent, parameter, state_variable
 from openalea.metafspm.data_structure.configs import PropsConfig, ScalesConfig
 from openalea.metafspm.data_structure.data_api import EntityView
@@ -73,17 +73,10 @@ class SeedReserve(FunctionalComponent):
         return np.maximum(reserve - self.dt * use_rate, 0.)
 
 
-class CrownedShoot(ScenarioShoot):
-    """ScenarioShoot on a crown, its seed's reserve used."""
-    initiators = (StandInCrown, ShootArchitecture)
-
-    def __init__(self, data_structure, time_step):
-        super().__init__(data_structure, time_step)
-        self.seed = SeedReserve(data_structure=data_structure, time_step=time_step)
-
-    def run(self):
-        super().run()
-        self.seed()
+class CrownedShoot(CompositeModel):
+    """ScenarioShoot (nested) on a crown, its seed's reserve used."""
+    initiators = (StandInCrown, ScenarioShoot)
+    parts = {"shoot": ScenarioShoot, "seed": SeedReserve}
 
 
 def _scene(plants, model, **parameters):
@@ -114,9 +107,15 @@ def _by_creation(ds, values, location="node"):
     return np.asarray(values)[np.argsort(np.asarray(ds.entity_ids(location)), kind="stable")]
 
 
+def _architecture(scene):
+    """The scene's ShootArchitecture: its ScenarioShoot's (the plain model's own, the crowned one's nested)."""
+    model = scene.populations[0].instance
+    return getattr(model, "shoot", model).architecture
+
+
 def _triangles_by_creation(scene):
     """The architecture's triangles' vertices, by their elements' creation order (each element's in their order)."""
-    architecture = scene.populations[0].instance.architecture
+    architecture = _architecture(scene)
     triangles = architecture.triangles()
     ids = np.asarray(architecture.data_structure.entity_ids("node"))
     rank = np.argsort(np.argsort(ids, kind="stable"), kind="stable")
@@ -135,7 +134,7 @@ def _crown(ds):
 def test_its_elements_only_its_main_stem_on_the_crown(grown):
     crowned, _ = grown
     ds = crowned.populations[0].data_structure
-    architecture = crowned.populations[0].instance.architecture
+    architecture = _architecture(crowned)
     view = architecture.data_structure
     assert isinstance(view, EntityView)
     subcrown, seed, crown_axis, _ = _crown(ds)
@@ -158,7 +157,7 @@ def test_its_elements_only_its_main_stem_on_the_crown(grown):
 def test_it_grows_as_a_plain_plant_sown_at_the_crown(grown):
     crowned, plain = grown
     ds, plain_ds = crowned.populations[0].data_structure, plain.populations[0].data_structure
-    view = crowned.populations[0].instance.architecture.data_structure
+    view = _architecture(crowned).data_structure
     assert view.n_nodes() == plain_ds.n_nodes()
     for name in ELEMENT_VARIABLES:
         np.testing.assert_array_equal(_by_creation(view, view.get(name)), _by_creation(plain_ds, plain_ds.get(name)),
@@ -198,6 +197,6 @@ def test_the_crown_and_the_seed_keep_their_own(grown):
 
 def test_without_its_anchor_built_first_it_raises():
     class Reversed(CrownedShoot):
-        initiators = (ShootArchitecture, StandInCrown)
+        initiators = (ScenarioShoot, StandInCrown)
     with pytest.raises(AnchorError, match="StandInCrown"):
         _scene(stand(1, plant_spacing=0.04, jitter=0.005, seed=0), Reversed, shoot_anchor=CROWN_TOP)

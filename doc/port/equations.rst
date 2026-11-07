@@ -422,7 +422,7 @@ the lengths and the age (``_organ_development``). ``ScenarioShoot`` runs the dev
 one schedule (metafspm's ``CompositeModel.run_together``): the development's potential steps, the shoot's
 segmentation (the axes and phytomers asked for), the development's postsegmentation steps (the new axes' Haun stages
 and the new organs' lengths, ``ScenarioDevelopment._new_axes``, ``_new_organs``), then the shoot's
-postsegmentation (``ScenarioShoot.run_shoot``). A call creates every axis, phytomer and element its thermal time asks
+postsegmentation (``ScenarioShoot.grow``). A call creates every axis, phytomer and element its thermal time asks
 for: the shoot's segmentation creates all the phytomers an axis' ``phytomer_number`` asks for, each after the
 previous one, and the axes on a bearer's phytomer it creates; an axis it creates has its first phytomer, its
 ``phytomer_number`` given by the development's postsegmentation, after which the shoot's segmentation and the

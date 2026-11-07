@@ -21,6 +21,7 @@ import numpy as np
 
 from openalea.adel.architecture import SCALES
 from openalea.adel.development import ScenarioShoot, random_delays, shoot_scene
+from openalea.metafspm.coupling.composite_wrapper import CompositeModel
 from openalea.metafspm.scene.population import stand
 from openalea.adel.leaf_shapes import LeafShapes
 from openalea.metafspm.coupling.component import (FunctionalComponent, geometry_input, input_variable, setting,
@@ -73,17 +74,10 @@ class ToyLight(FunctionalComponent):
         return {"light_fraction": fraction, "absorbed": fraction * green_area}
 
 
-class LitShoot(ScenarioShoot):
-    """ScenarioShoot, then the toy light on its triangles."""
-
-    def __init__(self, data_structure, time_step):
-        super().__init__(data_structure, time_step)
-        self.light = ToyLight(data_structure=data_structure, time_step=time_step)
-        self.couple(self.development, self.architecture, self.light)
-
-    def run(self):
-        super().run()
-        self.light()
+class LitShoot(CompositeModel):
+    """ScenarioShoot (nested), then the toy light on its triangles."""
+    initiators = (ScenarioShoot,)
+    parts = {"shoot": ScenarioShoot, "light": ToyLight}
 
 
 if __name__ == "__main__":
@@ -95,7 +89,7 @@ if __name__ == "__main__":
     ds = scene.populations[0].data_structure
     for _ in range(n_steps + 1):
         scene.run()
-    architecture = scene.populations[0].instance.architecture
+    architecture = scene.populations[0].instance.shoot.architecture
     fraction = np.asarray(ds.get("light_fraction"))
 
     figure = plt.figure(figsize=(13, 5))

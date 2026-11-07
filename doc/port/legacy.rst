@@ -227,7 +227,7 @@ Structure and tables
    * - AD-54
      - a development adds a metamer per ``add_metamer`` call, one at a time
      - changed: a call creates every phytomer and axis its development asks for, each after the previous one
-       (``ScenarioShoot.run_shoot`` segments again for the axes it created): one large step reaches the structure
+       (``ScenarioShoot.grow`` segments again for the axes it created): one large step reaches the structure
        and the values of the small steps reaching the same thermal time, its elements created in another order
 
 Elements and leaf shapes

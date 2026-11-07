@@ -32,9 +32,12 @@ The tables are Adel's (its axeT and phytoT, one row per axis and per axis and ra
 per-plant parameter, says which of their plants a plant is). Each plant's tables are kept on the MPG at its initiation;
 the components index the population's (tables.population_tables: every plant's rows at an offset; tables()).
 
-The elements are placed by Adel's turtle (openalea.adel.turtle), from each plant's position and rotation: their base
-x1, y1, z1, their end x2, y2, z2 (a blade element's along its blade: its rolled part's base, its flat part's midrib's
-end), and the frame they are drawn in (frame_x…, heading_x…, up_x…), at each step after their lengths. triangles()
+The elements are placed by Adel's turtle (openalea.adel.turtle), from each plant's position and rotation: the frame
+they are drawn in (frame_x…, heading_x…, up_x…), where they are drawn (their display ends display_x1 … display_z2: a
+blade element's along its blade, its rolled part's base, its flat part's midrib's end; a hidden element's a point on
+the visible parts below it), and their topological ends x1, y1, z1, x2, y2, z2 (metafspm's convention: each element's
+base at its parent's end, the main stem's at the plant's base; its end its base plus its chord, a stem or hidden
+element's heading times its length, a blade element's drawn chord), at each step after their lengths. triangles()
 gives their triangles (metafspm's coupling.geometry.Triangles) for light models and display.
 The axes are vertical, as AdelDyn's; with tiller_inclination=1, inclined by static Adel's rules from the axes table
 (incT ramping with the axes' Haun stage, the straightening at dredT, the azimuths azTb and azT: _first_inclination per
@@ -77,8 +80,9 @@ from functools import lru_cache
 import numpy as np
 import pandas as pd
 
-from openalea.metafspm.coupling.component import (NewComplexes, NewNodes, StructuralComponent, input_variable,
-                                                   parameter, planting_variable, setting, state_variable)
+from openalea.metafspm.coupling.component import (NewComplexes, NewNodes, StructuralComponent, display_end,
+                                                   input_variable, parameter, planting_variable, setting,
+                                                   state_variable)
 from openalea.metafspm.coupling.geometry import HalfSpace, Triangles, place, slim_cylinders
 from openalea.metafspm.data_structure.configs import PropsConfig, ScalesConfig
 from openalea.metafspm.solve.decorator import postsegmentation, segmentation
@@ -296,18 +300,25 @@ class ShootArchitecture(StructuralComponent):
     y: float = planting_variable("y")
     z: float = planting_variable("z")
     rotation: float = planting_variable("rotation")
-    x1: float = state_variable(unit='m', description="The element's base, x (a blade element's: along its blade)",
+    x1: float = state_variable(unit='m', description="The element's base, x (topological: its parent's end)",
                                kind=DESCRIPTOR, default=0., scale=SCALES.SubOrgan)
-    y1: float = state_variable(unit='m', description="The element's base, y (a blade element's: along its blade)",
+    y1: float = state_variable(unit='m', description="The element's base, y (topological: its parent's end)",
                                kind=DESCRIPTOR, default=0., scale=SCALES.SubOrgan)
-    z1: float = state_variable(unit='m', description="The element's base, z (a blade element's: along its blade)",
+    z1: float = state_variable(unit='m', description="The element's base, z (topological: its parent's end)",
                                kind=DESCRIPTOR, default=0., scale=SCALES.SubOrgan)
-    x2: float = state_variable(unit='m', description="The element's end, x (a blade element's: along its blade)",
+    x2: float = state_variable(unit='m', description="The element's end, x (topological: its base plus its chord)",
                                kind=DESCRIPTOR, default=0., scale=SCALES.SubOrgan)
-    y2: float = state_variable(unit='m', description="The element's end, y (a blade element's: along its blade)",
+    y2: float = state_variable(unit='m', description="The element's end, y (topological: its base plus its chord)",
                                kind=DESCRIPTOR, default=0., scale=SCALES.SubOrgan)
-    z2: float = state_variable(unit='m', description="The element's end, z (a blade element's: along its blade)",
+    z2: float = state_variable(unit='m', description="The element's end, z (topological: its base plus its chord)",
                                kind=DESCRIPTOR, default=0., scale=SCALES.SubOrgan)
+    # where the turtle draws them (a blade element's along its blade; a hidden one on the visible parts below it)
+    display_x1: float = display_end("x1")
+    display_y1: float = display_end("y1")
+    display_z1: float = display_end("z1")
+    display_x2: float = display_end("x2")
+    display_y2: float = display_end("y2")
+    display_z2: float = display_end("z2")
     frame_x: float = state_variable(unit='m', description="The origin of the element's frame, x: where it is drawn "
                                     "from (a stem element's base; a blade element's, its rolled part's base)",
                                     kind=DESCRIPTOR, default=0., scale=SCALES.SubOrgan)
@@ -549,7 +560,7 @@ class ShootArchitecture(StructuralComponent):
         all of them, in order: the new axes, the phytomers of the axes there before (as many per axis as asked, each
         after the previous one), then the axes waiting for a bearer's phytomer this call created. A new axis has its
         first phytomer: the development gives its phytomer_number after the call's segmentation
-        (ScenarioShoot.run_shoot then segments again). Its axes are those with a row in the axes table (another
+        (ScenarioShoot.grow then segments again). Its axes are those with a row in the axes table (another
         model's, a crown's, has none: left as they are)."""
         ds = self.data_structure
         g = ds.structure
@@ -809,7 +820,10 @@ class ShootArchitecture(StructuralComponent):
         heading (a hidden element's: its base). A blade element is drawn in its blade's frame (Adel's: a blade's
         elements from its collar, each moved up by the rolled parts below it): its base is its rolled part's base
         when it has one, else its flat part's midrib's first point; its end its flat part's midrib's last point, its
-        rolled part's end without a flat part drawn (kernels.blade_element_midrib_ends)."""
+        rolled part's end without a flat part drawn (kernels.blade_element_midrib_ends): its display ends. Its
+        topological ends (x1 ... z2) chain the elements' chords from the plant's base, each element's base at its
+        parent's end: a stem or hidden element's chord its heading times its length, a blade element's its drawn
+        chord (its drawn end minus its drawn base)."""
         ds = self.data_structure
         element_kind, organ_kind = self._kinds()
         order, frame_source, plant_base, parent = self._traversal()
@@ -836,8 +850,15 @@ class ShootArchitecture(StructuralComponent):
             rolled = np.asarray(rolled_part, dtype=float)[nodes] > 0
             base[nodes] = np.where(rolled[:, None], position[nodes], placed[:, 0])
             end[nodes] = placed[:, 1]
-        return {"x1": base[:, 0], "y1": base[:, 1], "z1": base[:, 2], "x2": end[:, 0], "y2": end[:, 1],
-                "z2": end[:, 2], "frame_x": position[:, 0], "frame_y": position[:, 1], "frame_z": position[:, 2],
+        chord = np.where((element_kind == 2)[:, None], end - base, heading * np.asarray(length, dtype=float)[:, None])
+        root = plant_position[plant]                          # each element's plant's base, for its first element
+        ds = self.data_structure
+        top = np.column_stack([ds.accumulate(chord[:, axis], direction="down") for axis in range(3)]) + root
+        bottom = top - chord
+        return {"x1": bottom[:, 0], "y1": bottom[:, 1], "z1": bottom[:, 2], "x2": top[:, 0], "y2": top[:, 1],
+                "z2": top[:, 2], "display_x1": base[:, 0], "display_y1": base[:, 1], "display_z1": base[:, 2],
+                "display_x2": end[:, 0], "display_y2": end[:, 1], "display_z2": end[:, 2],
+                "frame_x": position[:, 0], "frame_y": position[:, 1], "frame_z": position[:, 2],
                 "heading_x": heading[:, 0], "heading_y": heading[:, 1], "heading_z": heading[:, 2],
                 "up_x": up[:, 0], "up_y": up[:, 1], "up_z": up[:, 2]}
 

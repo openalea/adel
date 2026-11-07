@@ -282,29 +282,24 @@ class ScenarioDevelopment(FunctionalComponent):
 
 
 class ScenarioShoot(CompositeModel):
-    """A plant model: ShootArchitecture grown by ScenarioDevelopment. They need no translator: each input is the
-    other's variable of the same name, shared on the DataStructure (the development's outputs are the shoot's inputs;
-    the shoot's tables, axis rows and organ ranks the development's), as couplings() lists. Both run together, in one
-    schedule: the development's potential (its thermal time and what it gives per plant, axis and organ), the shoot's
-    segmentation (the axes and phytomers asked for), the development's postsegmentation (the new axes' Haun stages,
-    the new organs' lengths), then the shoot's postsegmentation (its elements). A call grows the plants to their
-    thermal time, whatever its step (run_shoot)."""
+    """A plant model: ShootArchitecture grown by ScenarioDevelopment, a part other plant models nest (metafspm's
+    CompositeModel parts: {"shoot": ScenarioShoot, ...}, its initiators by naming it in theirs). They need no
+    translator: each input is the other's variable of the same name, shared on the DataStructure (the development's
+    outputs are the shoot's inputs; the shoot's tables, axis rows and organ ranks the development's), as couplings()
+    lists. Its one step, grow: both run together, in one schedule: the development's potential (its thermal time and
+    what it gives per plant, axis and organ), the shoot's segmentation (the axes and phytomers asked for), the
+    development's postsegmentation (the new axes' Haun stages, the new organs' lengths), then the shoot's
+    postsegmentation (its elements). A call grows the plants to their thermal time, whatever its step."""
     initiators = (ShootArchitecture,)
+    parts = {"development": ScenarioDevelopment, "architecture": ShootArchitecture}
+    schedule = ("grow",)
 
-    def __init__(self, data_structure, time_step):
-        self.architecture = ShootArchitecture(data_structure=data_structure, time_step=time_step)
-        self.development = ScenarioDevelopment(data_structure=data_structure, time_step=time_step)
-        self.couple(self.development, self.architecture)
-
-    def run(self):
-        self.run_shoot()
-
-    def run_shoot(self):
+    def grow(self):
         """The development and the shoot run together; then, while the axes the call created have phytomers to come
         (the development gives a new axis' phytomer_number in its postsegmentation, after the shoot's segmentation),
         the shoot's segmentation and the development's postsegmentation again, and the shoot's postsegmentation
         once more: a call creates every axis, phytomer and element its thermal time asks for, one large step as the
-        small steps reaching it. A model extending ScenarioShoot calls it in its run."""
+        small steps reaching it."""
         self.run_together(self.development, self.architecture)
         ds = self.architecture.data_structure
         grown = False

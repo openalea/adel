@@ -90,7 +90,7 @@ def test_sown_below_the_coleoptile_and_t1_at_its_top():
     ds, architecture = grow(shoot_scene(), 60)
     assert ds.mtg.property("z")[ds.entity_ids("Plant")[0]] == pytest.approx(-0.9 * coleoptile)
     names, kind = architecture.axis_names(), architecture._kinds()[0]
-    node_axis, z1 = np.asarray(ds.owner("Axis")), np.asarray(ds.get("z1"))
+    node_axis, z1 = np.asarray(ds.owner("Axis")), np.asarray(ds.get("display_z1"))      # where they are drawn
     first = {name: z1[np.flatnonzero(node_axis == axis)[0]] for axis, name in enumerate(names)}
     assert first["MS"] == pytest.approx(-0.9 * coleoptile)
     assert first["T1"] == pytest.approx(first["T2"]) and first["T1"] > 0.
@@ -169,7 +169,7 @@ def _tiller_of_tiller_tables():
 
 @pytest.mark.parametrize("own_axis_top", [0, 1])
 def test_one_large_step_as_small_steps(own_axis_top):
-    """A call creates every axis, phytomer and element its thermal time asks for (ScenarioShoot.run_shoot): one large
+    """A call creates every axis, phytomer and element its thermal time asks for (ScenarioShoot.grow): one large
     step (from the start, or after a first call) reaches the structure of small steps, its elements' values the
     same; plants with tillers, a tiller of a tiller, inclined."""
     axes, phytomers = _tiller_of_tiller_tables()
@@ -198,16 +198,20 @@ def test_one_large_step_as_small_steps(own_axis_top):
 
 
 def test_blade_elements_from_their_base_to_their_end():
-    """A blade element's base (x1, y1, z1) and end (x2, y2, z2) lie along its blade, on its triangles' extent (its
+    """A blade element's drawn base (display_x1, ...) and end (display_x2, ...) lie along its blade, on its triangles' extent (its
     rolled part's cylinder and its flat part's mesh, drawn from its frame's origin frame_x…: its blade's collar for
     the first one; within 0.1 mm, its mesh's tip triangle left out below the minimal area), its base the previous
-    element's end, its end away from its frame's origin."""
+    element's end, its end away from its frame's origin. Its topological ends (x1 ... z2) keep that chord, each
+    element's base at its parent's end (metafspm's ds.check_connectivity)."""
     ds, architecture = grow(shoot_scene(leaves=LeafShapes.echap(xy_model="Soissons_byleafclass"), n_sect=3,
                                         tiller_inclination=1), 70)
     triangles = architecture.triangles()
     leaf = architecture._kinds()[0] == 2
-    base = np.stack([np.asarray(ds.get(name)) for name in ("x1", "y1", "z1")], axis=1)
-    end = np.stack([np.asarray(ds.get(name)) for name in ("x2", "y2", "z2")], axis=1)
+    base = np.stack([np.asarray(ds.get(f"display_{name}")) for name in ("x1", "y1", "z1")], axis=1)
+    end = np.stack([np.asarray(ds.get(f"display_{name}")) for name in ("x2", "y2", "z2")], axis=1)
+    topological = [np.stack([np.asarray(ds.get(name + k)) for name in "xyz"], axis=1) for k in "12"]
+    np.testing.assert_allclose((topological[1] - topological[0])[leaf], (end - base)[leaf], atol=1e-12)
+    assert ds.check_connectivity(tolerance=1e-12).empty
     frame = np.stack([np.asarray(ds.get(name)) for name in ("frame_x", "frame_y", "frame_z")], axis=1)
     drawn = np.unique(triangles.owner[leaf[triangles.owner]])
     assert drawn.size > 20
@@ -234,7 +238,7 @@ def test_a_stand_grown_to_its_stage_before_the_first_step():
     scene = shoot_scene([Planting(), Planting(x=0.2)], delays=[0., 30.], time_step=86400.,
                         forcings={"air_temperature": 15.}, start=600.)
     model = scene.populations[0].instance
-    model.run_shoot()
+    model.grow()
     ds = scene.populations[0].data_structure
     grown = {name: np.asarray(ds.get(name)).copy() for name in ("organ_length", "z2")}
     np.testing.assert_allclose(np.asarray(ds.get("thermal_time")), [600., 570.])

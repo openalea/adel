@@ -23,6 +23,7 @@ ORGAN_NAMES = {"StemInternode": "internode", "Sheath": "sheath", "Blade": "blade
 ELEMENT_VARIABLES = ("length", "area", "green_length", "green_area", "senesced_length", "senesced_area", "is_green",
                      "rolled_part", "rolled_diameter", "width", "flat_base", "flat_top", "x1", "y1", "z1", "x2", "y2",
                      "z2", "frame_x", "frame_y", "frame_z")
+DRAWN = {name: f"display_{name}" for name in ("x1", "y1", "z1", "x2", "y2", "z2")}     # x1 ... z2: the port's drawn
 
 
 @dataclass
@@ -102,7 +103,8 @@ def structure(scene, plant=0):
                  "organ_azimuth")
     arrays = {name: np.asarray(ds.get(name)) for name in variables}
     node_index = dict(zip(np.asarray(ds.entity_ids("node")).tolist(), range(ds.n_nodes())))
-    element_arrays = {name: np.asarray(ds.get(name)) for name in ELEMENT_VARIABLES + ("element_index",)}
+    # the ends as the legacy draws them: the turtle's (the display ends), under the legacy's names
+    element_arrays = {name: np.asarray(ds.get(DRAWN.get(name, name))) for name in ELEMENT_VARIABLES + ("element_index",)}
     organ_plant = plant_of(ds, "Organ")
     for i, organ in enumerate(organ_ids.tolist()):
         if organ_plant[i] != plant:
