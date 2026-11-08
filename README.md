@@ -78,9 +78,9 @@ result = simulate(days=80, outputs="outputs")         # and the run's files: run
 ```
 
 `simulate(..., compute=Compute(...))` (`from openalea.metafspm import Compute`) sets how the run uses the machine:
-the threads of numba's kernels and of the linear solves' blocks (`threads="auto"` by default: the processors,
-each part taking those that pay, the results the same at any number; BLAS stays at one), the process pool of a
-reduction's kinds (`workers="auto"` by default), the device (`"cpu"`, or `"cuda"` with CuPy), the memory policy and
+the threads of numba's kernels, of the linear solves' blocks and of a reduction's kinds (`threads="auto"` by
+default: the processors, each part taking those that pay, the results the same at any number; BLAS stays at one),
+the device (`"cpu"`, or `"cuda"` with CuPy), the memory policy and
 the sparse solver (`linear_solver=`: SuperLU by default; PARDISO and MUMPS optional, used when installed). The default
 `Compute()` suits a laptop; metafspm's user guide (`docs/user.md`, *The run configuration*) and *Running on a GPU*
 (`docs/gpu.md`) give the details.

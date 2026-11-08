@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- metafspm QG-3 (devplan_generic_kernels): metafspm's process pool and `Compute.workers` are removed; the README and
+  `simulate`'s docstring describe `Compute(threads=)` alone (a reduction's kinds in its threads).
+
 ### Added
 
 - `ShootArchitecture` (`openalea.adel.architecture`): Adel's shoot architecture as a metafspm StructuralComponent,
