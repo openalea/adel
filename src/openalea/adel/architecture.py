@@ -758,7 +758,7 @@ class ShootArchitecture(StructuralComponent):
             nodes = ds.entity_ids("node").tolist()
             index = {vid: i for i, vid in enumerate(nodes)}
             parents = [g.parent(v) for v in nodes]
-            return (*traversal_order(g, nodes), np.array([parent not in index for parent in parents]),
+            return (*traversal_order(ds), np.array([parent not in index for parent in parents]),
                     np.array([index.get(parent, -1) for parent in parents], dtype=np.int64))
         return self.cached("traversal", build)
 

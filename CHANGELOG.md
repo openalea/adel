@@ -38,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- metafspm GK-2 (devplan_generic_kernels): `turtle.traversal_order(ds)` is metafspm's `ds.preorder` (a compiled
+  depth-first walk, branches first, the coleoptile tillers deferred after their phytomer's last element) instead of
+  a per-vertex walk with dict lookups; the same order and frame sources (test/comparison/test_traversal.py, against
+  the former walk). Its argument is the DataStructure.
 - metafspm P1 (the MPG's properties as columns): `ShootArchitecture`'s initiator writes the axes', phytomers' and
   elements' values with `g.set_values`, reads the plants' tables with `g.values_at`, and the turtle the edge types
   with `g.column("edge_type")`; `g.property(name)` is metafspm's read-only mapping now. The comparison with the

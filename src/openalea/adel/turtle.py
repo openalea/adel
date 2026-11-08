@@ -38,42 +38,33 @@ import numpy as np
 from openalea.metafspm.kernels import down, left_of, roll_right, roll_to_vertical
 
 
-def traversal_order(g, nodes):
-    """(order, frame_source): the positions of *nodes* (the elements' vertex ids, in the DataStructure's order) in
-    Adel's traversal: per
-    plant, from its base element (the one without topological parent among *nodes*: none, or another model's vertex
-    it is anchored on), depth first, branches before successors (each group in the MPG's children order).
+def traversal_order(ds):
+    """(order, frame_source): the positions of the DataStructure's nodes (the elements, in its order) in Adel's
+    traversal: per plant, from its base element (the one without topological parent among the nodes: none, or another
+    model's vertex it is anchored on), depth first, branches before successors (each group in the MPG's children
+    order): ds.preorder.
 
     One change to Adel's: a tiller borne on the main stem's phytomer 1 (T1, in the axil of leaf 1) is visited after
     that phytomer's sheath and blade, as the last branch of its internode's last element, instead of right after the
-    internode's first element it is branched on. The phytomer's sheath is the coleoptile, whose base is below ground:
-    T1 then starts at its top, where phytomer 2 (and T2) starts, as it appears, oriented as at its branching point:
-    frame_source gives its first element the position of the element it is branched on, whose heading and up it
-    takes (-1 for the others). The MPG keeps T1 on phytomer 1."""
+    internode's first element it is branched on (ds.preorder's defer). The phytomer's sheath is the coleoptile, whose
+    base is below ground: T1 then starts at its top, where phytomer 2 (and T2) starts, as it appears, oriented as at
+    its branching point: frame_source gives its first element the position of the element it is branched on, whose
+    heading and up it takes (-1 for the others). The MPG keeps T1 on phytomer 1."""
+    g = ds.structure
+    nodes = ds.entity_ids("node").tolist()
     position = {vid: i for i, vid in enumerate(nodes)}
-    edge_type = g.column("edge_type")[0]               # over the vid index, None where there is none
+    edge_type = g.topology_arrays()["edge_type"]
+    branch = g._EDGE_TYPE_CODES["+"]
     roots = [vid for vid in nodes if g.parent(vid) not in position]
-    deferred = {}                                      # an element: the coleoptile tillers visited after its branches
-    for root in roots:
-        tillers = [child for child in g.children(root) if child in position and edge_type[child] == "+"]
-        if tillers:
-            deferred[g.components(g.complex(root))[-1]] = tillers
-    moved = {tiller for tillers in deferred.values() for tiller in tillers}
     frame_source = np.full(len(nodes), -1, dtype=np.int64)
+    defer = []                                         # (a coleoptile tiller, the element it is visited after)
     for root in roots:
-        for tiller in deferred.get(g.components(g.complex(root))[-1], []):
-            frame_source[position[tiller]] = position[root]
-    order = []
-    for root in roots:
-        stack = [root]
-        while stack:
-            vid = stack.pop()
-            order.append(position[vid])
-            children = [child for child in g.children(vid) if child in position and child not in moved]
-            branches = [child for child in children if edge_type[child] != "<"] + deferred.get(vid, [])
-            successors = [child for child in children if edge_type[child] == "<"]
-            stack.extend(reversed(branches + successors))
-    return np.asarray(order, dtype=np.int64), frame_source
+        last = g.components(g.complex(root))[-1]
+        for tiller in g.children(root):
+            if tiller in position and edge_type[tiller] == branch:
+                defer.append((position[tiller], position[last]))
+                frame_source[position[tiller]] = position[root]
+    return ds.preorder(branches_first=True, defer=defer), frame_source
 
 
 def base_inclination(table_inclination, is_main, haun_stage, start_haun_stage=1., rate=30.):

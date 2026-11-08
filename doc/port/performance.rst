@@ -82,9 +82,9 @@ Where the time goes
 - The turtle (``kernels.interpret``, compiled) places every element at each call; the blade meshes are rebuilt only for
   the elements that changed, so ``triangles()`` costs little once the canopy stops growing (1.1 ms against 20 ms on one
   plant).
-- The traversal order (``turtle.traversal_order``) is computed in Python, once per change of topology. Its cost has
-  not been measured separately; if it becomes the cost on large stands, it can be built incrementally from the new
-  nodes' parents.
+- The traversal order (``turtle.traversal_order``) is computed once per change of topology by metafspm's
+  ``ds.preorder`` (a compiled depth-first walk over the children's CSR, the coleoptile tillers deferred); only the
+  children lists and the few deferred tillers are read in Python.
 
 
 Sources
