@@ -21,7 +21,7 @@ from openalea.metafspm.io.encoding3d import import_frame
 
 from export_frames import OUTPUTS, export
 
-INDEX = os.path.join(OUTPUTS, "frames", "scene.fspm.json")
+INDEX = os.path.join(OUTPUTS, "frames.fspm.zip")              # the frames packed (encoding3d reads them there)
 
 
 def plant_of(data_structure, set_name: str) -> np.ndarray:

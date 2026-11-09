@@ -74,7 +74,7 @@ result = simulate(days=80)
 print(result.summary)                         # per day: thermal time, Haun stage, tillers, height, leaf area
 result.draw()                                 # the plant in 3D
 result = simulate({"phyllochron": 100.}, days=80)     # leaves appearing every 100 °Cd
-result = simulate(days=80, outputs="outputs")         # and the run's files: run.json, scenario.json, summaries, frames
+result = simulate(days=80, outputs="outputs")         # and its files: run.json, scenario.json, summaries, frames.fspm.zip
 ```
 
 `simulate(..., compute=Compute(...))` (`from openalea.metafspm import Compute`) sets how the run uses the machine:

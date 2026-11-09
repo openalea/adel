@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- metafspm fix-B (a packed run's frames folder removed once its archive is checked): `simulate(outputs=)` packs the
+  frames into `frames.fspm.zip` when the run finishes (`SceneRecorder(pack_at_finish=True)`: the archive checked,
+  then `frames/` removed); `example/exchange/export_frames.py` packs both of its exports and validates the archives,
+  `import_frames.py` reads `outputs/frames.fspm.zip`; user tutorial 1 lists `frames.fspm.zip` (re-run).
 - metafspm QG-3 (devplan_generic_kernels): metafspm's process pool and `Compute.workers` are removed; the README and
   `simulate`'s docstring describe `Compute(threads=)` alone (a reduction's kinds in its threads).
 

@@ -176,7 +176,8 @@ def simulate(parameters: dict = None, days: float = 80, temperature=15., base_te
 
     *outputs*: a folder for the run's files (metafspm's SceneRecorder): run.json, scenario.json, summary.csv (the
     summary), Plant/<model>/summaries.csv (every variable per plant, every day) and a frame of the plants every 10
-    days (frames/, for ParaView or another platform).
+    days (frames.fspm.zip, for ParaView or another platform: the frames folder packed at the end, the archive
+    checked, then the folder removed).
     *compute*: the Scene's run configuration (metafspm's Compute: its threads, those of a reduction's
     kinds included, its sparse solver, its memory trim; None: Compute())."""
     values = dict(parameters or {})
@@ -184,7 +185,7 @@ def simulate(parameters: dict = None, days: float = 80, temperature=15., base_te
     values.setdefault("base_temperature", base_temperature)
     recorder = SceneRecorder(outputs, summaries=outputs is not None,
                              tables={"summary": _Summary(duration(every, "every"), int(days))},
-                             frame_period="10 d" if outputs is not None else None)
+                             frame_period="10 d" if outputs is not None else None, pack_at_finish=outputs is not None)
     forcings = {"air_temperature": as_forcing(temperature, time_unit=DAY)}
     if plants == 1:
         built = shoot_scene(model=model, time_step=DAY, forcings=forcings, recorder=recorder, compute=compute,
