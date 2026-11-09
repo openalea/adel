@@ -31,6 +31,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tutorials (`example/tutorials/user/`: a first plant, a parameter, combinations, sensitivity analysis, experimental
   data, other models) and developer tutorials (`example/tutorials/developer/`); the docs split into a user guide and
   a developer guide.
+- `LeafShapes.cnwheat()`: CN-Wheat's leaf shapes as a named preset (echap's Mercia widths, Soissons' midribs by leaf
+  class and age).
+- Adel's shoot on another model's crown: its own entities (`shoot_elements`), its coarse steps leaving other models'
+  axes and organs unchanged; `shoot_anchor` (a `find_anchor` selector): the main stem's first element `<` on it, its
+  base at the anchor's top (`shoot_base_height`); the crown's top found by `find_anchor(last=True)` (no `crown_top`
+  mark).
+- Examples of the exchange (`example/exchange`): `export_frames.py` writes the scene as encoding3d frames (formerly
+  fspm-TF: the format other FSPM platforms and ParaView read), with a filtered export for logging beside the full
+  one, and `import_frames.py` reads them back with openalea.encoding3d and with metafspm.
 
 - `pyproject.toml` file following [OpenAlea Guidelines](https://openalea.readthedocs.io/en/latest/development/guidelines.html).
 - [OpenAlea svg](./doc/_static/openalea_web.svg) logo for documentation.
@@ -64,6 +73,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `simulate(every="1 d")`: the summary's period is a duration (metafspm's `coupling.durations`: `"5 d"`), no longer a
   number of days; the frames every `"10 d"`.
+- metafspm O-11: the triangles carry their green share (`architecture.triangles().attributes["green"]`): each
+  triangle's area within its element's first `green_length` from its base (the senescence going down from the top),
+  the distance along the element a cylinder's local z or a blade vertex's midrib abscissa (a second output of
+  `kernels.blade_element_triangles`); the light models carry it along and the gas exchange's soil cut weighs by it
+  (CNW-Grass's `emerged_links`: the green area above the soil). Behaviour change: an element Adel does not draw
+  (shorter than `min_length`) has no triangles, so it now exchanges no gas.
+- metafspm O-5: the numba kernels are in one module, `openalea.adel.kernels` (the turtle's `interpret` and
+  `stem_inclinations`, the blade meshes: `blade_mesh.py` is gone); its `warm_up` is registered for metafspm's warm_up
+  (entry point `openalea.metafspm.warm_up`) and run before the conda recipe's tests; metafspm's frame operations
+  (`down`, `left_of`, `roll_right`, `roll_to_vertical`) come from `openalea.metafspm.kernels`.
+- metafspm O-10 (forcings over the step): `ScenarioDevelopment`'s `air_temperature` is declared as its mean over the
+  step (`forcing_variable`'s `at=` gone): the degree-days of a step are its mean temperature above the base times its
+  duration (were its temperature at its start).
+- metafspm O-1: `simulate(compute=)` and `shoot_scene(compute=)` forward metafspm's `Compute` (the Scene's run
+  configuration: its threads, its memory trim; None: `Compute()`) to the Scene.
 - The modules not ported to metafspm are frozen in `openalea.adel.legacy` (their tests and examples in `test/legacy`
   and `example/legacy`); the `wralea` entry point points there.
 
