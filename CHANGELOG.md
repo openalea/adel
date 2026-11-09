@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `simulate(model=)` with a model nesting `ScenarioShoot` (e.g. user tutorial 6's `LitShoot`, a part since metafspm
+  O-12b): the summary and `Simulation.architecture` find the `ShootArchitecture` among the model's components (they
+  read `instance.architecture` and failed); user tutorial 6 and `example/light_coupling.py` plot the blades where they
+  are drawn (`display_z1`, `display_z2`: `x1` ... `z2` are topological since O-12b). `shoot_scene`'s default time
+  step is the duration `"1 h"` (a number is still seconds).
 - metafspm fix-B (a packed run's frames folder removed once its archive is checked): `simulate(outputs=)` packs the
   frames into `frames.fspm.zip` when the run finishes (`SceneRecorder(pack_at_finish=True)`: the archive checked,
   then `frames/` removed); `example/exchange/export_frames.py` packs both of its exports and validates the archives,
