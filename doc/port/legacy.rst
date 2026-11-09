@@ -320,7 +320,7 @@ Placement
    * - AD-34
      - plants at :math:`z = 0`
      - changed: a plant at minus its sowing depth (metafspm's planting convention), by default 0.9 times its
-       coleoptile's final length (``shoot_scene(sowing_depth=)``); the comparisons sow at 0
+       coleoptile's final length (``shoot_scene(depth=)``, ``"coleoptile"`` by default); the comparisons sow at 0
    * - AD-35
      - ``AdelDyn`` sets every inclination to 0: the tillers grow vertical, inside the main stem's cylinder
      - kept by default; corrected with ``tiller_inclination=1``: static Adel's ``getIncT`` (incT ramping with the

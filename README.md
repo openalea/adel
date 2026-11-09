@@ -83,7 +83,8 @@ default: the processors, each part taking those that pay, the results the same a
 the device (`"cpu"`, or `"cuda"` with CuPy), the memory policy and
 the sparse solver (`linear_solver=`: SuperLU by default; PARDISO and MUMPS optional, used when installed). The default
 `Compute()` suits a laptop; metafspm's user guide (`docs/user.md`, *The run configuration*) and *Running on a GPU*
-(`docs/gpu.md`) give the details.
+(`docs/gpu.md`) give the details. The component's numba kernels (`openalea.adel.kernels`) compile at
+their first call: `python -m openalea.metafspm warm_up` compiles them once, with metafspm's and the other ports'.
 
 ### User tutorials
 
