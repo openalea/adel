@@ -319,7 +319,7 @@ def random_delays(n_plants, max_delay=60., seed=0):
     return np.random.default_rng(seed).uniform(0., max_delay, n_plants).tolist()
 
 
-def shoot_scene(plants=None, model=ScenarioShoot, time_step=3600, delays=None, plant_scenarios=None,
+def shoot_scene(plants=None, model=ScenarioShoot, time_step="1 h", delays=None, plant_scenarios=None,
                 depth="coleoptile", forcings=None, recorder=None, compute=None, **parameters):
     """A scene of *plants* (metafspm's Planting, m, or its stand(); by default one at the origin), each a *model*
     (ScenarioShoot or a model nesting it) with *parameters* (its components' parameters, e.g. axes_table,
