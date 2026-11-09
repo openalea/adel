@@ -97,11 +97,11 @@ if __name__ == "__main__":
     draw(axes, architecture.triangles(), colors=value_colors(fraction, limits=(0., 1.)), shade=False)
     axes.set_title(f"the light fraction each element receives, {n_steps * THERMAL_TIME_STEP:.0f} °Cd")
     axes = figure.add_subplot(1, 2, 2)
-    height = np.asarray(ds.get("z1"))
+    height = np.asarray(ds.get("display_z1"))          # where the element is drawn (its z1 is topological)
     lit = np.asarray(ds.get("green_area")) > 0
     axes.scatter(fraction[lit], height[lit] * 100, s=6, c="tab:green")
     axes.set_xlabel("the light fraction the element receives")
-    axes.set_ylabel("the element's base height (cm)")
+    axes.set_ylabel("the element's drawn base height (cm)")
     axes.set_title("the light down the canopy (green elements)")
     figure.savefig("light_coupling.png", dpi=120)
     absorbed = ds.map_to(np.asarray(ds.get("absorbed")), "node", "Plant", "sum")            # per plant

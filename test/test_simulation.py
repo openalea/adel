@@ -4,8 +4,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from openalea.adel.development import shoot_scene
+from openalea.adel.development import ScenarioShoot, shoot_scene
 from openalea.adel.simulation import MAIN_PARAMETERS, parameters, simulate
+from openalea.metafspm.coupling.composite_wrapper import CompositeModel
 
 DAYS = 40
 
@@ -59,6 +60,18 @@ def test_parameters():
 def test_a_stand():
     stand = simulate(days=20, plants=3)
     assert stand.axes()["plant"].nunique() == 3
+
+
+class NestedShoot(CompositeModel):
+    """ScenarioShoot nested in another plant model (as tutorial 6's LitShoot): its architecture a nested part's."""
+    initiators = (ScenarioShoot,)
+    parts = {"shoot": ScenarioShoot}
+
+
+def test_a_model_nesting_the_shoot():
+    nested, alone = simulate(days=20, model=NestedShoot), simulate(days=20)
+    assert nested.architecture is nested.scene.populations[0].instance.shoot.architecture
+    pd.testing.assert_frame_equal(nested.summary, alone.summary)
 
 
 def test_draw(default):

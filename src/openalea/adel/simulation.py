@@ -80,7 +80,12 @@ class _Summary:
         if day < 0 or not (round(day * DAY / self.every, 9).is_integer() or day == self.last_day):
             return None
         population = scene.populations[0]
-        return _summary_row(float(day), population.data_structure, population.instance.architecture)
+        return _summary_row(float(day), population.data_structure, _architecture(population.instance))
+
+
+def _architecture(model):
+    """The ShootArchitecture among *model*'s components (its part, or a nested model's: LitShoot's shoot)."""
+    return next(component for component in model.components if isinstance(component, ShootArchitecture))
 
 
 @dataclass
@@ -97,7 +102,7 @@ class Simulation:
 
     @property
     def architecture(self):
-        return self.scene.populations[0].instance.architecture
+        return _architecture(self.scene.populations[0].instance)
 
     def _plant_of(self, scale):
         return self.data_structure.owner("Plant", of=scale)
