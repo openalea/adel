@@ -97,6 +97,7 @@ doc/_dvlpt/
 .DS_Store
 
 /dev*.md
+/.devplan/
 
 # the examples' outputs
 example/**/outputs/
