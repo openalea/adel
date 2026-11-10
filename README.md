@@ -45,8 +45,9 @@ and the plastic leaf model of Fournier & Pradal (2012)
 mamba env create -n adel -c openalea3 -c conda-forge openalea.adel 
 ``` 
 
-The metafspm port below (`ShootArchitecture`, `openalea.adel.simulation`) and its tutorials need the developers'
-installation until metafspm is published.
+The metafspm port below (`ShootArchitecture`, `openalea.adel.simulation`) and its tutorials depend on
+`openalea.metafspm`, which the developers' environment brings; they need the developers' installation until metafspm's
+`release2026` and encoding3d are published.
 
 ### Developers
 
@@ -57,9 +58,12 @@ git clone -b to_metafspm https://github.com/openalea/adel.git adel
 cd adel
 mamba env create -n adel_dev -f ./conda/environment.yml
 mamba activate adel_dev
-pip install -e ../encoding3d               # openalea.encoding3d, metafspm's dependency, until it is published
-pip install -e ../metafspm                            # ShootArchitecture's framework, until it is published
+pip install -e ../encoding3d --no-deps                # until encoding3d is published
+pip install -e ../metafspm --no-deps                  # until metafspm's release2026 is published
 ```
+
+The environment brings `openalea.metafspm` (ShootArchitecture's framework, from `openalea3`), in an older version
+until `release2026` is published: the two lines above install metafspm and encoding3d from their clones over it.
 
 Tests: `pytest test` (the comparisons with the legacy need PlantGL; plantgen's need R through rpy2).
 
