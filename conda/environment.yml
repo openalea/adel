@@ -10,20 +10,13 @@ dependencies:
   - pandoc
   - rpy2
   - matplotlib-base
-  - openalea.mtg
+  - openalea.metafspm     # brings numpy, scipy, pandas, numba, pyyaml, openalea.mtg and openalea.encoding3d
   - openalea.plantgl
   - openalea.caribu
   - openalea.astk
   - openalea.widgets
   - openalea.core
-  # metafspm's (installed by hand with pip install -e ../metafspm, until it is published in openalea3)
-  - pyyaml
-  - numpy
-  - numba
-  - scipy
-  - pandas
   - pytest
-  - jsonschema                    # openalea.encoding3d's (metafspm's encoding3d exchange)
   - pip
   # let pip install the rest using pyproject.toml (if you are okay with conda/pip mix)
   - pip:

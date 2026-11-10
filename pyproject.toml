@@ -38,13 +38,7 @@ classifiers = [
 ]
 dynamic = ["readme","version"]
 #version = "2.0.2"
-dependencies = [
-    "numpy",
-    "scipy",
-    "pandas",
-    "numba",
-    # openalea.metafspm, for ShootArchitecture: installed by hand (pip install -e ../metafspm) until it is published
-]
+dependencies = []          # numpy, scipy, pandas, numba: openalea.metafspm's (below, a conda package)
 
 [project.optional-dependencies]
 test = ["pytest"]
@@ -80,7 +74,7 @@ channels = [
 ]
 
 dependencies = [
-    "openalea.mtg",
+    "openalea.metafspm",       # ShootArchitecture's platform; brings numpy, scipy, pandas, numba, openalea.mtg
     "openalea.plantgl",
     "openalea.caribu",
     "openalea.astk",
