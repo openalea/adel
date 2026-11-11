@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from openalea.adel.comparison.legacy_run import T1_OFFSET, legacy_run
+from openalea.adel.comparison.legacy_run import T1_OFFSET, legacy_run, without_ear_rows
 from openalea.adel.comparison.port_run import coleoptile_top, port_run
 from openalea.adel.tables import DATA, with_tillers
 
@@ -32,12 +32,13 @@ SHAPELESS = (("MS", 4, "blade"), ("T2", 2, "blade"))
 
 def tables(tiller_of_tiller=True):
     """(axes table, phytomer table): Adel's sample plant, with T1.1 (T3's row, 5 leaves, its first at 420 °Cd), the
-    main stem's blade 4 without a shape class and T2's blade 2 without a shape seed."""
+    main stem's blade 4 without a shape class and T2's blade 2 without a shape seed; without the ear rows (AdelDyn
+    grows no ear: legacy_run.without_ear_rows)."""
     axes = pd.read_csv(os.path.join(DATA, "axeTable.csv"))
     if tiller_of_tiller:
         tiller = axes.loc[axes["axe"] == "T3"].assign(axe="T1.1", emf1=420., nf=5., nf_end=5.)
         axes = pd.concat([axes, tiller], ignore_index=True).sort_values("emf1", kind="stable").reset_index(drop=True)
-    phytomers = with_tillers(axes, pd.read_csv(os.path.join(DATA, "phytoT.csv")))
+    phytomers = without_ear_rows(axes, with_tillers(axes, pd.read_csv(os.path.join(DATA, "phytoT.csv"))))
     phytomers.loc[(phytomers["axe"] == "MS") & (phytomers["n"] == 4), "Lindex"] = -999.
     phytomers.loc[(phytomers["axe"] == "T2") & (phytomers["n"] == 2), "Lseed"] = -999.
     return axes, phytomers

@@ -79,9 +79,18 @@ def leaf_database(name):
 
 def harness_tables(leaves="samples", tiller_factor=0.9):
     """(axes table, phytomer table): Adel's sample plant (tables.sample_tables: each tiller with the main stem's first
-    nf ranks, its lengths and diameters *tiller_factor* times), the shape indices those of the leaf database."""
+    nf ranks, its lengths and diameters *tiller_factor* times), the shape indices those of the leaf database; without
+    its ear rows (ranks beyond nf): AdelDyn grows no ear (new_mtg_factory crashes on them, AD-10), the port's ears are
+    compared with the static factory's (test/comparison/test_ears_and_options.py)."""
     axes, phytomers = sample_tables(tiller_factor)
+    phytomers = without_ear_rows(axes, phytomers)
     return axes, echap_shape_indices(axes, phytomers) if leaves == "echap" else phytomers
+
+
+def without_ear_rows(axes, phytomers):
+    """*phytomers* without the ear rows of *axes* (each axis' ranks beyond its nf), which AdelDyn cannot grow."""
+    final = phytomers.merge(axes[["plant", "axe", "nf"]], on=["plant", "axe"], how="left")["nf"].to_numpy()
+    return phytomers.loc[phytomers["n"].to_numpy() <= final].reset_index(drop=True)
 
 
 def start(axes):

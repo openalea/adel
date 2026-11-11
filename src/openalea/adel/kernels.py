@@ -190,14 +190,15 @@ def incline(x, y, inclination):
 def blade_part(x, y, s, r, mature_length, visible_length, s_base, s_top, max_width):
     """Adel's fitting.leaf_element: the midrib's points (x, y), the width r and the abscissa along the midrib (from
     the visible part's base) of the part [s_base, s_top] of the visible length, scaled to the blade's mature length
-    and maximal width (empty when nothing is visible)."""
+    and maximal width (empty when nothing is visible); and the part's last abscissa before the width's cut at its
+    first zero, relative to the mature length (the twist's end, as Adel's mesh4 reads it)."""
     s_base = min(s_base, s_top, 1.)
     s_top = max(s_base, s_top, 0.)
     if visible_length <= 0.:
-        return np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0)
+        return np.zeros(0), np.zeros(0), np.zeros(0), np.zeros(0), 0.
     visible_length = min(visible_length, mature_length)
     if visible_length == mature_length and s_base == 0 and s_top == 1:
-        return x * mature_length, y * mature_length, r * max_width, s * mature_length
+        return x * mature_length, y * mature_length, r * max_width, s * mature_length, s[-1]
     r = r.copy()
     r[-1] = 0.
     visible = visible_length / mature_length
@@ -214,6 +215,7 @@ def blade_part(x, y, s, r, mature_length, visible_length, s_base, s_top, max_wid
     tolerance = (s_top - s_base) / (len(s) * 2)
     kept = inside[1:][np.diff(inside) >= tolerance]
     kept = np.unique(np.concatenate((kept, np.array([inside[0], inside[-1]]))))
+    last = kept[-1]
     x_part, y_part = np.interp(kept, s, x), np.interp(kept, s, y)
     r_part = np.interp(kept + tip_offset, s, r)
     zero = (r_part <= 0).astype(np.int64)
@@ -222,17 +224,19 @@ def blade_part(x, y, s, r, mature_length, visible_length, s_base, s_top, max_wid
         x_part, y_part, r_part = x_part[:end + 1], y_part[:end + 1], r_part[:end + 1].copy()
         kept = kept[:end + 1]
         r_part[-1] = 0.
-    return x_part * mature_length, y_part * mature_length, r_part * max_width, kept * mature_length
+    return x_part * mature_length, y_part * mature_length, r_part * max_width, kept * mature_length, last
 
 
 @njit(cache=True)
-def strip_triangles(x, y, r):
-    """Adel's leaf_to_mesh without twist: points (x, ∓r/2, y) in two rows, two triangles between consecutive points,
-    one at the tip when it is narrower than TIP_WIDTH; (T, 3, 3)."""
+def strip_triangles(x, y, r, theta):
+    """Adel's leaf_to_mesh: points (x, ∓r/2 |cos θ|, y ± r/2 |sin θ|) in two rows (*theta*: each point's twist
+    angle, rad; zeros: flat), two triangles between consecutive points, one at the tip when it is narrower than
+    TIP_WIDTH; (T, 3, 3)."""
     n = len(x)
     points = np.zeros((2 * n, 3))
-    points[:n, 0], points[:n, 1], points[:n, 2] = x, -r / 2., y + 0.
-    points[n:, 0], points[n:, 1], points[n:, 2] = x, r / 2., y - 0.
+    across, lift = np.abs(np.cos(theta)), np.abs(np.sin(theta)) * r / 2.
+    points[:n, 0], points[:n, 1], points[:n, 2] = x, -r / 2. * across, y + lift
+    points[n:, 0], points[n:, 1], points[n:, 2] = x, r / 2. * across, y - lift
     indices = strip_indices(n, r[-1] < TIP_WIDTH)
     triangles = np.zeros((indices.shape[0], 3, 3))
     for t in range(indices.shape[0]):
@@ -259,17 +263,22 @@ def strip_indices(n, narrow_tip):
 
 @njit(cache=True)
 def blade_element_triangles(x, y, s, r, inclination, mature_length, max_width, visible_length, s_base, s_top,
-                            min_area):
+                            min_area, twist=0.):
     """A blade element's triangles (T, 3, 3) in its local frame (Adel's Leaves.mesh with flipx), from its shape's
     fitted midrib (x, y, s, r): *inclination* a factor of the shape's base angle (a dynamic database's shapes carry
-    their inclination: 1); those of area at most *min_area* left out. With each one's vertices' abscissae (T, 3)
-    along the midrib from the flat part's base (its green and senesced parts are along it)."""
+    their inclination: 1); those of area at most *min_area* left out. *twist* (°, Adel's Leaves.twist): the blade
+    turned about its midrib by twist times the relative abscissa (along the mature length), from the part's first
+    abscissa to its last, evenly over its points (Adel's mesh4 and leaf_to_mesh). With each one's vertices'
+    abscissae (T, 3) along the midrib from the flat part's base (its green and senesced parts are along it)."""
     x_inclined, y_inclined = incline(x, y, inclination)
-    x_part, y_part, r_part, abscissa = blade_part(-x_inclined, y_inclined, s, r, mature_length, visible_length,
-                                                  s_base, s_top, max_width)
+    x_part, y_part, r_part, abscissa, last = blade_part(-x_inclined, y_inclined, s, r, mature_length,
+                                                        visible_length, s_base, s_top, max_width)
     if len(x_part) < 2:
         return np.zeros((0, 3, 3)), np.zeros((0, 3))
-    triangles = strip_triangles(x_part, y_part, r_part)
+    theta = np.zeros(len(x_part))
+    if twist != 0.:
+        theta = np.linspace(radians(twist * abscissa[0] / mature_length), radians(twist * last), len(x_part))
+    triangles = strip_triangles(x_part, y_part, r_part, theta)
     indices = strip_indices(len(x_part), r_part[-1] < TIP_WIDTH)
     n = len(x_part)
     along = np.zeros((indices.shape[0], 3))
@@ -290,7 +299,7 @@ def blade_element_midrib_ends(x, y, s, r, inclination, mature_length, max_width,
     blade_element_triangles draws it (its triangles' rows lie on either side of them); (0, 3) when it has no
     triangles."""
     x_inclined, y_inclined = incline(x, y, inclination)
-    x_part, y_part, _, _ = blade_part(-x_inclined, y_inclined, s, r, mature_length, visible_length, s_base, s_top,
+    x_part, y_part, _, _, _ = blade_part(-x_inclined, y_inclined, s, r, mature_length, visible_length, s_base, s_top,
                                       max_width)
     ends = np.zeros((0, 3))
     if len(x_part) >= 2:
@@ -298,6 +307,41 @@ def blade_element_midrib_ends(x, y, s, r, inclination, mature_length, max_width,
         ends[0, 0], ends[0, 2] = x_part[0], y_part[0]
         ends[1, 0], ends[1, 2] = x_part[-1], y_part[-1]
     return ends
+
+
+# ── The classic stems ──
+
+_CLASSIC_SLICES = 6
+
+
+def _classic_indices():
+    """PlantGL's tesselation of a solid Cylinder of 6 slices (its points: per slice k its base 2k and top 2k + 1,
+    then the base's centre 12 and the top's 13): per slice, two side triangles and one of each cap."""
+    indices = []
+    for k in range(_CLASSIC_SLICES):
+        i, j = 2 * k, 2 * ((k + 1) % _CLASSIC_SLICES)
+        indices += [(i, j, i + 1), (i + 1, j, j + 1), (i + 1, j + 1, 13), (i, 12, j)]
+    return np.array(indices)
+
+
+_CLASSIC_INDICES = _classic_indices()
+
+
+def classic_cylinders(length, radius_base, radius_top) -> np.ndarray:
+    """(n, 24, 3, 3): per cylinder, Adel's classic stem mesh (PlantGL's Tapered(radius_base, radius_top,
+    Cylinder(1, length, solid, 6 slices)), tesselated) in its local frame, axis z from 0 to its length."""
+    length, radius_base, radius_top = np.broadcast_arrays(np.asarray(length, dtype=float),
+                                                          np.asarray(radius_base, dtype=float),
+                                                          np.asarray(radius_top, dtype=float))
+    angles = 2 * np.pi * np.arange(_CLASSIC_SLICES) / _CLASSIC_SLICES
+    n = length.size
+    points = np.zeros((n, 2 * _CLASSIC_SLICES + 2, 3))
+    for radius, offset, height in ((radius_base, 0, 0.), (radius_top, 1, 1.)):
+        points[:, offset:2 * _CLASSIC_SLICES:2, 0] = radius.reshape(-1, 1) * np.cos(angles)
+        points[:, offset:2 * _CLASSIC_SLICES:2, 1] = radius.reshape(-1, 1) * np.sin(angles)
+        points[:, offset:2 * _CLASSIC_SLICES:2, 2] = height * length.reshape(-1, 1)
+    points[:, 2 * _CLASSIC_SLICES + 1, 2] = length.reshape(-1)
+    return points[:, _CLASSIC_INDICES]
 
 
 # ── Warm-up ──

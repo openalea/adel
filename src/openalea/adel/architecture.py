@@ -21,6 +21,13 @@ The plant's structure, in the MPG:
                  ├─ Organ Sheath           the same, its first element branched (+) on the internode's last
                  └─ Organ Blade            a HiddenElement (its part in the sheaths' tube), then n_sect
                                            LeafElements (<), on the sheath's last element
+             └─ Phytomer (ShootPhytomer)   on an axis with an ear (has_ear), ranks nf + 1 to nf + 3 (the phytomer
+                 └─ Organ Peduncle, Ear    table's ear rows, El and Ed): one organ each, the peduncle, the ear and
+                                           the awns (an Ear organ too, the one at rank nf + 3), a HiddenElement then
+                                           a StemElement (<), as an internode, following the previous one
+
+The ears, peduncles and awns are cylinders of their rows' El (length) and Ed (diameter; Adel.R's: the peduncle's
+W_peduncle, the ear's and the awns' A_ear / L_ear), placed and drawn as the internodes (Adel's m_type rows, AD-11).
 
 Axes appear when the plant's axis_number asks for them, in its axes table's order, each with its first phytomer;
 phytomers when their axis' phytomer_number asks for them. A phytomer's internode follows the previous one's (<); a
@@ -86,7 +93,8 @@ from openalea.metafspm.coupling.component import (NewComplexes, NewNodes, Struct
 from openalea.metafspm.coupling.geometry import HalfSpace, Triangles, place, slim_cylinders
 from openalea.metafspm.data_structure.configs import PropsConfig, ScalesConfig
 from openalea.metafspm.solve.decorator import postsegmentation, segmentation
-from openalea.adel.kernels import blade_element_midrib_ends, blade_element_triangles, interpret, stem_inclinations
+from openalea.adel.kernels import (blade_element_midrib_ends, blade_element_triangles, classic_cylinders, interpret,
+                                   stem_inclinations)
 from openalea.adel.leaf_shapes import LeafShapes
 from openalea.adel.tables import (phytomer_dimensions, plant_rows, plant_tables, population_tables,
                                   record_plant_tables)
@@ -95,7 +103,8 @@ from openalea.adel.turtle import base_inclination, traversal_order
 BY = "model_shoot_architecture"
 DESCRIPTOR = "descriptor"
 SCALES = ScalesConfig
-ORGANS = ("internode", "sheath", "blade")
+ORGANS = ("internode", "sheath", "blade", "peduncle", "ear", "awn")
+EAR_PARTS = 3                                  # the ear rows of an axis with an ear: peduncle, ear, awns
 ELEMENTS = ("HiddenElement", "StemElement", "LeafElement")
 
 
@@ -121,12 +130,18 @@ def bearer_of(axis_name):
     return ("MS" if len(code) == 1 else "T" + ".".join(code[:-1])), int(code[-1])
 
 
-def phytomer_layout(labels, n_sect):
+def phytomer_layout(labels, n_sect, ear_part=0):
     """A phytomer's complexes and elements, in creation order:
     complexes [(anchor, scale, label)] with anchor "unit" (the axis' GrowthUnit) or the index of an earlier complex;
     elements [(complex index, parent, edge, label, organ, index in organ)] with parent "previous" (the internode's
     predecessor: the previous internode's last element, the bearer's internode's first, or none) or the index of an
-    earlier element."""
+    earlier element. *ear_part*: 0 a vegetative phytomer; 1, 2, 3 an ear's (its peduncle, ear, awns): one organ, a
+    HiddenElement then a StemElement, as an internode."""
+    if ear_part:
+        label = labels.Organ.Peduncle if ear_part == 1 else labels.Organ.Ear
+        return ([("unit", SCALES.Phytomer, labels.Phytomer.Shoot), (0, SCALES.Organ, label)],
+                [(1, "previous", None, labels.SubOrgan.HiddenElement, 0, 0),
+                 (1, 0, "<", labels.SubOrgan.StemElement, 0, 1)])
     complexes = [("unit", SCALES.Phytomer, labels.Phytomer.Shoot),
                  (0, SCALES.Organ, labels.Organ.StemInternode),
                  (0, SCALES.Organ, labels.Organ.Sheath),
@@ -356,6 +371,14 @@ class ShootArchitecture(StructuralComponent):
     length_unit: float = parameter(unit='m', description="The tables' length unit in m (Adel's cm: 0.01)", by=BY,
                                    default=0.01)
     leaves: object = setting(description="The leaf shape database (LeafShapes; None: Adel's samples)", default=None)
+    twist: float = setting(unit='°',
+                           description="The blades' twist about their midrib over their mature length (Adel's "
+                                       "Leaves.twist)", default=0.)
+    stem_mesh: str = setting(description="The cylinders' mesh: 'slim' (8 triangles, Adel's slim_cylinder) or 'classic' "
+                                         "(PlantGL's tapered cylinder, 6 slices, 24 triangles: Adel's classic)",
+                             default="slim", choices=("slim", "classic"))
+    face_up: bool = setting(description="True: the blade elements drawn in a frame whose z is the vertical instead of "
+                                        "the turtle's heading (Adel's face_up)", default=False)
     min_length: float = setting(unit='m',
                                 description="The shortest element drawn (Adel's min_length, 0.01 cm); a blade's "
                                             "triangles smaller than its square / 100 are left out", default=1e-4)
@@ -511,6 +534,27 @@ class ShootArchitecture(StructuralComponent):
             "shape_seed": ([3], [np.where(valid, shape_seed, -1).astype(int)]),
         }
 
+    @staticmethod
+    def _ear_values(dimensions, rows, ranks, nff, units):
+        """_phytomer_values for the phytomers of an ear (layout positions 0 phytomer, 1 its organ): its rank, its
+        ntop (0 the peduncle, -1 the ear, -2 the awns, as Adel's), its diameter (Ed) and azimuth (Azim)."""
+        return {
+            "phytomer_rank": ([0], [ranks]),
+            "organ_rank": ([1], [ranks]),
+            "ntop": ([1], [nff - ranks + 1]),
+            "diameter": ([1], [dimensions["Ed"][rows, ranks] * units]),
+            "organ_azimuth": ([1], [dimensions["Azim"][rows, ranks]]),
+        }
+
+    def ear_part(self, row, rank, values):
+        """The ear part of axis *row*'s phytomer *rank* (*values*: its axis' _axis_values): 1, 2, 3 its peduncle,
+        ear, awns (an axis with an ear, its rank beyond nf and its row in the phytomer table: its El given), else 0."""
+        part = rank - values["final_leaf_number"]
+        if part < 1 or part > EAR_PARTS or not values["has_ear"]:
+            return 0
+        lengths = self._dimension_arrays()["El"]
+        return part if rank < lengths.shape[1] and np.isfinite(lengths[row, rank]) else 0
+
     def tables(self):
         """(axes table, phytomer table, per plant its number in them, per plant its rows' offset): the population's
         tables (tables.population_tables), the ones axis_row indexes."""
@@ -524,7 +568,7 @@ class ShootArchitecture(StructuralComponent):
         return np.where(rows >= 0, names, "")
 
     def organ_names(self):
-        """Each Organ's kind: "internode", "sheath" or "blade"."""
+        """Each Organ's kind: "internode", "sheath", "blade", "peduncle", "ear" or "awn"."""
         _, organ_kind = self._kinds()
         ds = self.data_structure
         kind = np.full(len(ds.entity_ids("Organ")), -1)
@@ -590,7 +634,7 @@ class ShootArchitecture(StructuralComponent):
                         break                               # its bearer's phytomer is not there yet
                     batch.axis(plant, row, dict(values, axis_phytomers=1))
                     batch.phytomer(None, predecessor, plant, row, 1, values["final_leaf_number"], unit,
-                                   branched=True)
+                                   branched=True, ear_part=self.ear_part(row, 1, values))
 
         new_axes()
 
@@ -605,7 +649,8 @@ class ShootArchitecture(StructuralComponent):
                 predecessor = self._predecessor(g, axis, rank, axis_of, g.complex(axis), values["bearer_row"],
                                                 values["insertion_rank"], batch, row=int(axis_row[a]))
                 batch.phytomer(g.components(axis)[0], predecessor, g.complex(axis), int(axis_row[a]), rank,
-                               values["final_leaf_number"], unit, branched=False)
+                               values["final_leaf_number"], unit, branched=False,
+                               ear_part=self.ear_part(int(axis_row[a]), rank, values))
                 count[a] = rank
 
         new_axes()                                          # those on a bearer's phytomer just created
@@ -615,14 +660,20 @@ class ShootArchitecture(StructuralComponent):
     # --- The elements ---
 
     def _kinds(self):
-        """Per node: its element kind (0 hidden, 1 stem, 2 leaf) and its organ's (0 internode, 1 sheath, 2 blade),
-        from the MPG's labels (ds.labels), once per topology."""
+        """Per node: its element kind (0 hidden, 1 stem, 2 leaf) and its organ's (0 internode, 1 sheath, 2 blade, 3
+        peduncle, 4 ear, 5 awns: an Ear organ at its axis' rank nf + 3), from the MPG's labels (ds.labels), once per
+        topology."""
         def build():
             ds = self.data_structure
             element = {"HiddenElement": 0, "StemElement": 1, "LeafElement": 2}
-            organ = {"StemInternode": 0, "Sheath": 1, "Blade": 2}
-            return (np.array([element.get(label, -1) for label in ds.labels().tolist()]),
-                    np.array([organ.get(label, -1) for label in ds.labels(location="Organ").tolist()]))
+            organ = {"StemInternode": 0, "Sheath": 1, "Blade": 2, "Peduncle": 3, "Ear": 4}
+            organ_kind = np.array([organ.get(label, -1) for label in ds.labels(location="Organ").tolist()])
+            if (organ_kind == 4).any():
+                organ = np.asarray(ds.owner("Organ"))             # per node
+                organ_rank = np.asarray(ds.get("organ_rank"))[organ]
+                final = np.asarray(ds.get("final_leaf_number"))[ds.owner("Axis", of="Organ")][organ]
+                organ_kind = np.where((organ_kind == 4) & (organ_rank - final == EAR_PARTS), 5, organ_kind)
+            return np.array([element.get(label, -1) for label in ds.labels().tolist()]), organ_kind
         return self.cached("kinds", build)
 
     def _leaf_shapes(self):
@@ -653,8 +704,8 @@ class ShootArchitecture(StructuralComponent):
         is_green = np.ones(n, dtype=int)
         hidden = np.maximum(l - l_visible, 0.)
 
-        # Stem organs (internodes, sheaths): a cylinder of the organ's diameter
-        stem = organ_kind < 2
+        # Stem organs (internodes, sheaths, an ear's peduncle, ear and awns): a cylinder of the organ's diameter
+        stem = organ_kind != 2
         d = diameter[organ]
         green = l_visible - np.minimum(l_senesced, l_visible)
         senesced = l_visible - green
@@ -796,7 +847,8 @@ class ShootArchitecture(StructuralComponent):
         kind = np.full(len(inclination), -1)
         kind[np.asarray(ds.owner("Organ"))] = organ_kind
         axis = ds.owner("Axis", of="Organ")
-        stem = np.flatnonzero((kind == 0) | (kind == 1))
+        stem = np.flatnonzero((kind == 0) | (kind == 1) | (kind >= 3))      # an ear's organs as its internodes
+        kind = np.where(kind >= 3, 0, kind)
         stem = stem[np.lexsort((kind[stem], organ_rank[stem], axis[stem]))]
         inclined = np.array(inclination, dtype=float)
         computed = stem_inclinations(axis[stem], kind[stem].astype(np.int64),
@@ -840,13 +892,13 @@ class ShootArchitecture(StructuralComponent):
             (np.asarray(phytomer_rank)[phytomer] == 1) & ~axis_is_main[axis], plant_position[plant],
             plant_rotation[plant], np.asarray(axis_azimuth, dtype=float)[axis],
             np.where(stem, np.asarray(inclination, dtype=float)[organ], 0.),
-            np.where(stem & (organ_kind == 0), np.asarray(organ_azimuth, dtype=float)[organ], 0.),
+            np.where(stem & ((organ_kind == 0) | (organ_kind >= 3)), np.asarray(organ_azimuth, dtype=float)[organ], 0.),
             np.asarray(length, dtype=float), np.asarray(rolled_part, dtype=float), frame_source, parent,
             np.asarray(own_axis_top) > 0)
         base = position.copy()
         nodes, ends = self._blade_midrib_ends(element_kind, organ, np.asarray(length), np.asarray(rolled_part))
         if nodes.size:
-            placed = place(ends[:, None], position[nodes], heading[nodes], up[nodes])[:, 0]
+            placed = self._place_blades(ends[:, None], position[nodes], heading[nodes], up[nodes])[:, 0]
             rolled = np.asarray(rolled_part, dtype=float)[nodes] > 0
             base[nodes] = np.where(rolled[:, None], position[nodes], placed[:, 0])
             end[nodes] = placed[:, 1]
@@ -888,19 +940,42 @@ class ShootArchitecture(StructuralComponent):
         radius = np.where(stem, 0.5 * np.asarray(ds.get("diameter"))[organ],
                           0.5 * np.asarray(ds.get("rolled_diameter")))[cylinder]
         position, heading, up = self.frames()
-        local = slim_cylinders(cylinder_length, radius, radius)
-        vertices = place(local, position[cylinder], heading[cylinder], up[cylinder]).reshape(-1, 3, 3)
-        owner = np.repeat(cylinder, 8)
+        local = (classic_cylinders if self.stem_mesh == "classic" else slim_cylinders)(cylinder_length, radius, radius)
+        blade_cylinder = ~stem[cylinder]
+        placed = place(local, position[cylinder], heading[cylinder], up[cylinder])
+        if self.face_up and blade_cylinder.any():           # a blade's rolled part in its blade's frame
+            placed[blade_cylinder] = self._place_blades(local[blade_cylinder], position[cylinder][blade_cylinder],
+                                                        heading[cylinder][blade_cylinder],
+                                                        up[cylinder][blade_cylinder])
+        vertices = placed.reshape(-1, 3, 3)
+        owner = np.repeat(cylinder, local.shape[1])
         green_length = np.asarray(ds.get("green_length"), dtype=float)
         green = self._green_shares(local.reshape(-1, 3, 3)[..., 2], green_length[owner], length[owner])
         blade_vertices, blade_owner, blade_abscissae = self._blade_triangles(leaf, rolled, minimum, organ)
         if blade_owner.size:
-            placed = place(blade_vertices[:, None], position[blade_owner], heading[blade_owner],
-                           up[blade_owner])[:, 0]
+            placed = self._place_blades(blade_vertices[:, None], position[blade_owner], heading[blade_owner],
+                                        up[blade_owner])[:, 0]
             vertices, owner = np.concatenate([vertices, placed]), np.concatenate([owner, blade_owner])
             green = np.concatenate([green, self._green_shares(blade_abscissae, green_length[blade_owner],
                                                               length[blade_owner])])
         return Triangles(vertices, owner, attributes={"green": green})
+
+    def _place_blades(self, local, position, heading, up):
+        """Blade elements' local triangles or points (n, k, 3, 3) placed in their frames (geometry.place); with
+        face_up, as Adel's AdelTurtle.transform(face_up=True) does: local x along up, y along the vertical × up (not
+        normalised: the blade narrowed by the sine of its up's angle to the vertical), z along x × y normalised; a
+        frame whose up is vertical keeps the turtle's."""
+        if not self.face_up:
+            return place(local, position, heading, up)
+        up = np.asarray(up, dtype=float)
+        side = np.cross(np.array([0., 0., 1.]), up)
+        third = np.cross(up, side)
+        norm = np.linalg.norm(third, axis=1)
+        degenerate = norm == 0.
+        third = np.where(degenerate[:, None], heading, third / np.where(degenerate, 1., norm)[:, None])
+        side = np.where(degenerate[:, None], np.cross(heading, up), side)
+        basis = np.stack([up, side, third], axis=1)
+        return np.einsum("nkpa,naw->nkpw", local, basis) + np.asarray(position, dtype=float)[:, None, None, :]
 
     @staticmethod
     def _green_shares(along, green_length, length) -> np.ndarray:
@@ -931,13 +1006,14 @@ class ShootArchitecture(StructuralComponent):
         cache = {}
         parts, owners, abscissae = [], [], []
         for node, made_from in self._meshed_blades(leaf, rolled, minimum, organ):
-            made_from = made_from + (min_area,)
+            made_from = made_from + (min_area, float(self.twist))
             vertex = int(vertex_ids[node])
             kept = previous.get(vertex)
             if kept is not None and kept[0] == made_from:
                 triangles, along = kept[1], kept[2]
             else:
-                triangles, along = blade_element_triangles(*shapes.fitted[made_from[1]], *made_from[2:8], min_area)
+                triangles, along = blade_element_triangles(*shapes.fitted[made_from[1]], *made_from[2:8], min_area,
+                                                           float(self.twist))
                 triangles[..., 2] += rolled[node]
                 along += rolled[node]
             cache[vertex] = (made_from, triangles, along)
@@ -1034,7 +1110,8 @@ class _Batch:
         self.complexes_layout, self.elements_layout = phytomer_layout(labels, n_sect)
         self.anchor, self.scale, self.label, self.complex_values = [], [], [], []
         self.parent, self.edge, self.element_label, self.complex_of, self.element_index = [], [], [], [], []
-        self.phytomers = []                                 # (layout's first complex, axis row, rank, nff, unit)
+        self.n_sect = n_sect
+        self.phytomers = []                       # (layout's first complex, axis row, rank, nff, unit, ear part)
         self.internodes = {}                    # {(plant, axis row): {rank: its internode's (first, last) elements}}
         self.last_unit = None
 
@@ -1056,16 +1133,18 @@ class _Batch:
         elements = self.internodes.get((plant, row), {}).get(rank)
         return None if elements is None else -1 - elements[1 if last else 0]
 
-    def phytomer(self, unit, predecessor, plant, row, rank, nff, length_unit, branched):
+    def phytomer(self, unit, predecessor, plant, row, rank, nff, length_unit, branched, ear_part=0):
         """A phytomer of *plant*'s axis *row* under the GrowthUnit *unit* (None: the new axis' just added), its
         internode after *predecessor* (an element's id, a batch element's -1 - its index, or NO_PARENT);
-        *length_unit*: its plant's (m)."""
+        *length_unit*: its plant's (m); *ear_part*: 1, 2, 3 an ear's peduncle, ear, awns (phytomer_layout)."""
         unit = -1 - self.last_unit if unit is None else unit
         base = len(self.anchor)
-        for where, scale, label in self.complexes_layout:
+        complexes_layout, elements_layout = ((self.complexes_layout, self.elements_layout) if not ear_part
+                                             else phytomer_layout(self.labels, self.n_sect, ear_part))
+        for where, scale, label in complexes_layout:
             self._complex(unit if where == "unit" else -1 - (base + where), scale, label)
         first = len(self.parent)
-        for complex_index, where, link, label, _, index in self.elements_layout:
+        for complex_index, where, link, label, _, index in elements_layout:
             if where == "previous":
                 self.parent.append(predecessor)
                 self.edge.append("+" if branched else "<")
@@ -1075,9 +1154,9 @@ class _Batch:
             self.element_label.append(label)
             self.complex_of.append(-1 - (base + complex_index))
             self.element_index.append(index)
-        internode = [first + k for k, element in enumerate(self.elements_layout) if element[0] == 1]
+        internode = [first + k for k, element in enumerate(elements_layout) if element[0] == 1]
         self.internodes.setdefault((plant, row), {})[rank] = (internode[0], internode[-1])
-        self.phytomers.append((base, row, rank, nff, length_unit))
+        self.phytomers.append((base, row, rank, nff, length_unit, bool(ear_part)))
 
     def new_nodes(self, dimensions, specs) -> NewNodes:
         if not self.parent:
@@ -1091,12 +1170,15 @@ class _Batch:
                 if name in complex_values:
                     column[k] = complex_values[name]
             values[name] = column
-        bases, rows, ranks, nff, units = (np.array(column) for column in zip(*self.phytomers))
-        for name, (positions, per_position) in ShootArchitecture._phytomer_values(dimensions, rows, ranks, nff,
-                                                                                  units).items():
-            column = values.setdefault(name, np.full(n, float(specs[name].default)))
-            for position, array in zip(positions, per_position):
-                column[bases + position] = array
+        bases, rows, ranks, nff, units, ears = (np.array(column) for column in zip(*self.phytomers))
+        for these, function in ((~ears, ShootArchitecture._phytomer_values), (ears, ShootArchitecture._ear_values)):
+            if not these.any():
+                continue
+            for name, (positions, per_position) in function(dimensions, rows[these], ranks[these], nff[these],
+                                                            units[these]).items():
+                column = values.setdefault(name, np.full(n, float(specs[name].default)))
+                for position, array in zip(positions, per_position):
+                    column[bases[these] + position] = array
         return NewNodes(parent=self.parent, edge=self.edge, label=self.element_label,
                         values=dict(element_index=self.element_index),
                         complexes=NewComplexes(anchor=self.anchor, scale=self.scale, label=self.label,
