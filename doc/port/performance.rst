@@ -83,7 +83,7 @@ Where the time goes
   the elements that changed, so ``triangles()`` costs little once the canopy stops growing (1.1 ms against 20 ms on one
   plant).
 - The traversal order (``turtle.traversal_order``) is computed once per change of topology by metafspm's
-  ``ds.preorder`` (a compiled depth-first walk over the children's CSR, the coleoptile tillers deferred); only the
+  ``data_structure.preorder`` (a compiled depth-first walk over the children's CSR, the coleoptile tillers deferred); only the
   children lists and the few deferred tillers are read in Python.
 
 

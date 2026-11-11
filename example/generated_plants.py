@@ -26,12 +26,12 @@ if __name__ == "__main__":
     scene = shoot_scene(PLANTS, plant_scenarios=OWN, phyllochron=100., n_sect=2, tiller_inclination=1)
     for _ in range(n_steps + 1):
         scene.run()
-    ds = scene.populations[0].data_structure
+    data_structure = scene.populations[0].data_structure
     architecture = scene.populations[0].instance.architecture
 
     figure = plt.figure(figsize=(14, 5))
     axes = figure.add_subplot(1, 2, 1, projection="3d")
-    plant_of = ds.owner("Plant")
+    plant_of = data_structure.owner("Plant")
     draw(axes, architecture.triangles(), colors=colormaps["tab10"](plant_of)[:, :3])
     axes.set_title(f"three generated plants, {n_steps * 10} °Cd")
     axes = figure.add_subplot(1, 2, 2)

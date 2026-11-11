@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from openalea.adel.development import random_delays, shoot_scene
-from openalea.metafspm.scene.population import stand
+from openalea.metafspm import stand
 from openalea.adel.display import state_colors
 from openalea.adel.leaf_shapes import LeafShapes
 from openalea.metafspm.display import draw
@@ -26,14 +26,14 @@ def grow(n_steps, shown):
     scene = shoot_scene(stand(N_PLANTS, rows=4, plant_spacing=0.04, jitter=0.005, seed=0), delays=random_delays(N_PLANTS),
                         leaves=LeafShapes.echap(xy_model="Soissons_byleafclass"), n_sect=2,
                         thermal_time_step=THERMAL_TIME_STEP)
-    ds = scene.populations[0].data_structure
+    data_structure = scene.populations[0].data_structure
     architecture = scene.populations[0].instance.architecture
     snapshots, areas = {}, []
     for step in range(n_steps + 1):
         scene.run()
-        areas.append((np.sum(ds.get("green_area")), np.sum(ds.get("senesced_area"))))
+        areas.append((np.sum(data_structure.get("green_area")), np.sum(data_structure.get("senesced_area"))))
         if step in shown:
-            snapshots[step] = (architecture.triangles(), np.asarray(ds.get("is_green")).copy())
+            snapshots[step] = (architecture.triangles(), np.asarray(data_structure.get("is_green")).copy())
     return snapshots, np.array(areas)
 
 

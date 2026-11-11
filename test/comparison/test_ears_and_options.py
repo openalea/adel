@@ -48,10 +48,10 @@ def headed_inclined():
 
 def canopy_table(result):
     """The legacy's canopy table (Adel.R's getdesc columns) of the port's main stem, lengths in cm."""
-    ds, names = result.data_structure, result.architecture.organ_names()
+    data_structure, names = result.data_structure, result.architecture.organ_names()
 
     def get(name):
-        return np.asarray(ds.get(name))
+        return np.asarray(data_structure.get(name))
     by_rank = {}
     for organ, (name, rank) in enumerate(zip(names, get("organ_rank"))):
         by_rank.setdefault(int(rank), {})[name] = organ
@@ -85,15 +85,15 @@ def canopy_table(result):
 
 def port_elements(result):
     """{(rank, organ, element label): node} of the port's main stem; the plant's base (its first element's frame)."""
-    ds, names = result.data_structure, result.architecture.organ_names()
-    organ_of, ranks = np.asarray(ds.owner("Organ")), np.asarray(ds.get("organ_rank"))
-    labels, index = np.asarray(ds.labels()), np.asarray(ds.get("element_index"))
+    data_structure, names = result.data_structure, result.architecture.organ_names()
+    organ_of, ranks = np.asarray(data_structure.owner("Organ")), np.asarray(data_structure.get("organ_rank"))
+    labels, index = np.asarray(data_structure.labels()), np.asarray(data_structure.get("element_index"))
     keys = {}
     for node, label in enumerate(labels):
         keys[(int(ranks[organ_of[node]]), names[organ_of[node]],
               label + (str(int(index[node])) if label == "LeafElement" else ""))] = node
     first = keys[(1, "internode", "HiddenElement")]
-    base = np.array([np.asarray(ds.get(name))[first] for name in ("frame_x", "frame_y", "frame_z")])
+    base = np.array([np.asarray(data_structure.get(name))[first] for name in ("frame_x", "frame_y", "frame_z")])
     return keys, base
 
 
@@ -129,45 +129,45 @@ def compare(result, options):
 
 def whole_blade(result, key):
     """Whether the element *key* is a blade element that is its whole mature blade (the legacy's twist quirk)."""
-    ds = result.data_structure
+    data_structure = result.data_structure
     keys, _ = port_elements(result)
     node = keys[key]
-    organ = np.asarray(ds.owner("Organ"))[node]
-    return (key[1] == "blade" and np.isclose(np.asarray(ds.get("visible_length"))[organ],
-                                             np.asarray(ds.get("shape_mature_length"))[organ], rtol=0, atol=1e-12)
-            and np.asarray(ds.get("flat_base"))[node] == 0 and np.asarray(ds.get("flat_top"))[node] == 1)
+    organ = np.asarray(data_structure.owner("Organ"))[node]
+    return (key[1] == "blade" and np.isclose(np.asarray(data_structure.get("visible_length"))[organ],
+                                             np.asarray(data_structure.get("shape_mature_length"))[organ], rtol=0, atol=1e-12)
+            and np.asarray(data_structure.get("flat_base"))[node] == 0 and np.asarray(data_structure.get("flat_top"))[node] == 1)
 
 
 # ── The ears ──
 
 def test_the_ear_phytomers_follow_the_flag_leaf(headed):
-    ds, names = headed.data_structure, headed.architecture.organ_names()
+    data_structure, names = headed.data_structure, headed.architecture.organ_names()
     organs = headed.organs()
     ears = organs.loc[organs["organ"].isin(["peduncle", "ear", "awn"])]
     assert ears["organ"].tolist() == ["peduncle", "ear", "awn"]
     assert ears["rank"].tolist() == [13, 14, 15]
     np.testing.assert_allclose(ears["length"], [0.198, 0.0738, 0.])            # the phytomer table's El
-    ntop, diameter = np.asarray(ds.get("ntop")), np.asarray(ds.get("diameter"))
+    ntop, diameter = np.asarray(data_structure.get("ntop")), np.asarray(data_structure.get("diameter"))
     assert ntop[names == "ear"].tolist() == [-1] and ntop[names == "awn"].tolist() == [-2]
     np.testing.assert_allclose(diameter[names == "ear"], [0.0102])
-    g = ds.structure
+    g = data_structure.structure
     labels = g.labels
-    peduncle = np.asarray(ds.entity_ids("Organ"))[names == "peduncle"][0]
+    peduncle = np.asarray(data_structure.entity_ids("Organ"))[names == "peduncle"][0]
     assert g.label(int(peduncle)) == labels.Organ.Peduncle
     hidden = g.components(int(peduncle))[0]
-    flag_internode = np.asarray(ds.entity_ids("Organ"))[(names == "internode")
-                                                        & (np.asarray(ds.get("organ_rank")) == 12)][0]
+    flag_internode = np.asarray(data_structure.entity_ids("Organ"))[(names == "internode")
+                                                        & (np.asarray(data_structure.get("organ_rank")) == 12)][0]
     assert g.parent(hidden) == g.components(int(flag_internode))[-1]        # '<' on the flag internode's top
     assert g.edge_type(hidden) == "<"
 
 
 def test_the_ears_are_drawn_and_have_their_area(headed):
-    ds, names = headed.data_structure, headed.architecture.organ_names()
+    data_structure, names = headed.data_structure, headed.architecture.organ_names()
     triangles = headed.architecture.triangles()
-    organ = np.asarray(ds.owner("Organ"))
-    ear_nodes = np.flatnonzero((names[organ] == "ear") & (np.asarray(ds.labels()) == "StemElement"))
+    organ = np.asarray(data_structure.owner("Organ"))
+    ear_nodes = np.flatnonzero((names[organ] == "ear") & (np.asarray(data_structure.labels()) == "StemElement"))
     assert np.isin(ear_nodes, triangles.owner).all()
-    area = np.asarray(ds.get("organ_area"))[names == "ear"][0]
+    area = np.asarray(data_structure.get("organ_area"))[names == "ear"][0]
     assert area == pytest.approx(np.pi * 0.0738 * 0.0102)                     # its cylinder: its whole length out
 
 
@@ -213,9 +213,9 @@ def test_the_twist_is_the_legacy_s_but_on_whole_blades():
 
 def test_the_options_change_what_they_name(headed_inclined):
     architecture = headed_inclined.architecture
-    ds = headed_inclined.data_structure
+    data_structure = headed_inclined.data_structure
     default = architecture.triangles()
-    leaf = np.asarray(ds.labels())[default.owner] == "LeafElement"
+    leaf = np.asarray(data_structure.labels())[default.owner] == "LeafElement"
     for name, value in (("twist", 30.), ("face_up", True)):
         setattr(architecture, name, value)
         try:
@@ -230,7 +230,7 @@ def test_the_options_change_what_they_name(headed_inclined):
     finally:
         architecture.stem_mesh = "slim"
     stems = np.unique(default.owner[~leaf])
-    assert (np.bincount(classic.owner, minlength=ds.n_nodes())[stems] == 24).all()
+    assert (np.bincount(classic.owner, minlength=data_structure.n_nodes())[stems] == 24).all()
     np.testing.assert_allclose(classic.areas()[np.isin(classic.owner, stems)].sum(),
                                default.areas()[np.isin(default.owner, stems)].sum(), rtol=0.3)
 

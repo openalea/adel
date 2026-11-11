@@ -76,7 +76,7 @@ class _Summary:
         self.every, self.last_day = every, last_day
 
     def __call__(self, scene):
-        day = scene.iteration - 1
+        day = scene.step_count - 1
         if day < 0 or not (round(day * DAY / self.every, 9).is_integer() or day == self.last_day):
             return None
         population = scene.populations[0]
@@ -110,24 +110,24 @@ class Simulation:
     def axes(self) -> pd.DataFrame:
         """The axes now, one row each: its plant (from 0), its name (MS the main stem, T1, T2... the tillers), the
         number of phytomers it has, its Haun stage (its leaves appeared) and its final number of leaves."""
-        ds = self.data_structure
+        data_structure = self.data_structure
         return pd.DataFrame(dict(plant=self._plant_of("Axis"), axis=self.architecture.axis_names(),
-                                 phytomers=np.asarray(ds.get("axis_phytomers")),
-                                 haun_stage=np.asarray(ds.get("haun_stage")),
-                                 final_leaf_number=np.asarray(ds.get("final_leaf_number"))))
+                                 phytomers=np.asarray(data_structure.get("axis_phytomers")),
+                                 haun_stage=np.asarray(data_structure.get("haun_stage")),
+                                 final_leaf_number=np.asarray(data_structure.get("final_leaf_number"))))
 
     def organs(self) -> pd.DataFrame:
         """The organs now, one row each: its plant, its axis, its kind (internode, sheath or blade), its rank on the
         axis (from 1, the bottom), its length, its visible length (out of the sheaths), its senesced length (m) and
         its visible area (m2)."""
-        ds = self.data_structure
+        data_structure = self.data_structure
         return pd.DataFrame(dict(plant=self._plant_of("Organ"),
-                                 axis=self.architecture.axis_names()[ds.owner("Axis", of="Organ")],
-                                 organ=self.architecture.organ_names(), rank=np.asarray(ds.get("organ_rank")),
-                                 length=np.asarray(ds.get("organ_length")),
-                                 visible_length=np.asarray(ds.get("visible_length")),
-                                 senesced_length=np.asarray(ds.get("organ_senesced_length")),
-                                 area=np.asarray(ds.get("organ_area"))))
+                                 axis=self.architecture.axis_names()[data_structure.owner("Axis", of="Organ")],
+                                 organ=self.architecture.organ_names(), rank=np.asarray(data_structure.get("organ_rank")),
+                                 length=np.asarray(data_structure.get("organ_length")),
+                                 visible_length=np.asarray(data_structure.get("visible_length")),
+                                 senesced_length=np.asarray(data_structure.get("organ_senesced_length")),
+                                 area=np.asarray(data_structure.get("organ_area"))))
 
     def draw(self, ax=None, color_by: str = None, view=(15., -60.)):
         """The plant in 3D: its elements green, or straw when more senesced than green; or coloured by *color_by*
@@ -138,31 +138,31 @@ class Simulation:
 
         if ax is None:
             ax = plt.figure(figsize=(6, 6)).add_subplot(projection="3d")
-        ds = self.data_structure
-        colors = (state_colors(ds.get("is_green")) if color_by is None
-                  else value_colors(np.asarray(ds.get(color_by), dtype=float)))
+        data_structure = self.data_structure
+        colors = (state_colors(data_structure.get("is_green")) if color_by is None
+                  else value_colors(np.asarray(data_structure.get(color_by), dtype=float)))
         draw(ax, self.architecture.triangles(), colors=colors, view=view)
         return ax
 
 
-def _summary_row(day: float, ds, architecture) -> dict:
+def _summary_row(day: float, data_structure, architecture) -> dict:
     """The plants' means: thermal time, the main stem's Haun stage and visible leaves, tillers, height, areas."""
-    n_plants = len(ds.entity_ids("Plant"))
-    main_stem = np.asarray(ds.get("bearer_row")) < 0
+    n_plants = len(data_structure.entity_ids("Plant"))
+    main_stem = np.asarray(data_structure.get("bearer_row")) < 0
     blade = architecture.organ_names() == "blade"
-    on_main = main_stem[ds.owner("Axis", of="Organ")]
-    visible_leaf = blade & on_main & (np.asarray(ds.get("visible_length")) > 0)
-    visible_leaves = ds.map_to(visible_leaf.astype(float), "Organ", "Plant", "sum")
-    stem = np.asarray(ds.labels()) == "StemElement"
-    height = ds.map_to(np.where(stem, np.asarray(ds.get("display_z2")), 0.), "node", "Plant", "max")  # stems' drawn top
-    leaf = np.asarray(ds.labels()) == "LeafElement"
-    return dict(day=day, thermal_time=float(np.mean(ds.get("thermal_time"))),
-                haun_stage=float(np.mean(np.asarray(ds.get("haun_stage"))[main_stem])),
+    on_main = main_stem[data_structure.owner("Axis", of="Organ")]
+    visible_leaf = blade & on_main & (np.asarray(data_structure.get("visible_length")) > 0)
+    visible_leaves = data_structure.map_to(visible_leaf.astype(float), "Organ", "Plant", "sum")
+    stem = np.asarray(data_structure.labels()) == "StemElement"
+    height = data_structure.map_to(np.where(stem, np.asarray(data_structure.get("display_z2")), 0.), "node", "Plant", "max")  # stems' drawn top
+    leaf = np.asarray(data_structure.labels()) == "LeafElement"
+    return dict(day=day, thermal_time=float(np.mean(data_structure.get("thermal_time"))),
+                haun_stage=float(np.mean(np.asarray(data_structure.get("haun_stage"))[main_stem])),
                 visible_leaves=float(np.mean(visible_leaves)),
-                tillers=float(np.mean(np.maximum(np.asarray(ds.get("axis_number")) - 1., 0.))),
+                tillers=float(np.mean(np.maximum(np.asarray(data_structure.get("axis_number")) - 1., 0.))),
                 height=float(np.mean(height)),
-                green_leaf_area=float(np.sum(np.asarray(ds.get("green_area"))[leaf])) / n_plants,
-                senesced_leaf_area=float(np.sum(np.asarray(ds.get("senesced_area"))[leaf])) / n_plants)
+                green_leaf_area=float(np.sum(np.asarray(data_structure.get("green_area"))[leaf])) / n_plants,
+                senesced_leaf_area=float(np.sum(np.asarray(data_structure.get("senesced_area"))[leaf])) / n_plants)
 
 
 def simulate(parameters: dict = None, days: float = 80, temperature=15., base_temperature: float = 0.,

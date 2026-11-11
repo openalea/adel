@@ -66,10 +66,10 @@ def main():
     print((table.set_index("day") * 1e4).round(2).to_string())
 
     last = encoding3d.read_index(INDEX)["frames"][-1]["path"]
-    identifier, ds = next(iter(import_frame(last).items()))            # {id: DataStructure}, as metafspm wrote them
-    total = float(np.sum(ds.get("green_area")))
-    print(f"\nRebuilt by metafspm from {os.path.basename(last)}: '{identifier}', a {type(ds).__name__} of "
-          f"{ds.n_nodes()} nodes, {len(ds.entity_ids('Plant'))} plants; green area {total * 1e4:.2f} cm2")
+    identifier, data_structure = next(iter(import_frame(last).items()))            # {id: DataStructure}, as metafspm wrote them
+    total = float(np.sum(data_structure.get("green_area")))
+    print(f"\nRebuilt by metafspm from {os.path.basename(last)}: '{identifier}', a {type(data_structure).__name__} of "
+          f"{data_structure.n_nodes()} nodes, {len(data_structure.entity_ids('Plant'))} plants; green area {total * 1e4:.2f} cm2")
     assert np.isclose(total, table.drop(columns="day").iloc[-1].sum(), rtol=0, atol=1e-15)
 
     if not show:

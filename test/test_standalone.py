@@ -29,10 +29,10 @@ def test_the_sample_plant_by_default():
 
 
 def test_the_sample_plant_with_echap_shapes():
-    ds, architecture = grow(shoot_scene(leaves=LeafShapes.echap(xy_model="Soissons_byleafclass")), 60)
+    data_structure, architecture = grow(shoot_scene(leaves=LeafShapes.echap(xy_model="Soissons_byleafclass")), 60)
     blades = architecture.organ_names() == "blade"
-    assert set(np.asarray(ds.get("shape_class"))[blades].tolist()) <= {1, 2}
-    assert np.sum(ds.get("green_area")) > 0
+    assert set(np.asarray(data_structure.get("shape_class"))[blades].tolist()) <= {1, 2}
+    assert np.sum(data_structure.get("green_area")) > 0
 
 
 def test_cnwheat_shapes_are_echap_s_mercia_profiles_and_soissons_midribs():
@@ -65,20 +65,20 @@ def test_plants_of_their_own_in_one_population():
     own = [dict(leaf_number=9, tiller_number=0), dict(leaf_number=12, tiller_number=2, longest_blade_length=0.25),
            dict(leaf_number=12, tiller_number=2, longest_blade_length=0.25)]
     scene = shoot_scene(plants, plant_scenarios=own, phyllochron=100.)
-    ds, architecture = grow(scene, 150)
+    data_structure, architecture = grow(scene, 150)
     axes, phytomers, numbers, offsets = architecture.tables()
     assert len(set(numbers.tolist())) == 2 and len(axes) == 1 + 3          # the same scalars, the same tables
-    plant_of_axis = ds.owner("Plant", of="Axis")
+    plant_of_axis = data_structure.owner("Plant", of="Axis")
     names = architecture.axis_names()
     assert [sorted(names[plant_of_axis == p].tolist()) for p in range(3)] == [["MS"], ["MS", "T1", "T2"],
                                                                               ["MS", "T1", "T2"]]
-    final = np.asarray(ds.get("final_leaf_number"))
+    final = np.asarray(data_structure.get("final_leaf_number"))
     assert final[(plant_of_axis == 0) & (names == "MS")].tolist() == [9]
     assert final[(plant_of_axis == 1) & (names == "MS")].tolist() == [12]
-    organ_plant = ds.owner("Plant", of="Organ")
-    longest = [np.asarray(ds.get("shape_mature_length"))[organ_plant == p].max() for p in range(3)]
+    organ_plant = data_structure.owner("Plant", of="Organ")
+    longest = [np.asarray(data_structure.get("shape_mature_length"))[organ_plant == p].max() for p in range(3)]
     assert longest[1] == pytest.approx(0.25) and longest[2] == pytest.approx(0.25) and longest[0] < 0.2
-    assert np.asarray(ds.get("phytomer_number"))[(plant_of_axis == 0)].tolist() == [9]
+    assert np.asarray(data_structure.get("phytomer_number"))[(plant_of_axis == 0)].tolist() == [9]
 
 
 def test_sown_below_the_coleoptile_and_t1_at_its_top():
@@ -87,30 +87,30 @@ def test_sown_below_the_coleoptile_and_t1_at_its_top():
     T2, and keeps its place in the MPG."""
     axes, phytomers = sample_tables()
     coleoptile = phytomers.loc[(phytomers["axe"] == "MS") & (phytomers["n"] == 1), "Gl"].iloc[0] * 0.01
-    ds, architecture = grow(shoot_scene(), 60)
-    assert ds.mtg.property("z")[ds.entity_ids("Plant")[0]] == pytest.approx(-0.9 * coleoptile)
+    data_structure, architecture = grow(shoot_scene(), 60)
+    assert data_structure.mtg.property("z")[data_structure.entity_ids("Plant")[0]] == pytest.approx(-0.9 * coleoptile)
     names, kind = architecture.axis_names(), architecture._kinds()[0]
-    node_axis, z1 = np.asarray(ds.owner("Axis")), np.asarray(ds.get("display_z1"))      # where they are drawn
+    node_axis, z1 = np.asarray(data_structure.owner("Axis")), np.asarray(data_structure.get("display_z1"))      # where they are drawn
     first = {name: z1[np.flatnonzero(node_axis == axis)[0]] for axis, name in enumerate(names)}
     assert first["MS"] == pytest.approx(-0.9 * coleoptile)
     assert first["T1"] == pytest.approx(first["T2"]) and first["T1"] > 0.
-    assert np.asarray(ds.get("insertion_rank"))[names == "T1"].tolist() == [1]
+    assert np.asarray(data_structure.get("insertion_rank"))[names == "T1"].tolist() == [1]
 
 
 
 def _grown_as_alone(own, shared, n_steps=80):
     """Plants of one population with their own scenarios *own* (and *shared*) grow as each alone."""
-    ds, _ = grow(shoot_scene([Planting(x=0.15 * k) for k in range(len(own))], plant_scenarios=own, **shared), n_steps)
-    organ_plant = ds.owner("Plant", of="Organ")
-    node_plant = np.asarray(ds.owner("Plant"))
-    triangles = ds.triangles()
-    plant_areas = ds.map_to(triangles.per_owner(triangles.areas(), ds.n_nodes()), "node", "Plant", "sum")
+    data_structure, _ = grow(shoot_scene([Planting(x=0.15 * k) for k in range(len(own))], plant_scenarios=own, **shared), n_steps)
+    organ_plant = data_structure.owner("Plant", of="Organ")
+    node_plant = np.asarray(data_structure.owner("Plant"))
+    triangles = data_structure.triangles()
+    plant_areas = data_structure.map_to(triangles.per_owner(triangles.areas(), data_structure.n_nodes()), "node", "Plant", "sum")
     for plant, scenario in enumerate(own):
         alone, _ = grow(shoot_scene(**dict(shared, **scenario)), n_steps)
         for name in ("inclination", "organ_area", "shape_mature_length", "diameter", "organ_length"):
-            np.testing.assert_allclose(np.sort(np.asarray(ds.get(name))[organ_plant == plant]),
+            np.testing.assert_allclose(np.sort(np.asarray(data_structure.get(name))[organ_plant == plant]),
                                        np.sort(np.asarray(alone.get(name))), rtol=1e-12, err_msg=f"{plant} {name}")
-        np.testing.assert_allclose(np.sort(np.asarray(ds.get("area"))[node_plant == plant]),
+        np.testing.assert_allclose(np.sort(np.asarray(data_structure.get("area"))[node_plant == plant]),
                                    np.sort(np.asarray(alone.get("area"))), rtol=1e-12)
         assert plant_areas[plant] == pytest.approx(np.sum(alone.triangles().areas()), rel=1e-9)
 
@@ -139,23 +139,23 @@ def test_each_plant_its_own_inclination_rule():
 def _keyed(scene):
     """Per element of a grown *scene*, sorted by its key (plant, axis name, phytomer rank, organ, index in organ):
     (the keys, each one's topological parent's key, {variable: values})."""
-    ds = scene.populations[0].data_structure
+    data_structure = scene.populations[0].data_structure
     architecture = scene.populations[0].instance.architecture
-    g = ds.structure
-    rank = np.asarray(ds.get("phytomer_rank"))[np.asarray(ds.owner("Phytomer"))]
-    keys = list(zip(np.asarray(ds.owner("Plant")).tolist(),
-                    architecture.axis_names()[np.asarray(ds.owner("Axis"))].tolist(), rank.tolist(),
-                    architecture.organ_names()[np.asarray(ds.owner("Organ"))].tolist(),
-                    np.asarray(ds.get("element_index")).tolist()))
-    nodes = ds.entity_ids("node").tolist()
+    mtg = data_structure.structure
+    rank = np.asarray(data_structure.get("phytomer_rank"))[np.asarray(data_structure.owner("Phytomer"))]
+    keys = list(zip(np.asarray(data_structure.owner("Plant")).tolist(),
+                    architecture.axis_names()[np.asarray(data_structure.owner("Axis"))].tolist(), rank.tolist(),
+                    architecture.organ_names()[np.asarray(data_structure.owner("Organ"))].tolist(),
+                    np.asarray(data_structure.get("element_index")).tolist()))
+    nodes = data_structure.entity_ids("node").tolist()
     position = {vid: i for i, vid in enumerate(nodes)}
     order = sorted(range(len(keys)), key=lambda i: keys[i])
-    parents = [keys[position[g.parent(nodes[i])]] if g.parent(nodes[i]) in position else None for i in order]
+    parents = [keys[position[mtg.parent(nodes[i])]] if mtg.parent(nodes[i]) in position else None for i in order]
     names = ("length", "area", "green_area", "senesced_area", "rolled_part", "width", "x1", "y1", "z1", "x2", "y2",
              "z2", "frame_x", "frame_y", "frame_z", "heading_x", "heading_y", "heading_z", "up_x", "up_y", "up_z")
-    values = {name: np.asarray(ds.get(name))[order] for name in names}
+    values = {name: np.asarray(data_structure.get(name))[order] for name in names}
     for name in ("organ_length", "visible_length", "inclination", "age", "organ_area"):
-        values[name] = np.asarray(ds.get(name))[np.asarray(ds.owner("Organ"))][order]
+        values[name] = np.asarray(data_structure.get(name))[np.asarray(data_structure.owner("Organ"))][order]
     return [keys[i] for i in order], parents, values
 
 
@@ -202,17 +202,17 @@ def test_blade_elements_from_their_base_to_their_end():
     rolled part's cylinder and its flat part's mesh, drawn from its frame's origin frame_x…: its blade's collar for
     the first one; within 0.1 mm, its mesh's tip triangle left out below the minimal area), its base the previous
     element's end, its end away from its frame's origin. Its topological ends (x1 ... z2) keep that chord, each
-    element's base at its parent's end (metafspm's ds.check_connectivity)."""
-    ds, architecture = grow(shoot_scene(leaves=LeafShapes.echap(xy_model="Soissons_byleafclass"), n_sect=3,
+    element's base at its parent's end (metafspm's data_structure.check_connectivity)."""
+    data_structure, architecture = grow(shoot_scene(leaves=LeafShapes.echap(xy_model="Soissons_byleafclass"), n_sect=3,
                                         tiller_inclination=1), 70)
     triangles = architecture.triangles()
     leaf = architecture._kinds()[0] == 2
-    base = np.stack([np.asarray(ds.get(f"display_{name}")) for name in ("x1", "y1", "z1")], axis=1)
-    end = np.stack([np.asarray(ds.get(f"display_{name}")) for name in ("x2", "y2", "z2")], axis=1)
-    topological = [np.stack([np.asarray(ds.get(name + k)) for name in "xyz"], axis=1) for k in "12"]
+    base = np.stack([np.asarray(data_structure.get(f"display_{name}")) for name in ("x1", "y1", "z1")], axis=1)
+    end = np.stack([np.asarray(data_structure.get(f"display_{name}")) for name in ("x2", "y2", "z2")], axis=1)
+    topological = [np.stack([np.asarray(data_structure.get(name + k)) for name in "xyz"], axis=1) for k in "12"]
     np.testing.assert_allclose((topological[1] - topological[0])[leaf], (end - base)[leaf], atol=1e-12)
-    assert ds.check_connectivity(tolerance=1e-12).empty
-    frame = np.stack([np.asarray(ds.get(name)) for name in ("frame_x", "frame_y", "frame_z")], axis=1)
+    assert data_structure.check_connectivity(tolerance=1e-12).empty
+    frame = np.stack([np.asarray(data_structure.get(name)) for name in ("frame_x", "frame_y", "frame_z")], axis=1)
     drawn = np.unique(triangles.owner[leaf[triangles.owner]])
     assert drawn.size > 20
     for node in drawn.tolist():
@@ -220,9 +220,9 @@ def test_blade_elements_from_their_base_to_their_end():
         low, high = vertices.min(axis=0) - 1e-4, vertices.max(axis=0) + 1e-4
         for point in (base[node], end[node]):
             assert ((point >= low) & (point <= high)).all(), node
-    organ, index = np.asarray(ds.owner("Organ")), np.asarray(ds.get("element_index"))
+    organ, index = np.asarray(data_structure.owner("Organ")), np.asarray(data_structure.get("element_index"))
     element = {(organ[node], index[node]): node for node in drawn.tolist()}
-    rolled = np.asarray(ds.get("rolled_part"))
+    rolled = np.asarray(data_structure.get("rolled_part"))
     pairs = [(element[(organ[node], index[node] - 1)], node) for node in drawn.tolist()
              if (organ[node], index[node] - 1) in element and rolled[node] == 0]
     assert pairs
@@ -239,15 +239,15 @@ def test_a_stand_grown_to_its_stage_before_the_first_step():
                         forcings={"air_temperature": 15.}, start=600.)
     model = scene.populations[0].instance
     model.grow()
-    ds = scene.populations[0].data_structure
-    grown = {name: np.asarray(ds.get(name)).copy() for name in ("organ_length", "z2")}
-    np.testing.assert_allclose(np.asarray(ds.get("thermal_time")), [600., 570.])
+    data_structure = scene.populations[0].data_structure
+    grown = {name: np.asarray(data_structure.get(name)).copy() for name in ("organ_length", "z2")}
+    np.testing.assert_allclose(np.asarray(data_structure.get("thermal_time")), [600., 570.])
     scene.run()
-    np.testing.assert_allclose(np.asarray(ds.get("thermal_time")), [600., 570.])
+    np.testing.assert_allclose(np.asarray(data_structure.get("thermal_time")), [600., 570.])
     for name, values in grown.items():
-        np.testing.assert_array_equal(np.asarray(ds.get(name)), values, err_msg=name)
+        np.testing.assert_array_equal(np.asarray(data_structure.get(name)), values, err_msg=name)
     scene.run()
-    np.testing.assert_allclose(np.asarray(ds.get("thermal_time")), [615., 585.])
+    np.testing.assert_allclose(np.asarray(data_structure.get("thermal_time")), [615., 585.])
 
 
 def test_the_triangles_carry_their_green_share():
@@ -255,14 +255,14 @@ def test_the_triangles_carry_their_green_share():
     from the element's base, along a stem's axis or a blade's midrib): an element's triangles' green area, over their
     area, is its green_area over its area (within its mesh's resolution); a wholly green element's 1, a senesced
     one's 0."""
-    ds, architecture = grow(shoot_scene(leaves=LeafShapes.echap(xy_model="Soissons_byleafclass"), n_sect=3), 90)
+    data_structure, architecture = grow(shoot_scene(leaves=LeafShapes.echap(xy_model="Soissons_byleafclass"), n_sect=3), 90)
     triangles = architecture.triangles()
     green = triangles.attributes["green"]
     assert green.min() >= 0. and green.max() <= 1.
-    n = ds.n_nodes()
+    n = data_structure.n_nodes()
     area = triangles.per_owner(triangles.areas(), n)
     green_area = triangles.per_owner(triangles.areas() * green, n)
-    expected_area, expected_green = np.asarray(ds.get("area")), np.asarray(ds.get("green_area"))
+    expected_area, expected_green = np.asarray(data_structure.get("area")), np.asarray(data_structure.get("green_area"))
     drawn = (area > 0) & (expected_area > 0)
     partly = drawn & (expected_green > 0) & (expected_green < 0.999 * expected_area)
     assert partly.sum() >= 5 and (drawn & (expected_green == 0)).any()

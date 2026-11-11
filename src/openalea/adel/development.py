@@ -171,7 +171,7 @@ class ScenarioDevelopment(FunctionalComponent):
         step_before = self.kept("degree_days")
         start = self.forcing_time("start")
         above_base = np.maximum(0., temperature - np.asarray(base_temperature, dtype=float))
-        self.keep("degree_days", (start, above_base * self.dt / DAY))
+        self.keep("degree_days", (start, above_base * self.step_duration / DAY))
         return 0. if step_before is None or step_before[0] >= start else step_before[1]
 
     @postsegmentation(location="Axis")
@@ -225,14 +225,14 @@ class ScenarioDevelopment(FunctionalComponent):
         senesced, and a blade's age; its parameters (durations in phyllochrons) one value per organ, its plant's.
         Another model's organ (on an axis without a row, or of another kind: a crown's, a root's) keeps its
         *organ_length*, *visible_length*, *organ_senesced_length* and *age*."""
-        ds = self.data_structure
+        data_structure = self.data_structure
         tables = self._tables(shoot_tables)
-        row = np.asarray(axis_row, dtype=int)[ds.owner("Axis", of="Organ")]
+        row = np.asarray(axis_row, dtype=int)[data_structure.owner("Axis", of="Organ")]
         kind = self._organ_kinds()
         own = (row >= 0) & (kind >= 0)
         row = np.where(own, row, 0)
         rank = np.asarray(organ_rank, dtype=int)
-        time = np.asarray(thermal_time, dtype=float)[ds.owner("Plant", of="Organ")]
+        time = np.asarray(thermal_time, dtype=float)[data_structure.owner("Plant", of="Organ")]
         phyllochron = np.asarray(phyllochron, dtype=float)
         timing = {name: np.asarray(values, dtype=float) * phyllochron for name, values in (
             ("blade_duration", blade_duration), ("sheath_start", sheath_start), ("sheath_duration", sheath_duration),
@@ -329,12 +329,12 @@ class ScenarioShoot(CompositeModel):
         once more: a call creates every axis, phytomer and element its thermal time asks for, one large step as the
         small steps reaching it."""
         self.run_together(self.development, self.architecture)
-        ds = self.architecture.data_structure
+        data_structure = self.architecture.data_structure
         grown = False
         while True:
-            nodes = len(ds.entity_ids("node"))
+            nodes = len(data_structure.entity_ids("node"))
             self.architecture.run_stage("segmentation")
-            if len(ds.entity_ids("node")) == nodes:
+            if len(data_structure.entity_ids("node")) == nodes:
                 break
             self.development.run_stage("postsegmentation")
             grown = True
@@ -365,7 +365,7 @@ def shoot_scene(plants=None, model=ScenarioShoot, time_step="1 h", delays=None, 
         depths = [coleoptile_sowing_depth(dict(parameters, **values)) if depth == "coleoptile" else float(depth)
                   for values in own]
         placed = [replace(plant, depth=value) for plant, value in zip(plants, depths)]
-        plants = Stand(placed, plants.xrange, plants.yrange, plants.models) if isinstance(plants, Stand) else placed
+        plants = Stand(placed, plants.x_range, plants.y_range, plants.models) if isinstance(plants, Stand) else placed
     return Scene(planting(plants, model, parameters, own), time_step=time_step, forcings=forcings, recorder=recorder,
                  compute=compute)
 

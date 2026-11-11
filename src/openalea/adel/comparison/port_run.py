@@ -55,16 +55,16 @@ def port_scene(leaves="samples", time_step=3600, rotation=0., phyllochron=PHYLLO
                        thermal_time_step=thermal_time_step, **(parameters or {}))
 
 
-def plant_of(ds, scale):
+def plant_of(data_structure, scale):
     """Each entity's plant (its index among the plants) at *scale*."""
-    return ds.owner("Plant", of=scale)
+    return data_structure.owner("Plant", of=scale)
 
 
-def organ_names(ds):
+def organ_names(data_structure):
     """Each Organ's name (internode, sheath, blade) from its MPG label."""
-    g = ds.structure
-    by_value = {getattr(g.labels.Organ, name): organ for name, organ in ORGAN_NAMES.items()}
-    return np.array([by_value.get(g.label(int(v))) for v in ds.entity_ids("Organ")], dtype=object)
+    mtg = data_structure.structure
+    by_value = {getattr(mtg.labels.Organ, name): organ for name, organ in ORGAN_NAMES.items()}
+    return np.array([by_value.get(mtg.label(int(v))) for v in data_structure.entity_ids("Organ")], dtype=object)
 
 
 def axis_names(scene):
@@ -74,53 +74,53 @@ def axis_names(scene):
 
 def write_inclinations(scene, inclinations):
     """The internodes' inclinations, {(axis, rank): degrees}."""
-    ds = scene.populations[0].data_structure
+    data_structure = scene.populations[0].data_structure
     names = axis_names(scene)
-    organ_axis = names[ds.owner("Axis", of="Organ")]
-    ranks, organs = np.asarray(ds.get("organ_rank")), organ_names(ds)
-    values = np.array(ds.get("inclination"), dtype=float)
+    organ_axis = names[data_structure.owner("Axis", of="Organ")]
+    ranks, organs = np.asarray(data_structure.get("organ_rank")), organ_names(data_structure)
+    values = np.array(data_structure.get("inclination"), dtype=float)
     for i in range(values.size):
         if organs[i] == "internode":
             values[i] = inclinations.get((organ_axis[i], int(ranks[i])), values[i])
-    ds.set("inclination", values)
+    data_structure.set("inclination", values)
 
 
 def structure(scene, plant=0):
     """{(axis, rank, organ): {"labels": [element labels], "elements": {label: {variable: value, "triangles": (T, 3,
     3)}}, variable: value}} of the plant *plant* (its index); leaf elements labelled as the legacy's, by their index
     (LeafElement1, ...)."""
-    ds = scene.populations[0].data_structure
+    data_structure = scene.populations[0].data_structure
     triangles = scene.populations[0].instance.architecture.triangles()
-    g = ds.structure
+    mtg = data_structure.structure
     label_name = {}
     for name in ("HiddenElement", "StemElement", "LeafElement"):
-        label_name[getattr(g.labels.SubOrgan, name)] = name
+        label_name[getattr(mtg.labels.SubOrgan, name)] = name
     out = {}
-    names, ranks = organ_names(ds), np.asarray(ds.get("organ_rank"))
-    organ_axis = axis_names(scene)[ds.owner("Axis", of="Organ")]
-    organ_ids = np.asarray(ds.entity_ids("Organ"))
+    names, ranks = organ_names(data_structure), np.asarray(data_structure.get("organ_rank"))
+    organ_axis = axis_names(scene)[data_structure.owner("Axis", of="Organ")]
+    organ_ids = np.asarray(data_structure.entity_ids("Organ"))
     variables = ("diameter", "shape_mature_length", "shape_max_width", "shape_class", "shape_seed", "ntop",
                  "organ_azimuth")
-    arrays = {name: np.asarray(ds.get(name)) for name in variables}
-    node_index = dict(zip(np.asarray(ds.entity_ids("node")).tolist(), range(ds.n_nodes())))
+    arrays = {name: np.asarray(data_structure.get(name)) for name in variables}
+    node_index = dict(zip(np.asarray(data_structure.entity_ids("node")).tolist(), range(data_structure.n_nodes())))
     # the ends as the legacy draws them: the turtle's (the display ends), under the legacy's names
-    element_arrays = {name: np.asarray(ds.get(DRAWN.get(name, name))) for name in ELEMENT_VARIABLES + ("element_index",)}
-    organ_plant = plant_of(ds, "Organ")
+    element_arrays = {name: np.asarray(data_structure.get(DRAWN.get(name, name))) for name in ELEMENT_VARIABLES + ("element_index",)}
+    organ_plant = plant_of(data_structure, "Organ")
     for i, organ in enumerate(organ_ids.tolist()):
         if organ_plant[i] != plant:
             continue
-        elements = [label_name[g.label(e)] for e in g.components(organ)]
+        elements = [label_name[mtg.label(e)] for e in mtg.components(organ)]
         values = {}
-        for e in g.components(organ):
+        for e in mtg.components(organ):
             j = node_index[e]
-            label = label_name[g.label(e)]
+            label = label_name[mtg.label(e)]
             if label == "LeafElement":
                 label += str(int(element_arrays["element_index"][j]))
             values[label] = {name: element_arrays[name][j].item() for name in ELEMENT_VARIABLES}
             values[label]["triangles"] = triangles.vertices[triangles.owner == j]
         out[(organ_axis[i], int(ranks[i]), names[i])] = dict(labels=elements, elements=values,
                                                               **{name: arrays[name][i].item() for name in variables},
-                                                              organ_area=float(np.asarray(ds.get("organ_area"))[i]))
+                                                              organ_area=float(np.asarray(data_structure.get("organ_area"))[i]))
     return out
 
 

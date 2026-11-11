@@ -109,10 +109,10 @@ def test_the_tillers_on_the_same_phytomers(runs):
     tillers = sorted({record.label[v] for v in record.vertices if record.scale[v] == 2 and record.label[v] != "MS"})
     assert tillers
     scene = port.scene
-    ds = scene.populations[0].data_structure
-    g = ds._mtg
+    data_structure = scene.populations[0].data_structure
+    g = data_structure._mtg
     from openalea.adel.comparison.port_run import axis_names
-    names = dict(zip(np.asarray(ds.entity_ids("Axis")).tolist(), axis_names(scene)))
+    names = dict(zip(np.asarray(data_structure.entity_ids("Axis")).tolist(), axis_names(scene)))
     for tiller in tillers:
         axis = [a for a, name in names.items() if name == tiller][0]
         first_phytomer = g.components(g.components(axis)[0])[0]

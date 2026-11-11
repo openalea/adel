@@ -3,7 +3,7 @@ The shoot's colours for metafspm's matplotlib drawings (openalea.metafspm.displa
 when more senesced than green.
 
     from openalea.metafspm.display import draw
-    draw(axes, architecture.triangles(), colors=state_colors(ds.get("is_green")))
+    draw(axes, architecture.triangles(), colors=state_colors(data_structure.get("is_green")))
 """
 import numpy as np
 

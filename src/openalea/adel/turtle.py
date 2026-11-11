@@ -38,33 +38,33 @@ import numpy as np
 from openalea.metafspm.kernels import down, left_of, roll_right, roll_to_vertical
 
 
-def traversal_order(ds):
+def traversal_order(data_structure):
     """(order, frame_source): the positions of the DataStructure's nodes (the elements, in its order) in Adel's
     traversal: per plant, from its base element (the one without topological parent among the nodes: none, or another
     model's vertex it is anchored on), depth first, branches before successors (each group in the MPG's children
-    order): ds.preorder.
+    order): data_structure.preorder.
 
     One change to Adel's: a tiller borne on the main stem's phytomer 1 (T1, in the axil of leaf 1) is visited after
     that phytomer's sheath and blade, as the last branch of its internode's last element, instead of right after the
-    internode's first element it is branched on (ds.preorder's defer). The phytomer's sheath is the coleoptile, whose
+    internode's first element it is branched on (data_structure.preorder's defer). The phytomer's sheath is the coleoptile, whose
     base is below ground: T1 then starts at its top, where phytomer 2 (and T2) starts, as it appears, oriented as at
     its branching point: frame_source gives its first element the position of the element it is branched on, whose
     heading and up it takes (-1 for the others). The MPG keeps T1 on phytomer 1."""
-    g = ds.structure
-    nodes = ds.entity_ids("node").tolist()
+    mtg = data_structure.structure
+    nodes = data_structure.entity_ids("node").tolist()
     position = {vid: i for i, vid in enumerate(nodes)}
-    edge_type = g.topology_arrays()["edge_type"]
-    branch = g._EDGE_TYPE_CODES["+"]
-    roots = [vid for vid in nodes if g.parent(vid) not in position]
+    edge_type = mtg.topology_arrays()["edge_type"]
+    branch = mtg._EDGE_TYPE_CODES["+"]
+    roots = [vid for vid in nodes if mtg.parent(vid) not in position]
     frame_source = np.full(len(nodes), -1, dtype=np.int64)
     defer = []                                         # (a coleoptile tiller, the element it is visited after)
     for root in roots:
-        last = g.components(g.complex(root))[-1]
-        for tiller in g.children(root):
+        last = mtg.components(mtg.complex(root))[-1]
+        for tiller in mtg.children(root):
             if tiller in position and edge_type[tiller] == branch:
                 defer.append((position[tiller], position[last]))
                 frame_source[position[tiller]] = position[root]
-    return ds.preorder(branches_first=True, defer=defer), frame_source
+    return data_structure.preorder(branches_first=True, defer=defer), frame_source
 
 
 def base_inclination(table_inclination, is_main, haun_stage, start_haun_stage=1., rate=30.):

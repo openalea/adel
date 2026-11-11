@@ -15,11 +15,11 @@ THERMAL_TIME_STEP = 10.
 def expected(scene, lengths):
     """{variable: values} from given_lengths' records (*lengths*: one per plant), as cnwgrass writes them: an organ
     not appeared yet keeps its values (0)."""
-    ds = scene.populations[0].data_structure
+    data_structure = scene.populations[0].data_structure
     names = axis_names(scene)
-    axis_plant = plant_of(ds, "Axis")
-    organ_axis = ds.owner("Axis", of="Organ")
-    organ_plant, ranks, organs = plant_of(ds, "Organ"), np.asarray(ds.get("organ_rank")), organ_names(ds)
+    axis_plant = plant_of(data_structure, "Axis")
+    organ_axis = data_structure.owner("Axis", of="Organ")
+    organ_plant, ranks, organs = plant_of(data_structure, "Organ"), np.asarray(data_structure.get("organ_rank")), organ_names(data_structure)
     out = dict(axis_number=np.array([float(sum(len(axis) > 0 for axis in mine.values())) for mine in lengths]),
                phytomer_number=np.array([len(lengths[plant][name]) for plant, name in zip(axis_plant, names)],
                                         dtype=float))
@@ -37,40 +37,40 @@ def expected(scene, lengths):
 def test_the_harness_scenario():
     axes, phytomers = harness_tables("samples")
     scene = port_scene("samples", plants=PLANTS, thermal_time_step=THERMAL_TIME_STEP)
-    ds = scene.populations[0].data_structure
+    data_structure = scene.populations[0].data_structure
     created = 0
     for step in range(80):
         scene.run()
         lengths = [given_lengths(start(axes) + step * THERMAL_TIME_STEP - plant.delay, axes, phytomers)
                    for plant in PLANTS]
         for name, values in expected(scene, lengths).items():
-            np.testing.assert_allclose(np.asarray(ds.get(name), dtype=float), values, rtol=0., atol=1e-10,
+            np.testing.assert_allclose(np.asarray(data_structure.get(name), dtype=float), values, rtol=0., atol=1e-10,
                                        err_msg=f"{name} at step {step}")
-        created = len(ds.entity_ids("Organ"))
+        created = len(data_structure.entity_ids("Organ"))
     assert created > 30                                # the tillers appeared, phytomers were created
 
 
 def test_the_blades_dimensions_from_development():
     scene = port_scene("samples", thermal_time_step=THERMAL_TIME_STEP)
-    ds = scene.populations[0].data_structure
+    data_structure = scene.populations[0].data_structure
     architecture = scene.populations[0].instance.architecture
     for _ in range(25):
         scene.run()
-    blade = organ_names(ds) == "blade"
-    area_before = np.asarray(ds.get("organ_area"), dtype=float).copy()
+    blade = organ_names(data_structure) == "blade"
+    area_before = np.asarray(data_structure.get("organ_area"), dtype=float).copy()
     assert area_before[blade].max() > 0
     given = {}
     for name, shape in (("final_blade_length", "shape_mature_length"), ("final_blade_width", "shape_max_width")):
         values = np.full(len(blade), np.nan)                           # what a development model gives
-        values[blade] = np.asarray(ds.get(shape), dtype=float)[blade] * 1.25
-        ds.set(name, values)
+        values[blade] = np.asarray(data_structure.get(shape), dtype=float)[blade] * 1.25
+        data_structure.set(name, values)
         given[shape] = values
     architecture()
-    area_after = np.asarray(ds.get("organ_area"), dtype=float)
+    area_after = np.asarray(data_structure.get("organ_area"), dtype=float)
     grown = blade & (area_before > 0)
     assert np.all(area_after[grown] != area_before[grown])
     for shape, values in given.items():                                # the blades' shapes: the given dimensions
-        np.testing.assert_array_equal(np.asarray(ds.get(shape), dtype=float)[blade], values[blade])
+        np.testing.assert_array_equal(np.asarray(data_structure.get(shape), dtype=float)[blade], values[blade])
     architecture()
-    np.testing.assert_array_equal(np.asarray(ds.get("shape_max_width"), dtype=float)[blade],
+    np.testing.assert_array_equal(np.asarray(data_structure.get("shape_max_width"), dtype=float)[blade],
                                   given["shape_max_width"][blade])      # kept

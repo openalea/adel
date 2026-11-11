@@ -62,12 +62,12 @@ def grown():
     for step in range(121):
         scene.run()
         if step % 20 == 0:
-            ds = scene.populations[0].data_structure
-            records.append({name: np.array(ds.get(name)) for name in (
+            data_structure = scene.populations[0].data_structure
+            records.append({name: np.array(data_structure.get(name)) for name in (
                 "inclination", "organ_azimuth", "axis_azimuth", "visible_length", "organ_rank", "haun_stage",
                 "table_inclination", "straightening_distance", "insertion_azimuth", "first_azimuth")}
-                           | dict(axes=axis_names(scene), organs=organ_names(ds),
-                                  organ_axis=ds.owner("Axis", of="Organ")))
+                           | dict(axes=axis_names(scene), organs=organ_names(data_structure),
+                                  organ_axis=data_structure.owner("Axis", of="Organ")))
     return scene, records
 
 
@@ -98,11 +98,11 @@ def test_the_inclinations_of_adel_r(grown):
 
 def test_the_straightened_tillers_reach_their_distance(grown):
     scene, records = grown
-    ds = scene.populations[0].data_structure
+    data_structure = scene.populations[0].data_structure
     element_kind, _ = scene.populations[0].instance.architecture._kinds()
-    node_axis = np.asarray(ds.owner("Axis"))
-    x1, y1, x2, y2 = (np.asarray(ds.get(name)) for name in ("x1", "y1", "x2", "y2"))
-    distance = np.asarray(ds.get("straightening_distance"))
+    node_axis = np.asarray(data_structure.owner("Axis"))
+    x1, y1, x2, y2 = (np.asarray(data_structure.get(name)) for name in ("x1", "y1", "x2", "y2"))
+    distance = np.asarray(data_structure.get("straightening_distance"))
     straightened = 0
     for axis, name in enumerate(axis_names(scene)):
         stem = np.flatnonzero((node_axis == axis) & (element_kind == 1))
@@ -118,6 +118,6 @@ def test_vertical_without_the_option():
     scene = port_scene("echap", plants=PLANTS, n_sect=2)
     for _ in range(80):
         scene.run()
-    ds = scene.populations[0].data_structure
-    assert not np.any(np.asarray(ds.get("inclination")))
-    assert not np.any(np.asarray(ds.get("axis_azimuth")))
+    data_structure = scene.populations[0].data_structure
+    assert not np.any(np.asarray(data_structure.get("inclination")))
+    assert not np.any(np.asarray(data_structure.get("axis_azimuth")))

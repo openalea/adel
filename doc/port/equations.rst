@@ -248,7 +248,7 @@ the unit axis :math:`\mathbf{a}` (Rodrigues, right-handed).
 
 with :math:`(0, -1, 0)` for the normalised vector when :math:`H` is vertical (PlantGL's convention).
 
-**The traversal** (``turtle.traversal_order``, once per topology: metafspm's ``ds.preorder``, a compiled depth-first
+**The traversal** (``turtle.traversal_order``, once per topology: metafspm's ``data_structure.preorder``, a compiled depth-first
 walk): plant by plant from its base element, depth first, a node's branches before its successors. A tiller borne on the main stem's phytomer 1 (T1) is visited after that
 phytomer's sheath and blade, as the last branch of its internode's last element; its first element takes the heading
 and up of the element it is branched on (``frame_source``). It then starts at the coleoptile's top, where phytomer 2

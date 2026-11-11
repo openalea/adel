@@ -27,14 +27,14 @@ if __name__ == "__main__":
     port = port_run(**options)
     legacy_vertices, legacy_green = legacy_canopy(legacy.steps[-1], PLANTS,
                                                   [coleoptile_top(record) for record in port.steps[-1]])
-    ds = port.scene.populations[0].data_structure
+    data_structure = port.scene.populations[0].data_structure
     port_triangles = port.scene.populations[0].instance.architecture.triangles()
 
     figure = plt.figure(figsize=(13, 6))
     for k, (title, vertices, colors) in enumerate((
             ("the legacy (AdelDyn)", legacy_vertices, state_colors(legacy_green)),
             ("the port (ShootArchitecture)", port_triangles.vertices,
-             state_colors(np.asarray(ds.get("is_green")))[port_triangles.owner]))):
+             state_colors(np.asarray(data_structure.get("is_green")))[port_triangles.owner]))):
         axes = figure.add_subplot(1, 2, k + 1, projection="3d")
         draw(axes, vertices, triangle_colors=colors)
         area = Triangles(vertices, np.zeros(len(vertices))).areas().sum()

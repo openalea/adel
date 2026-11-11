@@ -21,10 +21,9 @@ import os
 
 from openalea.encoding3d import read_index
 from openalea.encoding3d.validate import validate_sequence
-from openalea.metafspm.scene.recorder import SceneRecorder
+from openalea.metafspm import SceneRecorder, stand
 
 from openalea.adel.development import ScenarioShoot, random_delays, shoot_scene
-from openalea.metafspm.scene.population import stand
 from openalea.adel.simulation import DAY
 
 HERE = os.path.dirname(os.path.abspath(__file__))

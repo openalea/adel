@@ -18,16 +18,16 @@ def default():
 
 def test_the_summary_is_the_plant_model_run_alone(default):
     alone = shoot_scene(start=0., thermal_time_step=15.)
-    ds = alone.populations[0].data_structure
+    data_structure = alone.populations[0].data_structure
     alone.run()
     for _ in range(DAYS):
         alone.run()
     last = default.summary.iloc[-1]
     assert list(default.summary["day"]) == list(range(DAYS + 1))
     assert last["thermal_time"] == pytest.approx(15. * DAYS)
-    leaf = np.asarray(ds.labels()) == "LeafElement"
-    assert last["green_leaf_area"] == pytest.approx(float(np.sum(np.asarray(ds.get("green_area"))[leaf])), rel=1e-12)
-    assert last["haun_stage"] == pytest.approx(float(np.asarray(ds.get("haun_stage"))[0]), rel=1e-12)
+    leaf = np.asarray(data_structure.labels()) == "LeafElement"
+    assert last["green_leaf_area"] == pytest.approx(float(np.sum(np.asarray(data_structure.get("green_area"))[leaf])), rel=1e-12)
+    assert last["haun_stage"] == pytest.approx(float(np.asarray(data_structure.get("haun_stage"))[0]), rel=1e-12)
     assert default.summary["tillers"].min() == 0.
 
 
