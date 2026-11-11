@@ -195,8 +195,7 @@ Structure and tables
        ``A_ear / L_ear``, ``L_spike - L_ear``), one metamer and one organ each, a hidden and a stem element as an
        internode (``adel_metamer``, ``internode_elements``), drawn as stem cylinders
      - ported: on an axis with ``has_ear`` whose phytomer table has its rows ``nf + 1`` to ``nf + 3``, a phytomer each
-       with one organ, labelled ``Peduncle``, ``Ear`` and ``Ear`` (the awns: metafspm has no Awn label; ``organ_names``
-       tells them by their rank ``nf + 3``), ``ntop`` 0, -1, -2, placed and drawn as internodes (their inclination in
+       with one organ, labelled ``Peduncle``, ``Ear`` and ``Awn``, ``ntop`` 0, -1, -2, placed and drawn as internodes (their inclination in
        the straightening, their azimuth ``Azim``); checked against ``mtg_factory`` and ``mtg_interpreter``
        (``test/comparison/test_ears_and_options.py``). Changed: their ``organ_area`` set (the legacy's static factory
        leaves none). Their kinetics are ``ScenarioDevelopment``'s (``ear_start``, ``peduncle_duration``), not

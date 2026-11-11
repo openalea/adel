@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The awns are labelled `Awn` (metafspm's new Organ label), no longer `Ear`: the tables grouped by organ label
+  split Ear and Awn; the organs' values are unchanged.
 - `pyproject.toml` file following [OpenAlea Guidelines](https://openalea.readthedocs.io/en/latest/development/guidelines.html).
 - [OpenAlea svg](./doc/_static/openalea_web.svg) logo for documentation.
 

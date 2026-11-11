@@ -22,8 +22,8 @@ The plant's structure, in the MPG:
                  └─ Organ Blade            a HiddenElement (its part in the sheaths' tube), then n_sect
                                            LeafElements (<), on the sheath's last element
              └─ Phytomer (ShootPhytomer)   on an axis with an ear (has_ear), ranks nf + 1 to nf + 3 (the phytomer
-                 └─ Organ Peduncle, Ear    table's ear rows, El and Ed): one organ each, the peduncle, the ear and
-                                           the awns (an Ear organ too, the one at rank nf + 3), a HiddenElement then
+                 └─ Organ Peduncle,        table's ear rows, El and Ed): one organ each, the peduncle, the ear and
+                          Ear, Awn         the awns, a HiddenElement then
                                            a StemElement (<), as an internode, following the previous one
 
 The ears, peduncles and awns are cylinders of their rows' El (length) and Ed (diameter; Adel.R's: the peduncle's
@@ -138,7 +138,7 @@ def phytomer_layout(labels, n_sect, ear_part=0):
     earlier element. *ear_part*: 0 a vegetative phytomer; 1, 2, 3 an ear's (its peduncle, ear, awns): one organ, a
     HiddenElement then a StemElement, as an internode."""
     if ear_part:
-        label = labels.Organ.Peduncle if ear_part == 1 else labels.Organ.Ear
+        label = (labels.Organ.Peduncle, labels.Organ.Ear, labels.Organ.Awn)[ear_part - 1]
         return ([("unit", SCALES.Phytomer, labels.Phytomer.Shoot), (0, SCALES.Organ, label)],
                 [(1, "previous", None, labels.SubOrgan.HiddenElement, 0, 0),
                  (1, 0, "<", labels.SubOrgan.StemElement, 0, 1)])
@@ -661,18 +661,13 @@ class ShootArchitecture(StructuralComponent):
 
     def _kinds(self):
         """Per node: its element kind (0 hidden, 1 stem, 2 leaf) and its organ's (0 internode, 1 sheath, 2 blade, 3
-        peduncle, 4 ear, 5 awns: an Ear organ at its axis' rank nf + 3), from the MPG's labels (data_structure.labels), once per
+        peduncle, 4 ear, 5 awns), from the MPG's labels (data_structure.labels), once per
         topology."""
         def build():
             data_structure = self.data_structure
             element = {"HiddenElement": 0, "StemElement": 1, "LeafElement": 2}
-            organ = {"StemInternode": 0, "Sheath": 1, "Blade": 2, "Peduncle": 3, "Ear": 4}
+            organ = {"StemInternode": 0, "Sheath": 1, "Blade": 2, "Peduncle": 3, "Ear": 4, "Awn": 5}
             organ_kind = np.array([organ.get(label, -1) for label in data_structure.labels(location="Organ").tolist()])
-            if (organ_kind == 4).any():
-                organ = np.asarray(data_structure.owner("Organ"))             # per node
-                organ_rank = np.asarray(data_structure.get("organ_rank"))[organ]
-                final = np.asarray(data_structure.get("final_leaf_number"))[data_structure.owner("Axis", of="Organ")][organ]
-                organ_kind = np.where((organ_kind == 4) & (organ_rank - final == EAR_PARTS), 5, organ_kind)
             return np.array([element.get(label, -1) for label in data_structure.labels().tolist()]), organ_kind
         return self.cached("kinds", build)
 

@@ -45,7 +45,7 @@ from openalea.metafspm.scene.scene import Scene
 from openalea.metafspm.solve.decorator import postsegmentation, potential
 
 BY = "model_scenario_development"
-ORGAN_KINDS = ("StemInternode", "Sheath", "Blade", "Peduncle", "Ear")     # the awns: an Ear organ
+ORGAN_KINDS = ("StemInternode", "Sheath", "Blade", "Peduncle", "Ear", "Awn")
 DAY = 86400.
 
 
@@ -260,9 +260,9 @@ class ScenarioDevelopment(FunctionalComponent):
         visible_fraction = np.asarray(internode_visible_fraction, dtype=float)
         peduncle = dimension("El", rank) * ramp(ear_appeared, np.asarray(peduncle_duration, dtype=float) * phyllochron)
         ear = dimension("El", rank) * (time >= ear_appeared)             # the ear and the awns: at once
-        length = np.select([kind == 0, kind == 1, kind == 2, kind == 3, kind == 4],
+        length = np.select([kind == 0, kind == 1, kind == 2, kind == 3, kind >= 4],
                            [internode, sheath, blade, peduncle, ear], 0.)
-        visible = np.select([kind == 0, kind == 1, kind == 2, kind == 3, kind == 4],
+        visible = np.select([kind == 0, kind == 1, kind == 2, kind == 3, kind >= 4],
                             [visible_fraction * internode, np.maximum(0., sheath - previous_sheath),
                              np.maximum(0., blade - previous_sheath), visible_fraction * peduncle, ear], 0.)
         senesced = np.where(kind == 2, blade_senesced, 0.)
@@ -300,7 +300,7 @@ class ScenarioDevelopment(FunctionalComponent):
         return np.where(np.isnan(start), main_stem, start)
 
     def _organ_kinds(self):
-        """Per Organ: 0 internode, 1 sheath, 2 blade, 3 peduncle, 4 ear or awns (from the MPG's labels), once per
+        """Per Organ: 0 internode, 1 sheath, 2 blade, 3 peduncle, 4 ear, 5 awns (from the MPG's labels), once per
         topology."""
         def build():
             kinds = {name: k for k, name in enumerate(ORGAN_KINDS)}
