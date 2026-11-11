@@ -122,7 +122,8 @@ crown's top grows the same elements.
 The elements (``ShootArchitecture._elements``)
 ==============================================
 
-**Stem organs** (internodes and sheaths): a cylinder of the organ's diameter. With the hidden length
+**Stem organs** (internodes, sheaths, and an ear's peduncle, ear and awns: Adel.R's rows :math:`n_f + 1` to
+:math:`n_f + 3`, their diameter ``Ed``): a cylinder of the organ's diameter. With the hidden length
 :math:`l_h = \max(l - l_v, 0)`, the green length :math:`l_g = l_v - \min(l_s, l_v)` and the visible senesced length
 :math:`l_{vs} = l_v - l_g`:
 
@@ -329,7 +330,10 @@ Each element is drawn in its frame: a local point :math:`(p_x, p_y, p_z)` is pla
 **Stem elements** of length :math:`\ell \ge` ``min_length`` (Adel's 0.01 cm, 1e-4 m) and **blades' rolled parts**
 (:math:`\rho_k > 0`): a slim cylinder (``coupling.geometry.slim_cylinders``, Adel's ``slim_cylinder``) of radius
 :math:`d/2` (the rolled diameter's half for a rolled part): three points at the angles :math:`0, 2\pi/3, 4\pi/3` at
-its base, three at the same angles plus :math:`\pi` at :math:`p_z = \ell`, eight triangles.
+its base, three at the same angles plus :math:`\pi` at :math:`p_z = \ell`, eight triangles. With
+``stem_mesh="classic"`` (Adel's ``classic``): PlantGL's solid tapered cylinder of 6 slices, tesselated
+(``kernels.classic_cylinders``): six points at the angles :math:`k\pi/3` at its base and at its top, its two centres,
+24 triangles (per slice two sides and one of each cap).
 
 **Blade elements' flat parts** (``ShootArchitecture._blade_triangles``, ``kernels.blade_element_triangles``), for
 a blade of visible length at least ``min_length`` and an element with a flat part, from its shape's fitted midrib
@@ -354,12 +358,19 @@ a blade of visible length at least ``min_length`` and an element with a flat par
    two ends kept; at each abscissa :math:`u`, the midrib point :math:`(x'(u), y'(u))` and the width
    :math:`r(u + 1 - v)` (the blade grows out of the tube: its visible top is the shape's top), interpolated linearly;
    the points cut after the first zero width; :math:`x, y` multiplied by :math:`L`, :math:`r` by :math:`W`;
-3. **the strip** (``kernels.strip_triangles``, Adel's ``leaf_to_mesh`` without twist): the points
-   :math:`(x_i, -r_i/2, y_i)` and :math:`(x_i, r_i/2, y_i)`, :math:`i = 0 \dots m - 1`, two triangles between
+3. **the strip** (``kernels.strip_triangles``, Adel's ``leaf_to_mesh``): the points
+   :math:`(x_i, -\tfrac{r_i}{2}|\cos\theta_i|, y_i + \tfrac{r_i}{2}|\sin\theta_i|)` and
+   :math:`(x_i, \tfrac{r_i}{2}|\cos\theta_i|, y_i - \tfrac{r_i}{2}|\sin\theta_i|)`, :math:`i = 0 \dots m - 1`, the
+   twist :math:`\theta_i` evenly spaced from :math:`\tau u_0 / L` to :math:`\tau u_{\text{end}} / L` (:math:`\tau` the
+   setting ``twist``, 0 by default; :math:`u_{\text{end}}` the part's last abscissa before the cut), two triangles between
    consecutive points up to :math:`m - 2`, one at the tip when its width is below 1e-5 m (Adel's 0.001 cm), two
    otherwise;
 4. the triangles of area at most ``min_length``\ :sup:`2` / 100 left out; the mesh lifted by the element's rolled
    part along :math:`p_z`, above its rolled cylinder.
+
+With ``face_up`` (Adel's), a blade element (its rolled cylinder and its flat mesh) is placed in the frame
+:math:`(U,\ Z \times U,\ \widehat{U \times (Z \times U)})`, :math:`Z` the vertical, the second axis not normalised
+(PlantGL's ``BaseOrientation``), instead of :math:`(U, H \times U, H)`; its display ends too.
 
 The blade elements of one blade are drawn from frames that only their rolled parts move, each its own part of the
 whole visible midrib. An element's local mesh is kept between calls, by MPG vertex, while what it is made from is the

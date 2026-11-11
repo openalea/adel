@@ -159,6 +159,13 @@ green = triangles.attributes["green"]                  # each triangle's green s
   without a translator), and `shoot_scene` builds a scene of such plants.
 - **Tillers:** vertical by default, as AdelDyn's. With `tiller_inclination=1` they are inclined by static Adel's rules
   (Adel.R's getIncT and axe_inclination: incT ramping with the Haun stage, straightening at dredT).
+- **Ears:** on an axis with an ear (the axes table's `hasEar`) whose phytomer table has its ear rows (ranks nf + 1 to
+  nf + 3, Adel's sample plant's main stem), its peduncle, ear and awns are organs of their own, cylinders of their
+  rows' lengths and diameters, placed and lit as the internodes. `ScenarioDevelopment` brings them out
+  `ear_start` (1.6) phyllochrons after the flag leaf, the peduncle growing for `peduncle_duration` (3).
+- **Geometry options** (ShootArchitecture's settings, as Adel's): `twist` (°, the blades' twist about their midrib,
+  0), `stem_mesh` (`"slim"`, 8 triangles a cylinder, or `"classic"`, PlantGL's 6-slice cylinder, 24) and `face_up`
+  (False: the blades in the turtle's frame; True: in a frame whose z is the vertical).
 - **Plants and the soil:** each plant is sown at minus its sowing depth (metafspm's `Planting`, m), by default 0.9
   times its coleoptile's length; T1 starts at the coleoptile's top, as T2.
 - **Display:** metafspm's matplotlib drawings of the triangles (`openalea.metafspm.display`), with the shoot's

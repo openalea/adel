@@ -188,10 +188,19 @@ Structure and tables
      - changed: m everywhere, the tables converted by ``length_unit`` (0.01) at their reading
    * - AD-10
      - ``new_mtg_factory`` unpacks three organs where an ear row gives one (a crash once ears appear)
-     - dropped (``new_mtg_factory`` is not ported)
+     - fixed (``new_mtg_factory`` is not ported; the ear rows are read as ``mtg_factory`` reads them, AD-11)
    * - AD-11
-     - ears, peduncles and awns (geometry only)
-     - dropped (not ported; the axes' ``has_ear`` kept as a descriptor)
+     - ears, peduncles and awns (geometry only): Adel.R's rows ``nf + 1`` to ``nf + 3`` of an axis with an ear
+       (``m_type`` peduncle, ear, awn; ``El`` and ``Ed`` from earT's ``L_peduncle``, ``W_peduncle``, ``L_ear``,
+       ``A_ear / L_ear``, ``L_spike - L_ear``), one metamer and one organ each, a hidden and a stem element as an
+       internode (``adel_metamer``, ``internode_elements``), drawn as stem cylinders
+     - ported: on an axis with ``has_ear`` whose phytomer table has its rows ``nf + 1`` to ``nf + 3``, a phytomer each
+       with one organ, labelled ``Peduncle``, ``Ear`` and ``Ear`` (the awns: metafspm has no Awn label; ``organ_names``
+       tells them by their rank ``nf + 3``), ``ntop`` 0, -1, -2, placed and drawn as internodes (their inclination in
+       the straightening, their azimuth ``Azim``); checked against ``mtg_factory`` and ``mtg_interpreter``
+       (``test/comparison/test_ears_and_options.py``). Changed: their ``organ_area`` set (the legacy's static factory
+       leaves none). Their kinetics are ``ScenarioDevelopment``'s (``ear_start``, ``peduncle_duration``), not
+       Adel.R's (not ported)
    * - AD-12
      - the sample ``phytoT.csv`` has the main stem's ranks only
      - kept: the sample tables give each tiller the main stem's first ``nf`` ranks, lengths and diameters 0.9 times
@@ -377,7 +386,15 @@ Meshes
    * - AD-44
      - ``leaf_to_mesh``'s twist (``Leaves.twist``, 0 by default); ``classic`` stems (PlantGL's tapered cylinders, 6
        slices); ``face_up`` blades
-     - dropped (no twist, slim cylinders, the turtle's frame)
+     - ported as ShootArchitecture's settings ``twist`` (°, 0), ``stem_mesh`` (``"slim"``, or ``"classic"``: the
+       tesselated tapered cylinder's 24 triangles) and ``face_up`` (False): the defaults the slim cylinders, no twist
+       and the turtle's frame, bit for bit as before. Reproduced: the twist's angles spread evenly over the part's
+       points, its end the part's last abscissa before the width's cut; face_up's frame (``BaseOrientation``: the
+       side vertical × up not normalised, the blade narrowed by it), the rolled part's cylinder in it too.
+       Corrected: an element that is its whole mature blade (``leaf_element``'s "just scale" case) has its
+       abscissae in the length unit, so Adel twists it by the twist times its length in cm; the port by the twist
+       times its relative abscissa, as every other element. Changed: with face_up, the blade elements' display ends
+       are their drawn midribs' in the face-up frame; a frame whose up is vertical keeps the turtle's
    * - AD-45
      - one triangle at the tip when its width is below 0.001, an absolute value in the scene's unit
      - reproduced as 1e-5 m (Adel's 0.001 cm, ``kernels.TIP_WIDTH``)
