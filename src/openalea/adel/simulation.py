@@ -11,8 +11,9 @@ Adel's wheat shoots for users: a plant grown in a few lines, its results as tabl
     parameters()                                  the parameters: their value, unit and description
     simulate({"phyllochron": 100.}, days=80)      leaves appearing every 100 °Cd
     simulate(days=80, temperature=series)         a measured air temperature (°C), by day
-    simulate(days=80, outputs="outputs")          the run's files too: run.json, scenario.json, summary.csv, the
-                                                  plants' summaries (Plant/), a frame of the plants every 10 days
+    simulate(days=80, outputs="outputs")          the run's files too: run.json, scenario.json, the
+                                                  summary (summaries/hand_declared/summary.csv), the plants'
+                                                  summaries (summaries/Plant/), a frame of the plants every 10 days
     tables_from_measurements(dimensions)          Adel's tables from a main stem's measured dimensions
 
 The plant grows one step per day; its development follows the thermal time, the sum of the days' temperatures above
@@ -179,10 +180,10 @@ def simulate(parameters: dict = None, days: float = 80, temperature=15., base_te
     day 0 (the sowing). *model*: the plant model,
     ScenarioShoot or one extending it (with more components, e.g. a light model).
 
-    *outputs*: a folder for the run's files (metafspm's SceneRecorder): run.json, scenario.json, summary.csv (the
-    summary), Plant/<model>/summaries.csv (every variable per plant, every day) and a frame of the plants every 10
-    days (frames.fspm.zip, for ParaView or another platform: the frames folder packed at the end, the archive
-    checked, then the folder removed).
+    *outputs*: a folder for the run's files (metafspm's SceneRecorder): run.json, scenario.json,
+    summaries/hand_declared/summary.csv (the summary), summaries/Plant/<model>/summaries.csv (every variable per plant,
+    every day) and a frame of the plants every 10 days (frames.fspm.zip, for ParaView or another platform: the frames
+    folder packed at the end, the archive checked, then the folder removed).
     *compute*: the Scene's run configuration (metafspm's Compute: its threads, those of a reduction's
     kinds included, its sparse solver, its memory trim; None: Compute())."""
     values = dict(parameters or {})
